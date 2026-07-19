@@ -5,6 +5,7 @@ import type { Ability } from '../character-wizard/types'
 import { ABILITIES, ALL_SKILLS } from '../character-wizard/types'
 import { parseEquipmentOptions } from '../character-wizard/parsing'
 import type { CharacterData } from '../character-wizard/types'
+import { CharacterAvatar } from '../CharacterAvatar'
 import {
   abilityModifier,
   armorClass,
@@ -200,9 +201,12 @@ export function CharacterSheetPage() {
       </div>
 
       <div className="pixel-panel flex w-full max-w-4xl flex-col gap-6">
-        <header>
-          <h1 className="pixel-title text-2xl">{character.name}</h1>
-          <p className="text-sm text-[var(--color-shadow)]/80">{headerLine}</p>
+        <header className="flex items-center gap-4">
+          <CharacterAvatar id={character.id} label={character.name} size={96} />
+          <div>
+            <h1 className="pixel-title text-2xl">{character.name}</h1>
+            <p className="text-sm text-[var(--color-shadow)]/80">{headerLine}</p>
+          </div>
         </header>
 
         {/* Ability scores */}

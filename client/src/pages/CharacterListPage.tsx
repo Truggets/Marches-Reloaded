@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { getBackground, getClass, getSpecies } from '@data'
 import type { CharacterData } from '../character-wizard/types'
+import { CharacterAvatar } from '../CharacterAvatar'
 import { WilburCompanion } from '../WilburCompanion'
 
 interface CharacterSummary {
@@ -97,14 +98,17 @@ export function CharacterListPage() {
 
           return (
             <div key={c.id} className="pixel-panel flex items-center justify-between gap-4">
-              <div>
-                <Link to={`/characters/${c.id}`} className="pixel-link">
-                  <p className="pixel-title text-sm">{c.name}</p>
-                </Link>
-                <p className="text-sm">
-                  {species?.name ?? c.data.speciesId} {background?.name ?? c.data.backgroundId} —{' '}
-                  {classNames}
-                </p>
+              <div className="flex items-center gap-3">
+                <CharacterAvatar id={c.id} label={c.name} size={48} />
+                <div>
+                  <Link to={`/characters/${c.id}`} className="pixel-link">
+                    <p className="pixel-title text-sm">{c.name}</p>
+                  </Link>
+                  <p className="text-sm">
+                    {species?.name ?? c.data.speciesId} {background?.name ?? c.data.backgroundId} —{' '}
+                    {classNames}
+                  </p>
+                </div>
               </div>
               <button
                 type="button"
