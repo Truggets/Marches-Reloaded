@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { useAuth } from './auth/AuthContext'
 import { WilburCompanion } from './WilburCompanion'
 import { AdminInvites } from './AdminInvites'
+import { Credits } from './Credits'
 
 function ChangePasswordForm({ onDone }: { onDone: () => void }) {
   const { changePassword } = useAuth()
@@ -113,6 +114,7 @@ function App() {
           {showInvites && user.isAdmin && <AdminInvites />}
         </div>
       )}
+      <Credits />
       <WilburCompanion />
     </div>
   )

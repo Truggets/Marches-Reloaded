@@ -6,7 +6,6 @@ server/node_modules/
 # Build output
 client/dist/
 server/dist/
-build/
 
 # Secrets & environment — NEVER commit these
 .env

@@ -1,0 +1,9 @@
+{
+  "id": "srd-5.2",
+  "name": "SRD 5.2 (2024 Core Rules)",
+  "version": "1.0.0",
+  "license": "CC-BY 4.0",
+  "attribution": "This work includes material from the System Reference Document 5.2 ('SRD 5.2') by Wizards of the Coast LLC, available at https://www.dndbeyond.com/srd. The SRD 5.2 is licensed under the Creative Commons Attribution 4.0 International License, available at https://creativecommons.org/licenses/by/4.0/legalcode. Source markdown transcription: https://github.com/downfallx/dnd-5e-srd-markdown",
+  "sourceCommit": "1b4b99dcb786cdd1a2fb26f8acec1551191f1ca4",
+  "sourceTag": "v1.0.0"
+}

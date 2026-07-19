@@ -1,0 +1,86 @@
+[
+  {
+    "id": "acolyte",
+    "name": "Acolyte",
+    "abilityScores": [
+      "Intelligence",
+      "Wisdom",
+      "Charisma"
+    ],
+    "feat": "Magic Initiate (Cleric)",
+    "skillProficiencies": [
+      "Insight",
+      "Religion"
+    ],
+    "toolProficiency": "Calligrapher's Supplies",
+    "equipment": "_Choose A or B:_ (A) Calligrapher's Supplies, Book (prayers), Holy Symbol, Parchment (10 sheets), Robe, 8 GP; or (B) 50 GP",
+    "pack": "srd-5.2",
+    "source": {
+      "book": "SRD 5.2.1",
+      "section": "Acolyte"
+    }
+  },
+  {
+    "id": "criminal",
+    "name": "Criminal",
+    "abilityScores": [
+      "Dexterity",
+      "Constitution",
+      "Intelligence"
+    ],
+    "feat": "Alert",
+    "skillProficiencies": [
+      "Sleight of Hand",
+      "Stealth"
+    ],
+    "toolProficiency": "Thieves' Tools",
+    "equipment": "_Choose A or B:_ (A) 2 Daggers, Thieves' Tools, Crowbar, 2 Pouches, Traveler's Clothes, 16 GP; or (B) 50 GP",
+    "pack": "srd-5.2",
+    "source": {
+      "book": "SRD 5.2.1",
+      "section": "Criminal"
+    }
+  },
+  {
+    "id": "sage",
+    "name": "Sage",
+    "abilityScores": [
+      "Constitution",
+      "Intelligence",
+      "Wisdom"
+    ],
+    "feat": "Magic Initiate (Wizard)",
+    "skillProficiencies": [
+      "Arcana",
+      "History"
+    ],
+    "toolProficiency": "Calligrapher's Supplies",
+    "equipment": "_Choose A or B:_ (A) Quarterstaff, Calligrapher's Supplies, Book (history), Parchment (8 sheets), Robe, 8 GP; or (B) 50 GP",
+    "pack": "srd-5.2",
+    "source": {
+      "book": "SRD 5.2.1",
+      "section": "Sage"
+    }
+  },
+  {
+    "id": "soldier",
+    "name": "Soldier",
+    "abilityScores": [
+      "Strength",
+      "Dexterity",
+      "Constitution"
+    ],
+    "feat": "Savage Attacker",
+    "skillProficiencies": [
+      "Athletics",
+      "Intimidation"
+    ],
+    "toolProficiency": "_Choose one kind of_ Gaming Set",
+    "equipment": "_Choose A or B:_ (A) Spear, Shortbow, 20 Arrows, Gaming Set (same as above), Healer's Kit, Quiver, Traveler's Clothes, 14 GP; or (B) 50 GP",
+    "pack": "srd-5.2",
+    "source": {
+      "book": "SRD 5.2.1",
+      "section": "Soldier"
+    }
+  }
+]
