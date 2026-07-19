@@ -11,6 +11,7 @@ import {
   abilityModifier,
   armorClass,
   combinedSpellSlots,
+  featuresForLevel,
   finalAbilityScores,
   hitPointsMulticlass,
   proficiencyBonusMulticlass,
@@ -64,6 +65,18 @@ function spellsForClass(data: CharacterData, classId: string): { cantrips: strin
       ...ownLevelUps.flatMap((lu) => lu.spellsAdded?.prepared ?? []),
     ],
   }
+}
+
+/** Every named feature a class grants from level 1 up to (and including) its
+ * current level — featuresForLevel only returns a single level's row, and
+ * nothing before this persisted them anywhere on the saved sheet (they were
+ * only ever shown transiently during the level-up stepper). */
+function allFeaturesForClass(classId: string, level: number): string[] {
+  const features: string[] = []
+  for (let lvl = 1; lvl <= level; lvl++) {
+    features.push(...featuresForLevel(classId, lvl))
+  }
+  return features
 }
 
 export function CharacterSheetPage() {
@@ -221,8 +234,8 @@ export function CharacterSheetPage() {
               const score = scores[ability]
               const mod = abilityModifier(score)
               return (
-                <div key={ability} className="pixel-panel !p-3 text-center">
-                  <p className="pixel-label">{ability}</p>
+                <div key={ability} className="pixel-panel !p-2 text-center">
+                  <p className="pixel-label text-[0.55rem]">{ability}</p>
                   <p className="text-lg font-bold">
                     {score} ({formatModifier(mod)})
                   </p>
@@ -287,6 +300,27 @@ export function CharacterSheetPage() {
           </div>
         </section>
 
+        {/* Class Features */}
+        <section>
+          <h2 className="pixel-title text-base mb-2">Class Features</h2>
+          <div className="flex flex-col gap-3">
+            {data.classes.map((c) => {
+              const features = allFeaturesForClass(c.classId, c.level)
+              if (features.length === 0) return null
+              return (
+                <div key={c.classId}>
+                  <p className="pixel-label">{getClass(c.classId)?.name ?? c.classId}</p>
+                  <ul className="text-sm list-disc list-inside">
+                    {features.map((f, i) => (
+                      <li key={`${f}-${i}`}>{f}</li>
+                    ))}
+                  </ul>
+                </div>
+              )
+            })}
+          </div>
+        </section>
+
         {/* Spellcasting */}
         {(combinedSlots || pactSlots) && (
           <section>
@@ -333,10 +367,19 @@ export function CharacterSheetPage() {
                       </div>
                       <div>
                         <p className="pixel-label">{getClass(c.classId)?.name ?? c.classId} Prepared Spells</p>
-                        <ul className="text-sm list-disc list-inside">
-                          {prepared.map((id) => (
-                            <li key={id}>{getSpell(id)?.name ?? id}</li>
-                          ))}
+                        <ul className="flex flex-col gap-2 text-sm">
+                          {prepared.map((id) => {
+                            const spell = getSpell(id)
+                            return (
+                              <li key={id}>
+                                <p>
+                                  <span className="font-bold">{spell?.name ?? id}</span>
+                                  {spell && <span className="text-xs italic"> (Level {spell.level})</span>}
+                                </p>
+                                {spell && <p className="text-xs">{spell.description}</p>}
+                              </li>
+                            )
+                          })}
                         </ul>
                       </div>
                     </div>

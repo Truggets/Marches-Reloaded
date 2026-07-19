@@ -49,6 +49,12 @@ export interface AbilityScoresData {
   rolls: [number, number, number, number, number, number]
   assignment: Record<Ability, number>
   backgroundIncrease: { plusTwo?: string; plusOne?: string[] }
+  // Which entry mode produced `rolls` — "roll" (Roll for me) or "manual"
+  // (Enter my own roll). Optional/absent-safe: older saved characters (and
+  // in-progress drafts before this field existed) have no rollMode at all;
+  // treat missing as "manual" (the step's own prior default) rather than
+  // guessing "roll" for data that was never actually rolled in-app.
+  rollMode?: 'roll' | 'manual'
 }
 
 /** One record per level gained above the character's starting level-1 class

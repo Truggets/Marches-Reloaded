@@ -339,17 +339,27 @@ export function LevelUpPage() {
 
   // Spells known/prepared so far FOR THIS CLASS specifically — a new class's
   // spell picks are independent of any other class's spell lists (SRD:
-  // spells prepared are determined per class individually).
+  // spells prepared are determined per class individually). Must include
+  // spells from EARLIER, already-saved level-up sessions (data.levelUps),
+  // not just the original creation-time picks and this session's
+  // in-progress draft — otherwise a spell already learned in a prior
+  // level-up gets offered (and re-added) again.
+  const isFirstClass = data.classes[0]?.classId === classId
+  const priorLevelUps = (data.levelUps ?? []).filter(
+    (lu) => (lu.classId ?? data.classes[0]?.classId) === classId,
+  )
   const knownCantripsSoFar = isNewClass
     ? []
     : [
-        ...(data.spells?.cantrips ?? []),
+        ...(isFirstClass ? data.spells?.cantrips ?? [] : []),
+        ...priorLevelUps.flatMap((lu) => lu.spellsAdded?.cantrips ?? []),
         ...draftLevelUps.flatMap((e) => e.spellsAdded?.cantrips ?? []),
       ]
   const knownPreparedSoFar = isNewClass
     ? []
     : [
-        ...(data.spells?.prepared ?? []),
+        ...(isFirstClass ? data.spells?.prepared ?? [] : []),
+        ...priorLevelUps.flatMap((lu) => lu.spellsAdded?.prepared ?? []),
         ...draftLevelUps.flatMap((e) => e.spellsAdded?.prepared ?? []),
       ]
 

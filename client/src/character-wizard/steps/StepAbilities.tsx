@@ -11,7 +11,7 @@ interface Props {
 type RollMode = 'roll' | 'manual'
 
 export function StepAbilities({ backgroundAbilities, value, onChange }: Props) {
-  const [mode, setMode] = useState<RollMode | null>(value ? 'manual' : null)
+  const [mode, setMode] = useState<RollMode | null>(value ? (value.rollMode ?? 'manual') : null)
   const [rolls, setRolls] = useState<[number, number, number, number, number, number]>(
     value?.rolls ?? [10, 10, 10, 10, 10, 10],
   )
@@ -90,9 +90,9 @@ export function StepAbilities({ backgroundAbilities, value, onChange }: Props) {
       backgroundIncrease.plusOne = [...backgroundAbilities]
     }
 
-    onChange({ rolls, assignment: finalAssignment, backgroundIncrease })
+    onChange({ rolls, assignment: finalAssignment, backgroundIncrease, rollMode: mode ?? undefined })
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [allAssigned, rolls, assignment, increaseMode, plusTwoAbility, plusOneAbility, backgroundAbilities])
+  }, [allAssigned, rolls, assignment, increaseMode, plusTwoAbility, plusOneAbility, backgroundAbilities, mode])
 
   function scoreFor(ability: Ability): number {
     const idx = assignment[ability]

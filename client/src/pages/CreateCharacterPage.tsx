@@ -101,7 +101,11 @@ export function CreateCharacterPage() {
   }
 
   function goBack() {
-    if (stepIndex > 0) setStepIndex(stepIndex - 1)
+    if (stepIndex > 0) {
+      setStepIndex(stepIndex - 1)
+    } else {
+      navigate('/characters')
+    }
   }
 
   async function handleSave() {
@@ -216,10 +220,10 @@ export function CreateCharacterPage() {
           <button
             type="button"
             onClick={goBack}
-            disabled={stepIndex === 0 || saving}
+            disabled={saving}
             className="pixel-btn pixel-btn-secondary"
           >
-            Back
+            {stepIndex === 0 ? 'Cancel' : 'Back'}
           </button>
           <button type="button" onClick={goNext} disabled={!canAdvance() || saving} className="pixel-btn">
             {stepIndex === steps.length - 1 ? (saving ? 'Saving…' : 'Save Character') : 'Next'}
