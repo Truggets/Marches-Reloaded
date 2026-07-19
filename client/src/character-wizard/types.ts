@@ -83,6 +83,10 @@ export interface CharacterData {
   equipmentChoice: string
   spells?: { cantrips: string[]; prepared: string[] }
   levelUps?: LevelUpEntry[]
+  // Bonus Origin feat granted by a species trait (e.g. Human's Versatile).
+  // Optional/absent-safe — only present for species with such a trait, and
+  // absent on characters saved before this was implemented.
+  originFeatId?: string
 }
 
 export const WIZARD_STEPS = [
@@ -90,6 +94,7 @@ export const WIZARD_STEPS = [
   'origin',
   'abilities',
   'skills',
+  'speciesBonus',
   'equipment',
   'spells',
   'name',

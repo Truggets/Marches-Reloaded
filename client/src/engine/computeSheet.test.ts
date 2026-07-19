@@ -95,6 +95,28 @@ describe('Paladin (half-caster) spell slots', () => {
   })
 })
 
+describe('preparedOrKnown tracks the real per-level column, not total slot count', () => {
+  // Regression test for a bug caught in manual QA: the level-up stepper was
+  // deriving "how many spells to prepare" from the change in total spell
+  // SLOTS between levels, not the class's actual preparedOrKnown delta.
+  // Slot-total growth and prepared/known growth are different numbers.
+  it('Bard/Druid: total slot delta L2->L3 differs from the real preparedOrKnown delta', () => {
+    const l2 = spellSlots('druid', 2)
+    const l3 = spellSlots('druid', 3)
+    const l2SlotTotal = Object.values(l2!.slotsByLevel).reduce((a, b) => a + b, 0)
+    const l3SlotTotal = Object.values(l3!.slotsByLevel).reduce((a, b) => a + b, 0)
+    // The bug: this delta (what the old code used) is +3, not the real +1.
+    expect(l3SlotTotal - l2SlotTotal).toBe(3)
+    // The fix: preparedOrKnown itself only grows by 1 from L2 to L3.
+    expect(l3!.preparedOrKnown - l2!.preparedOrKnown).toBe(1)
+  })
+
+  it('Warlock preparedOrKnown comes from the "Prepared Spells" feature-table column', () => {
+    const result = spellSlots('warlock', 1)
+    expect(result?.preparedOrKnown).toBe(2)
+  })
+})
+
 describe('featuresForLevel / isAsiLevel', () => {
   it('Fighter is an ASI level at 4 but not at 5', () => {
     expect(isAsiLevel('fighter', 4)).toBe(true)

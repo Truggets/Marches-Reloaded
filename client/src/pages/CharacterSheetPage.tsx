@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
-import { getBackground, getClass, getSpecies, getSpell } from '@data'
+import { getBackground, getClass, getFeat, getSpecies, getSpell } from '@data'
 import type { Ability } from '../character-wizard/types'
 import { ABILITIES, ALL_SKILLS } from '../character-wizard/types'
 import { parseEquipmentOptions } from '../character-wizard/parsing'
@@ -351,6 +351,11 @@ export function CharacterSheetPage() {
                 <span className="font-bold">{trait.name}.</span> {trait.description}
               </div>
             ))}
+            {data.originFeatId && (
+              <div className="text-sm">
+                <span className="font-bold">Feat:</span> {getFeat(data.originFeatId)?.name ?? data.originFeatId}
+              </div>
+            )}
           </div>
         </section>
 

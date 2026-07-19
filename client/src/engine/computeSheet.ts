@@ -160,6 +160,7 @@ export function armorClass(classId: string, equipmentChoiceLetter: string, dexMo
 
 export interface SpellSlotInfo {
   cantrips: number
+  preparedOrKnown: number
   slotsByLevel: Record<number, number>
 }
 
@@ -176,16 +177,17 @@ export function spellSlots(classId: string, level: number): SpellSlotInfo | unde
   if (classEntry.spellSlotTable) {
     const row = classEntry.spellSlotTable.find((r) => r.level === level)
     if (!row) return undefined
-    return { cantrips: row.cantrips ?? 0, slotsByLevel: row.slotsByLevel }
+    return { cantrips: row.cantrips ?? 0, preparedOrKnown: row.preparedOrKnown ?? 0, slotsByLevel: row.slotsByLevel }
   }
 
   const featureRow = classEntry.featureTable.find((r) => r.level === level)
   const cols = featureRow?.extraColumns
   if (cols && 'Cantrips' in cols && 'Spell Slots' in cols && 'Slot Level' in cols) {
     const cantrips = parseInt(cols['Cantrips'], 10) || 0
+    const preparedOrKnown = parseInt(cols['Prepared Spells'] ?? '0', 10) || 0
     const slotLevel = parseInt(cols['Slot Level'], 10) || 1
     const slotCount = parseInt(cols['Spell Slots'], 10) || 0
-    return { cantrips, slotsByLevel: { [slotLevel]: slotCount } }
+    return { cantrips, preparedOrKnown, slotsByLevel: { [slotLevel]: slotCount } }
   }
 
   return undefined

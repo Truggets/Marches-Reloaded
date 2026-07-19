@@ -1,10 +1,11 @@
 import { useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { getBackground, getClass } from '@data'
+import { getBackground, getClass, getSpecies } from '@data'
 import { StepClass } from '../character-wizard/steps/StepClass'
 import { StepOrigin } from '../character-wizard/steps/StepOrigin'
 import { StepAbilities } from '../character-wizard/steps/StepAbilities'
 import { StepSkills } from '../character-wizard/steps/StepSkills'
+import { StepSpeciesBonus } from '../character-wizard/steps/StepSpeciesBonus'
 import { StepEquipment } from '../character-wizard/steps/StepEquipment'
 import { StepSpells } from '../character-wizard/steps/StepSpells'
 import { StepName } from '../character-wizard/steps/StepName'
@@ -29,6 +30,8 @@ export function CreateCharacterPage() {
   const [backgroundId, setBackgroundId] = useState<string | null>(null)
   const [abilityScores, setAbilityScores] = useState<AbilityScoresData | null>(null)
   const [skillsChosen, setSkillsChosen] = useState<string[]>([])
+  const [bonusSkill, setBonusSkill] = useState<string | null>(null)
+  const [originFeatId, setOriginFeatId] = useState<string | null>(null)
   const [equipmentChoice, setEquipmentChoice] = useState<string | null>(null)
   const [spellCantrips, setSpellCantrips] = useState<string[]>([])
   const [spellPrepared, setSpellPrepared] = useState<string[]>([])
@@ -37,16 +40,20 @@ export function CreateCharacterPage() {
   const [error, setError] = useState<string | null>(null)
 
   const classEntry = classId ? getClass(classId) : undefined
+  const speciesEntry = speciesId ? getSpecies(speciesId) : undefined
   const backgroundEntry = backgroundId ? getBackground(backgroundId) : undefined
   const casterCounts = classEntry ? getCasterCounts(classEntry) : null
   const isCaster = casterCounts !== null
+  const hasSkillfulTrait = !!speciesEntry?.traits.some((t) => t.name === 'Skillful')
+  const hasVersatileTrait = !!speciesEntry?.traits.some((t) => t.name === 'Versatile')
+  const hasSpeciesBonusStep = hasSkillfulTrait || hasVersatileTrait
 
   const steps = useMemo(
     () =>
-      (['class', 'origin', 'abilities', 'skills', 'equipment', 'spells', 'name'] as const).filter(
-        (s) => s !== 'spells' || isCaster,
+      (['class', 'origin', 'abilities', 'skills', 'speciesBonus', 'equipment', 'spells', 'name'] as const).filter(
+        (s) => (s !== 'spells' || isCaster) && (s !== 'speciesBonus' || hasSpeciesBonusStep),
       ),
-    [isCaster],
+    [isCaster, hasSpeciesBonusStep],
   )
   const [stepIndex, setStepIndex] = useState(0)
   const step = steps[stepIndex]
@@ -71,6 +78,8 @@ export function CreateCharacterPage() {
         const count = skillsChosen.length
         return count > 0 && count === parseInt(classEntry.skillProficiencies.match(/Choose\s+(?:any\s+)?(\d+)/i)?.[1] ?? '0', 10)
       }
+      case 'speciesBonus':
+        return (!hasSkillfulTrait || !!bonusSkill) && (!hasVersatileTrait || !!originFeatId)
       case 'equipment':
         return !!equipmentChoice
       case 'spells':
@@ -106,10 +115,11 @@ export function CreateCharacterPage() {
       classes: [{ classId, level: 1 }],
       abilityScores,
       skillProficiencies: Array.from(
-        new Set([...skillsChosen, ...(backgroundEntry?.skillProficiencies ?? [])]),
+        new Set([...skillsChosen, ...(backgroundEntry?.skillProficiencies ?? []), ...(bonusSkill ? [bonusSkill] : [])]),
       ),
       equipmentChoice,
       ...(isCaster ? { spells: { cantrips: spellCantrips, prepared: spellPrepared } } : {}),
+      ...(originFeatId ? { originFeatId } : {}),
     }
 
     try {
@@ -163,6 +173,18 @@ export function CreateCharacterPage() {
             backgroundSkills={backgroundEntry?.skillProficiencies ?? []}
             chosen={skillsChosen}
             onChange={setSkillsChosen}
+          />
+        )}
+
+        {step === 'speciesBonus' && (
+          <StepSpeciesBonus
+            hasSkillfulTrait={hasSkillfulTrait}
+            hasVersatileTrait={hasVersatileTrait}
+            alreadyGrantedSkills={[...skillsChosen, ...(backgroundEntry?.skillProficiencies ?? [])]}
+            bonusSkill={bonusSkill}
+            onChangeBonusSkill={setBonusSkill}
+            originFeatId={originFeatId}
+            onChangeOriginFeat={setOriginFeatId}
           />
         )}
 

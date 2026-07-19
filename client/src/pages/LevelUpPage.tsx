@@ -325,13 +325,9 @@ export function LevelUpPage() {
   const currSlots = spellSlots(classId, level)
   const isCaster = currSlots !== undefined
   const cantripDelta = isCaster ? currSlots!.cantrips - (prevSlots?.cantrips ?? 0) : 0
-  const prevSlotTotal = prevSlots
-    ? Object.values(prevSlots.slotsByLevel).reduce((a, b) => a + b, 0)
+  const preparedDelta = isCaster
+    ? currSlots!.preparedOrKnown - (prevSlots?.preparedOrKnown ?? 0)
     : 0
-  const currSlotTotal = currSlots
-    ? Object.values(currSlots.slotsByLevel).reduce((a, b) => a + b, 0)
-    : 0
-  const preparedDelta = isCaster ? currSlotTotal - prevSlotTotal : 0
   const maxSpellLevel = currSlots
     ? Math.max(
         0,
