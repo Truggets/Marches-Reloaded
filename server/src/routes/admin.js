@@ -1,6 +1,7 @@
-// Marches Reload — /api/admin routes: user list, password reset.
+// Marches Reload — /api/admin routes: user list, password reset, invites.
 // All routes here require an authenticated admin session.
 
+import crypto from "node:crypto";
 import express from "express";
 import argon2 from "argon2";
 import db from "../db/index.js";
@@ -47,6 +48,32 @@ router.post("/users/:id/reset-password", async (req, res, next) => {
   } catch (err) {
     return next(err);
   }
+});
+
+router.get("/invites", (req, res) => {
+  const rows = db
+    .prepare(
+      `SELECT invites.code, invites.created_at, invites.used_at, users.username AS used_by_username
+       FROM invites LEFT JOIN users ON users.id = invites.used_by_user_id
+       ORDER BY invites.id DESC`
+    )
+    .all();
+  const invites = rows.map((row) => ({
+    code: row.code,
+    createdAt: row.created_at,
+    usedAt: row.used_at,
+    usedByUsername: row.used_by_username,
+  }));
+  return res.status(200).json({ invites });
+});
+
+router.post("/invites", (req, res) => {
+  const code = crypto.randomBytes(6).toString("base64url");
+  db.prepare("INSERT INTO invites (code, created_at) VALUES (?, ?)").run(
+    code,
+    new Date().toISOString()
+  );
+  return res.status(201).json({ code });
 });
 
 export default router;
