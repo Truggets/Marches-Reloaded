@@ -98,7 +98,9 @@ export function CharacterListPage() {
           return (
             <div key={c.id} className="pixel-panel flex items-center justify-between gap-4">
               <div>
-                <p className="pixel-title text-sm">{c.name}</p>
+                <Link to={`/characters/${c.id}`} className="pixel-link">
+                  <p className="pixel-title text-sm">{c.name}</p>
+                </Link>
                 <p className="text-sm">
                   {species?.name ?? c.data.speciesId} {background?.name ?? c.data.backgroundId} —{' '}
                   {classNames}

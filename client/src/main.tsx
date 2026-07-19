@@ -9,6 +9,7 @@ import { LoginPage } from './pages/LoginPage'
 import { RegisterPage } from './pages/RegisterPage'
 import { CharacterListPage } from './pages/CharacterListPage'
 import { CreateCharacterPage } from './pages/CreateCharacterPage'
+import { CharacterSheetPage } from './pages/CharacterSheetPage'
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
@@ -38,6 +39,14 @@ createRoot(document.getElementById('root')!).render(
             element={
               <RequireAuth>
                 <CreateCharacterPage />
+              </RequireAuth>
+            }
+          />
+          <Route
+            path="/characters/:id"
+            element={
+              <RequireAuth>
+                <CharacterSheetPage />
               </RequireAuth>
             }
           />

@@ -190,3 +190,56 @@ body {
     animation: none;
   }
 }
+
+/* Character sheet print support (M4): render the sheet cleanly on paper —
+ * single column, black-on-white, no dark/parchment backgrounds wasting ink,
+ * navigation and action buttons hidden. */
+@media print {
+  .no-print {
+    display: none !important;
+  }
+
+  body {
+    background: white !important;
+    background-image: none !important;
+    color: black !important;
+  }
+
+  .sheet-page {
+    padding: 0 !important;
+    gap: 0.5rem !important;
+    align-items: stretch !important;
+  }
+
+  .sheet-page .pixel-panel {
+    background: white !important;
+    color: black !important;
+    border: 1px solid black !important;
+    box-shadow: none !important;
+    padding: 0.75rem !important;
+  }
+
+  .sheet-page .pixel-panel::before,
+  .sheet-page .pixel-panel::after {
+    display: none !important;
+  }
+
+  .sheet-page .pixel-title {
+    color: black !important;
+    text-shadow: none !important;
+  }
+
+  .sheet-page section {
+    break-inside: avoid;
+  }
+
+  .sheet-page .grid {
+    display: block !important;
+  }
+
+  .sheet-page .grid > * {
+    display: inline-block;
+    width: auto;
+    margin: 0 0.75rem 0.25rem 0;
+  }
+}
