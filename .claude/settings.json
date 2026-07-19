@@ -1,0 +1,54 @@
+{
+  "$schema": "https://json.schemastore.org/claude-code-settings.json",
+  "permissions": {
+    "allow": [
+      "Read",
+      "Edit",
+      "Write",
+      "Grep",
+      "Glob",
+      "Bash(npm install*)",
+      "Bash(npm ci*)",
+      "Bash(npm run build*)",
+      "Bash(npm run dev*)",
+      "Bash(npm test*)",
+      "Bash(npm run test*)",
+      "Bash(npm --prefix client *)",
+      "Bash(npm --prefix server *)",
+      "Bash(npx vite*)",
+      "Bash(npx tsc*)",
+      "Bash(node data/build-srd.js*)",
+      "Bash(node *)",
+      "Bash(git status*)",
+      "Bash(git diff*)",
+      "Bash(git log*)",
+      "Bash(git branch*)",
+      "Bash(git show*)",
+      "Bash(git add*)",
+      "Bash(git remote -v)"
+    ],
+    "ask": [
+      "Bash(git commit*)",
+      "Bash(git push*)",
+      "Bash(git checkout*)",
+      "Bash(git reset*)",
+      "Bash(git rebase*)",
+      "Bash(git merge*)",
+      "Bash(./deploy.sh*)",
+      "Bash(./rollback.sh*)",
+      "Bash(npm run migrate*)",
+      "Bash(node *migrate*)"
+    ],
+    "deny": [
+      "Read(./.env)",
+      "Read(./.env.*)",
+      "Read(./server/.env)",
+      "Read(./data/*.sqlite)",
+      "Bash(git push --force*)",
+      "Bash(git push -f*)",
+      "Bash(rm -rf*)",
+      "Bash(curl *)",
+      "Bash(wget *)"
+    ]
+  }
+}

@@ -1,0 +1,33 @@
+# Dependencies
+node_modules/
+client/node_modules/
+server/node_modules/
+
+# Build output
+client/dist/
+server/dist/
+build/
+
+# Secrets & environment — NEVER commit these
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+
+# Database & backups (runtime data lives on the server, not in git)
+*.sqlite
+*.sqlite3
+*.db
+data/*.sqlite
+backups/
+
+# Logs & OS cruft
+*.log
+npm-debug.log*
+.DS_Store
+Thumbs.db
+
+# Editor
+.vscode/
+.idea/

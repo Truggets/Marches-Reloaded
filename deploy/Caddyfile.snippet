@@ -1,0 +1,23 @@
+# Append this block to /etc/caddy/Caddyfile on srv1820905, then `systemctl reload caddy`.
+# Mirrors the dashboard.therinkinc.com block in the same file.
+
+marches.therinkinc.com {
+    handle /api/* {
+        reverse_proxy 127.0.0.1:3001
+    }
+    handle {
+        root * /opt/marches-reload/current/client/dist
+        try_files {path} /index.html
+        file_server
+    }
+    encode gzip
+    header {
+        Strict-Transport-Security "max-age=31536000; includeSubDomains"
+        X-Content-Type-Options "nosniff"
+        X-Frame-Options "DENY"
+        Referrer-Policy "no-referrer"
+    }
+    log {
+        output file /var/log/caddy/marches-access.log
+    }
+}
