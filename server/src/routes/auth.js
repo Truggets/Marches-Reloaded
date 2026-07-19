@@ -3,6 +3,7 @@
 import express from "express";
 import argon2 from "argon2";
 import db from "../db/index.js";
+import { requireAuth } from "../middleware/auth.js";
 
 const router = express.Router();
 
@@ -118,6 +119,37 @@ router.post("/logout", (req, res, next) => {
     res.clearCookie("connect.sid");
     return res.status(204).end();
   });
+});
+
+router.post("/change-password", requireAuth, async (req, res, next) => {
+  try {
+    const { currentPassword, newPassword } = req.body || {};
+    if (
+      typeof currentPassword !== "string" ||
+      typeof newPassword !== "string" ||
+      !currentPassword ||
+      !newPassword
+    ) {
+      return res.status(400).json({ error: "currentPassword and newPassword are required" });
+    }
+
+    const user = db.prepare("SELECT * FROM users WHERE id = ?").get(req.session.userId);
+    if (!user) {
+      return res.status(401).json({ error: "Not authenticated" });
+    }
+
+    const valid = await argon2.verify(user.password_hash, currentPassword);
+    if (!valid) {
+      return res.status(401).json({ error: "Current password is incorrect" });
+    }
+
+    const passwordHash = await argon2.hash(newPassword);
+    db.prepare("UPDATE users SET password_hash = ? WHERE id = ?").run(passwordHash, user.id);
+
+    return res.status(200).json({ ok: true });
+  } catch (err) {
+    return next(err);
+  }
 });
 
 router.get("/me", (req, res) => {
