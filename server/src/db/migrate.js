@@ -1,4 +1,4 @@
-// Marches Reload — schema migration + first-run bootstrap.
+// Marches Reloaded — schema migration + first-run bootstrap.
 //
 // Idempotent: safe to run on every deploy. Creates the three M1 tables if
 // they don't exist yet, then:

@@ -1,4 +1,4 @@
-# Permissions — Marches Reload
+# Permissions — Marches Reloaded
 
 *Trugg Plan · Phase 6 · 2026-07-18*
 

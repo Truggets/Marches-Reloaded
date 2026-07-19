@@ -1,4 +1,4 @@
-// Marches Reload — SQLite-backed express-session store.
+// Marches Reloaded — SQLite-backed express-session store.
 //
 // Hand-rolled, not connect-sqlite3, per the M1 execution plan (adapted from
 // the sibling therink-dashboard app's real session store). better-sqlite3 is

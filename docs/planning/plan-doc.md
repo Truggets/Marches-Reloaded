@@ -1,4 +1,4 @@
-# Plan Doc — Marches Reload (D&D campaign hub; first build = Character Builder)
+# Plan Doc — Marches Reloaded (D&D campaign hub; first build = Character Builder)
 
 *Trugg Plan · Phase 1 · 2026-07-18*
 

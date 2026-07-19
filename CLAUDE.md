@@ -1,4 +1,4 @@
-# CLAUDE.md — Marches Reload (Character Builder app)
+# CLAUDE.md — Marches Reloaded (Character Builder app)
 
 Focused guide for agents working in **this repo** — the standalone D&D 5e (2024/SRD 5.2) character builder. This file is scoped to the app codebase. Broader project/campaign context lives one level up in `../CLAUDE.md`; the campaign hub is a separate future component.
 
@@ -68,7 +68,7 @@ Every new feature gets a short reference doc under `docs/<feature-name>/` (overv
 
 ## Documentation index
 
-> **Note:** during planning the canonical docs live at the project level, `../docs/planning/` (i.e. `Marches Reload/docs/planning/`). When this `app/` folder is initialized as the real standalone git repo at M0, copy `../docs/planning/` into the repo as `docs/planning/` so the pushed repo is self-contained. Paths below are relative to that final in-repo location.
+> **Note:** during planning the canonical docs live at the project level, `../docs/planning/` (i.e. `Marches Reloaded/docs/planning/`). When this `app/` folder is initialized as the real standalone git repo at M0, copy `../docs/planning/` into the repo as `docs/planning/` so the pushed repo is self-contained. Paths below are relative to that final in-repo location.
 
 - `docs/planning/PROJECT_SPEC.md` — requirements + milestones (source of truth for status).
 - `docs/planning/tech-research-report.md` — stack decisions and why.

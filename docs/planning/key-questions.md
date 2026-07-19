@@ -1,4 +1,4 @@
-# Key Questions — Marches Reload
+# Key Questions — Marches Reloaded
 
 *Trugg Plan · Phase 2 · 2026-07-18*
 

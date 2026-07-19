@@ -1,4 +1,4 @@
-// Marches Reload — server configuration.
+// Marches Reloaded — server configuration.
 //
 // Loads secrets from `shared/.env` on the VPS (NOT from a relative `.env` in
 // the release dir). This mirrors the sibling therink-dashboard app's real

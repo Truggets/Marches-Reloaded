@@ -1,4 +1,4 @@
-// Marches Reload — API server entrypoint.
+// Marches Reloaded — API server entrypoint.
 //
 // M0 (skeleton + deploy): a bare Express app with one health-check route.
 // M1 (accounts & login): adds session-cookie auth (invite-gated register,
@@ -55,5 +55,5 @@ app.use((err, req, res, next) => {
 });
 
 app.listen(port, () => {
-  console.log(`Marches Reload API listening on port ${port}`);
+  console.log(`Marches Reloaded API listening on port ${port}`);
 });

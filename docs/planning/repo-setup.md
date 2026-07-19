@@ -1,4 +1,4 @@
-# Repo Setup — Marches Reload
+# Repo Setup — Marches Reloaded
 
 *Trugg Plan · Phase 5 · 2026-07-18*
 
@@ -12,7 +12,7 @@ Init and connect the local `app/` scaffold (you run this — sandbox can't reach
 
 ```
 # from inside the app/ folder once you're ready to init:
-cd "Marches Reload/app"
+cd "Marches Reloaded/app"
 cp -r ../docs/planning docs/planning        # make the repo self-contained
 git init
 git add -A

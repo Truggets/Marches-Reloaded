@@ -1,4 +1,4 @@
-// Marches Reload — SQLite connection.
+// Marches Reloaded — SQLite connection.
 //
 // Opens the single `better-sqlite3` connection used by the whole server.
 // The DB file lives under `shared/data/` (see config.js for why) — that

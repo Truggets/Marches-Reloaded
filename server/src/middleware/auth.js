@@ -1,4 +1,4 @@
-// Marches Reload — auth middleware.
+// Marches Reloaded — auth middleware.
 //
 // Adapted from the sibling therink-dashboard app's requireAuth/requireRole,
 // but this is a JSON API (not server-rendered): on failure we return JSON

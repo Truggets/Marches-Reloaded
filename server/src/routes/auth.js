@@ -1,4 +1,4 @@
-// Marches Reload — /api/auth routes: register, login, logout, me.
+// Marches Reloaded — /api/auth routes: register, login, logout, me.
 
 import express from "express";
 import argon2 from "argon2";

@@ -1,4 +1,4 @@
-# Planning Retro — Marches Reload
+# Planning Retro — Marches Reloaded
 
 *Trugg Plan · Phase 7 · 2026-07-18*
 

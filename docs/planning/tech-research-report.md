@@ -1,4 +1,4 @@
-# Tech Research Report — Marches Reload (Character Builder)
+# Tech Research Report — Marches Reloaded (Character Builder)
 
 *Trugg Plan · Phase 4 · 2026-07-18*
 

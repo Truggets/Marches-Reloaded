@@ -1,4 +1,4 @@
-# Marches Reload — Character Builder
+# Marches Reloaded — Character Builder
 
 A private, SRD-legal **D&D 2024 (SRD 5.2)** character builder for my friend group's campaign. Build a character start-to-finish in the browser, level up to 10 (with multiclassing), and save it to a shared home on my own server. Each character gets an 8-bit pixel-art avatar.
 

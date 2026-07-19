@@ -1,10 +1,10 @@
-# Project Spec — Marches Reload
+# Project Spec — Marches Reloaded
 
 *Trugg Plan · Phase 3 · 2026-07-18*
 
 ## 0. Purpose
 
-Marches Reload is a private, SRD-legal home for Truman's D&D campaign and the tools around it. Its first component is a web-based **character builder** that lets his friend group create, level, and store fully rules-legal D&D 2024 (SRD 5.2) characters — including multiclassing up to level 10 — each represented by an 8-bit pixel-art avatar. Characters live server-side on Truman's own VPS behind simple accounts, so sheets persist across devices and the group has one shared home. A later component adds the campaign itself (session notes, world/lore, NPCs, house rules). It is not a product and will never be sold; all game-rules content stays inside the Creative Commons SRD.
+Marches Reloaded is a private, SRD-legal home for Truman's D&D campaign and the tools around it. Its first component is a web-based **character builder** that lets his friend group create, level, and store fully rules-legal D&D 2024 (SRD 5.2) characters — including multiclassing up to level 10 — each represented by an 8-bit pixel-art avatar. Characters live server-side on Truman's own VPS behind simple accounts, so sheets persist across devices and the group has one shared home. A later component adds the campaign itself (session notes, world/lore, NPCs, house rules). It is not a product and will never be sold; all game-rules content stays inside the Creative Commons SRD.
 
 ## 1. Functionality / Jobs-to-be-done
 
@@ -33,7 +33,7 @@ Marches Reload is a private, SRD-legal home for Truman's D&D campaign and the to
 - Not a virtual tabletop — no maps, initiative/combat tracker, or in-app dice-based play (a simple dice roller is optional polish, not core).
 - No leveling past 10.
 - No mobile-native app (responsive web is enough).
-- The **campaign hub** (session notes/lore/NPCs) is a later phase of Marches Reload, not part of the builder MVP.
+- The **campaign hub** (session notes/lore/NPCs) is a later phase of Marches Reloaded, not part of the builder MVP.
 
 ## 3. Technical Design
 
@@ -68,7 +68,7 @@ Ordered so each depends only on those before it. Early ones precise; later ones 
 | M6 | Multiclassing | Add levels in additional classes with prerequisite checks, combined spell slots, and multiclass proficiencies. | Not started |
 | M7 | 8-bit avatars | Each character has a pixel-art avatar (approach chosen in Phase 4); shown on sheet and in character list. | Not started |
 | M8 | Polish & party view | DM party view (see all characters), edit/delete own character, error handling, responsive cleanup, optional dice roller. | Not started |
-| M9 | Campaign hub (future) | Session notes, lore, NPCs, house rules — separate later phase of Marches Reload. | Placeholder |
+| M9 | Campaign hub (future) | Session notes, lore, NPCs, house rules — separate later phase of Marches Reloaded. | Placeholder |
 | M10 | Content-authoring UI (future) | In-app editor to *create/edit* content packs (vs. importing a pre-made file at M2b). Nice-to-have polish. | Placeholder |
 
 ## 5. Key Risks / Assumptions

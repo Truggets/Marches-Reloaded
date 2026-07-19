@@ -87,7 +87,7 @@ function App() {
 
   return (
     <div className="flex min-h-screen flex-col items-center justify-center gap-2">
-      <h1 className="text-4xl font-bold">Marches Reload</h1>
+      <h1 className="text-4xl font-bold">Marches Reloaded</h1>
       <p className="text-gray-500">Character builder — under construction</p>
       {user && (
         <div className="mt-4 flex flex-col items-center gap-2">

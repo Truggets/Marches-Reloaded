@@ -2,7 +2,7 @@
   "name": "marches-reload-server",
   "version": "0.1.0",
   "private": true,
-  "description": "Marches Reload API — thin Node/Express JSON server (auth, character CRUD, admin). No game-rules logic lives here.",
+  "description": "Marches Reloaded API — thin Node/Express JSON server (auth, character CRUD, admin). No game-rules logic lives here.",
   "type": "module",
   "main": "src/index.js",
   "scripts": {

@@ -27,7 +27,7 @@ export function LoginPage() {
   return (
     <div className="flex min-h-screen flex-col items-center justify-center gap-6">
       <div className="flex flex-col items-center gap-1">
-        <h1 className="text-4xl font-bold">Marches Reload</h1>
+        <h1 className="text-4xl font-bold">Marches Reloaded</h1>
         <p className="text-gray-500">Log in to continue</p>
       </div>
 

@@ -1,4 +1,4 @@
-// Marches Reload — /api/admin routes: user list, password reset, invites.
+// Marches Reloaded — /api/admin routes: user list, password reset, invites.
 // All routes here require an authenticated admin session.
 
 import crypto from "node:crypto";
