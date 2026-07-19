@@ -53,6 +53,7 @@ export function LevelUpPage() {
   const [asiMode, setAsiMode] = useState<AsiMode>('one-plus-two')
   const [asiAbilityOne, setAsiAbilityOne] = useState<Ability | ''>('')
   const [asiAbilityTwo, setAsiAbilityTwo] = useState<Ability | ''>('')
+  const [grapplerAbility, setGrapplerAbility] = useState<Ability | ''>('')
   const [cantripPicks, setCantripPicks] = useState<string[]>([])
   const [preparedPicks, setPreparedPicks] = useState<string[]>([])
 
@@ -79,6 +80,7 @@ export function LevelUpPage() {
     setAsiMode('one-plus-two')
     setAsiAbilityOne('')
     setAsiAbilityTwo('')
+    setGrapplerAbility('')
     setCantripPicks([])
     setPreparedPicks([])
   }
@@ -229,6 +231,7 @@ export function LevelUpPage() {
   const asiLevel = isAsiLevel(primaryClass.classId, level)
   const selectedFeat = selectedFeatId ? listFeats('General').find((f) => f.id === selectedFeatId) : undefined
   const isAsiFeatSelected = selectedFeatId === 'ability-score-improvement'
+  const isGrapplerFeatSelected = selectedFeatId === 'grappler'
 
   const prevSlots = spellSlots(primaryClass.classId, level - 1)
   const currSlots = spellSlots(primaryClass.classId, level)
@@ -277,7 +280,13 @@ export function LevelUpPage() {
         scoresSoFar[asiAbilityOne as Ability] + 1 <= 20 &&
         scoresSoFar[asiAbilityTwo as Ability] + 1 <= 20
 
-  const featStepDone = !asiLevel || (selectedFeatId !== null && (!isAsiFeatSelected || asiValid))
+  const grapplerValid = grapplerAbility !== '' && scoresSoFar[grapplerAbility as Ability] + 1 <= 20
+
+  const featStepDone =
+    !asiLevel ||
+    (selectedFeatId !== null &&
+      (!isAsiFeatSelected || asiValid) &&
+      (!isGrapplerFeatSelected || grapplerValid))
   const spellStepDone =
     (cantripDelta <= 0 || cantripPicks.length === cantripDelta) &&
     (preparedDelta <= 0 || preparedPicks.length === preparedDelta)
@@ -310,6 +319,8 @@ export function LevelUpPage() {
         asiMode === 'one-plus-two'
           ? [asiAbilityOne as Ability, asiAbilityOne as Ability]
           : [asiAbilityOne as Ability, asiAbilityTwo as Ability]
+    } else if (isGrapplerFeatSelected) {
+      abilityIncreases = [grapplerAbility as Ability]
     }
 
     const entry: LevelUpEntry = {
@@ -425,6 +436,28 @@ export function LevelUpPage() {
                 )}
               </div>
               {!asiValid && <p className="text-sm text-[var(--color-danger)]">Choose valid ability score(s) (max 20).</p>}
+            </div>
+          )}
+
+          {isGrapplerFeatSelected && (
+            <div className="pixel-panel !p-3 flex flex-col gap-2">
+              <p className="pixel-label">Ability Score Increase (Strength or Dexterity)</p>
+              <select
+                className="pixel-input"
+                value={grapplerAbility}
+                onChange={(e) => setGrapplerAbility(e.target.value as Ability)}
+              >
+                <option value="">Choose ability</option>
+                {(['Strength', 'Dexterity'] as Ability[]).map((a) => {
+                  const disabled = scoresSoFar[a] + 1 > 20
+                  return (
+                    <option key={a} value={a} disabled={disabled}>
+                      {a} ({scoresSoFar[a]}){disabled ? ' — at cap' : ''}
+                    </option>
+                  )
+                })}
+              </select>
+              {!grapplerValid && <p className="text-sm text-[var(--color-danger)]">Choose a valid ability score (max 20).</p>}
             </div>
           )}
         </section>
