@@ -29,6 +29,23 @@ for (const c of classes) {
 }
 console.log(totalMissing === 0 ? 'All table-referenced features have matching descriptions.' : `${totalMissing} missing.`)
 
+// Every class must have a non-empty multiclassTraitsGranted string (regression
+// guard: the "As a Multiclass Character" bullet uses "•" for some classes and
+// "-" for others in the source markdown, and a bullet-style-specific regex
+// can silently produce an empty string for whichever style it doesn't match).
+let totalEmptyMulticlass = 0
+for (const c of classes) {
+  if (typeof c.multiclassTraitsGranted !== 'string' || c.multiclassTraitsGranted.trim().length === 0) {
+    totalEmptyMulticlass += 1
+    console.log(`${c.name}: MISSING multiclassTraitsGranted (empty or non-string)`)
+  }
+}
+console.log(
+  totalEmptyMulticlass === 0
+    ? 'All classes have non-empty multiclassTraitsGranted.'
+    : `${totalEmptyMulticlass} classes missing multiclassTraitsGranted.`,
+)
+
 // Spot checks
 function assertEq(label, actual, expected) {
   const ok = JSON.stringify(actual) === JSON.stringify(expected)

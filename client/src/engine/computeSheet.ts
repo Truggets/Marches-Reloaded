@@ -3,7 +3,7 @@
 // no side effects — every function here is a plain, testable transform.
 import { getClass, getSpecies, listEquipment } from '@data'
 import { parseEquipmentOptions } from '../character-wizard/parsing'
-import type { Ability, CharacterData } from '../character-wizard/types'
+import type { Ability, CharacterClassEntry, CharacterData } from '../character-wizard/types'
 
 /** floor((score - 10) / 2). Must use Math.floor (not truncation) so odd
  * scores below 10 round further down, e.g. 7 -> -1.5 -> -2. */
@@ -239,4 +239,167 @@ export function skillBonus(
   if (!ability) throw new Error(`Unknown skill: ${skillName}`)
   const mod = abilityModifier(abilityScores[ability])
   return mod + (skillProficiencies.includes(skillName) ? profBonus : 0)
+}
+
+// ---- M6: multiclassing ----
+// SRD 5.2 "Multiclassing" (character-creation.md): proficiency bonus and
+// spell slots are governed by *combined* levels; HP and ASI/features are
+// governed by *per-class* levels (see functions below for exactly which).
+
+/** Sum of every class's level — "total character level" as used by
+ * proficiency bonus and XP-to-next-level (not by HP or ASI timing). */
+export function totalCharacterLevel(classes: CharacterClassEntry[]): number {
+  return classes.reduce((sum, c) => sum + c.level, 0)
+}
+
+/**
+ * Proficiency bonus is keyed off *total* character level, not any single
+ * class's level (SRD: "based on your total character level"). Any class's
+ * featureTable row for that total level gives the same value — the
+ * progression is universal across all 12 classes (asserted in tests) — so
+ * this just delegates to the single-class `proficiencyBonus` using the
+ * first class as a lookup vehicle and the combined level as the target.
+ */
+export function proficiencyBonusMulticlass(classes: CharacterClassEntry[]): number {
+  if (classes.length === 0) throw new Error('No classes')
+  return proficiencyBonus(classes[0].classId, totalCharacterLevel(classes))
+}
+
+/** floor(dieMax/2)+1, the same fixed-per-level HP formula used by the
+ * single-class `hitPoints`, exposed per-class for the multiclass HP sum. */
+function fixedHpPerLevel(classId: string): number {
+  const classEntry = getClass(classId)
+  if (!classEntry) throw new Error(`Unknown class: ${classId}`)
+  const match = classEntry.hitPointDie.match(/D(\d+)/i)
+  if (!match) throw new Error(`Unparseable hitPointDie for class: ${classId}`)
+  return Math.floor(parseInt(match[1], 10) / 2) + 1
+}
+
+/**
+ * Multiclass HP total. SRD rule: "You gain the level 1 Hit Points for a
+ * class only when your total character level is 1" — i.e. the hit-die-max
+ * bonus applies exactly once, at level 1 of the character's very first
+ * class. Every other level — including level 1 of every class added later
+ * via multiclassing — uses the fixed per-level value. `classes[0]` is
+ * always the original level-1 class (new classes are appended, never
+ * unshifted), so this is safe without tracking an explicit "first class"
+ * flag.
+ */
+export function hitPointsMulticlass(
+  classes: CharacterClassEntry[],
+  conModifier: number,
+  speciesId: string,
+): number {
+  if (classes.length === 0) throw new Error('No classes')
+  const species = getSpecies(speciesId)
+  const isDwarf = species?.name === 'Dwarf'
+  const perLevel = (fixed: number) => Math.max(1, fixed + conModifier) + (isDwarf ? 1 : 0)
+
+  const [first, ...rest] = classes
+  const firstClassEntry = getClass(first.classId)
+  if (!firstClassEntry) throw new Error(`Unknown class: ${first.classId}`)
+  const firstDieMatch = firstClassEntry.hitPointDie.match(/D(\d+)/i)
+  if (!firstDieMatch) throw new Error(`Unparseable hitPointDie for class: ${first.classId}`)
+  const firstDieMax = parseInt(firstDieMatch[1], 10)
+
+  let total = Math.max(1, firstDieMax + conModifier) + (isDwarf ? 1 : 0) // level 1 of the first class
+  for (let lvl = 2; lvl <= first.level; lvl++) {
+    total += perLevel(fixedHpPerLevel(first.classId))
+  }
+  for (const c of rest) {
+    for (let lvl = 1; lvl <= c.level; lvl++) {
+      total += perLevel(fixedHpPerLevel(c.classId))
+    }
+  }
+  return total
+}
+
+const FULL_CASTER_CLASS_IDS = ['bard', 'cleric', 'druid', 'sorcerer', 'wizard']
+const HALF_CASTER_CLASS_IDS = ['paladin', 'ranger']
+
+/**
+ * Combined caster level per SRD: all levels in full-caster classes, plus
+ * half your levels (rounded UP) in Paladin/Ranger. Warlock is deliberately
+ * excluded — its Pact Magic is a wholly separate slot pool (see
+ * `warlockPactMagic`), never folded into this total.
+ */
+export function combinedCasterLevel(classes: CharacterClassEntry[]): number {
+  let level = 0
+  for (const c of classes) {
+    if (FULL_CASTER_CLASS_IDS.includes(c.classId)) {
+      level += c.level
+    } else if (HALF_CASTER_CLASS_IDS.includes(c.classId)) {
+      level += Math.ceil(c.level / 2)
+    }
+  }
+  return level
+}
+
+/**
+ * Combined multiclass spell slots, looked up against the standard
+ * "Multiclass Spellcaster" table — which has the identical shape/values as
+ * any single full-caster's own `spellSlotTable` (verified in tests), so no
+ * separate table is bundled; this reuses Wizard's as the lookup vehicle.
+ * Returns undefined if the combined caster level is 0 (no full/half caster
+ * levels at all).
+ */
+export function combinedSpellSlots(classes: CharacterClassEntry[]): Record<number, number> | undefined {
+  const level = combinedCasterLevel(classes)
+  if (level === 0) return undefined
+  const wizardEntry = getClass('wizard')
+  const row = wizardEntry?.spellSlotTable?.find((r) => r.level === level)
+  return row?.slotsByLevel
+}
+
+/** Warlock Pact Magic slots — always separate from the combined table above,
+ * per SRD ("If you have the Pact Magic feature ... and the Spellcasting
+ * feature, you can use the spell slots you gain from Pact Magic..."
+ * describing two distinct pools). Undefined if the character has no
+ * Warlock levels. */
+export function warlockPactMagic(classes: CharacterClassEntry[]): SpellSlotInfo | undefined {
+  const warlock = classes.find((c) => c.classId === 'warlock')
+  if (!warlock) return undefined
+  return spellSlots('warlock', warlock.level)
+}
+
+/** Splits a class's raw `primaryAbility` string ("Strength", "Strength or
+ * Dexterity", "Dexterity and Wisdom") into the abilities involved and
+ * whether satisfying ANY (or) or ALL (and) of them meets the multiclass
+ * prerequisite. */
+function parsePrimaryAbility(primaryAbility: string): { abilities: Ability[]; mode: 'AND' | 'OR' } {
+  if (primaryAbility.includes(' or ')) {
+    return { abilities: primaryAbility.split(' or ').map((s) => s.trim()) as Ability[], mode: 'OR' }
+  }
+  if (primaryAbility.includes(' and ')) {
+    return { abilities: primaryAbility.split(' and ').map((s) => s.trim()) as Ability[], mode: 'AND' }
+  }
+  return { abilities: [primaryAbility.trim() as Ability], mode: 'AND' }
+}
+
+/**
+ * SRD multiclass prerequisite: to add a new class, ability scores must be
+ * >=13 in the new class's primary ability AND in every current class's
+ * primary ability (compound abilities resolved via `parsePrimaryAbility`).
+ * Levelling a class the character is already in doesn't re-check the
+ * prerequisite (only *adding* a new class does).
+ */
+export function canMulticlassInto(
+  classes: CharacterClassEntry[],
+  abilityScores: Record<Ability, number>,
+  targetClassId: string,
+): boolean {
+  if (classes.some((c) => c.classId === targetClassId)) return true
+
+  const targetClass = getClass(targetClassId)
+  if (!targetClass) return false
+
+  const classIdsToCheck = [...new Set([...classes.map((c) => c.classId), targetClassId])]
+  return classIdsToCheck.every((id) => {
+    const entry = getClass(id)
+    if (!entry) return false
+    const { abilities, mode } = parsePrimaryAbility(entry.primaryAbility)
+    return mode === 'OR'
+      ? abilities.some((a) => abilityScores[a] >= 13)
+      : abilities.every((a) => abilityScores[a] >= 13)
+  })
 }

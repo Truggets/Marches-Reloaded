@@ -51,20 +51,33 @@ export interface AbilityScoresData {
   backgroundIncrease: { plusTwo?: string; plusOne?: string[] }
 }
 
-/** One record per level gained above 1 (M5 leveling). Older saved M3/M4
- * characters won't have this field at all — treat `levelUps` as optional and
- * absent-safe (default to `[]`) everywhere it's read. */
+/** One record per level gained above the character's starting level-1 class
+ * (M5 leveling, M6 multiclassing). Older saved M3/M4 characters won't have
+ * this field at all — treat `levelUps` as optional and absent-safe (default
+ * to `[]`) everywhere it's read. */
 export interface LevelUpEntry {
-  level: number // 2..10
+  // M6: which class this level was taken in. Optional/absent-safe — old M5
+  // saves (and pre-M6 test fixtures) have no classId at all; a missing
+  // classId means "the character's only/first class."
+  classId?: string
+  level: number // 2..10, that class's own level after this entry
   hitPointGain: number // the fixed value used that level (die-average+1, +1 more if Dwarf)
   featChoice?: { featId: string; abilityIncreases?: Ability[] } // only present at ASI-granting levels
   spellsAdded?: { cantrips: string[]; prepared: string[] } // only present for casters at levels where slot/cantrip counts grow
 }
 
+export interface CharacterClassEntry {
+  classId: string
+  level: number
+}
+
 export interface CharacterData {
   speciesId: string
   backgroundId: string
-  classes: [{ classId: string; level: number }]
+  // M6: a real array — first entry is the original level-1 class, later
+  // entries (if any) are added via multiclassing. Every saved character has
+  // at least one entry.
+  classes: CharacterClassEntry[]
   abilityScores: AbilityScoresData
   skillProficiencies: string[]
   equipmentChoice: string

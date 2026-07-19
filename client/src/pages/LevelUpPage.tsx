@@ -1,15 +1,17 @@
 import { useCallback, useEffect, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
-import { getClass, getSpellsByClass, listFeats } from '@data'
-import type { Ability, CharacterData, LevelUpEntry } from '../character-wizard/types'
+import { getClass, getSpellsByClass, listClasses, listFeats } from '@data'
+import type { Ability, CharacterClassEntry, CharacterData, LevelUpEntry } from '../character-wizard/types'
 import { ABILITIES } from '../character-wizard/types'
 import {
   abilityModifier,
+  canMulticlassInto,
   featuresForLevel,
   finalAbilityScores,
-  hitPoints,
+  hitPointsMulticlass,
   isAsiLevel,
   spellSlots,
+  totalCharacterLevel,
 } from '../engine/computeSheet'
 
 interface CharacterRecord {
@@ -31,6 +33,17 @@ async function extractErrorMessage(res: Response): Promise<string> {
   }
 }
 
+/** Replaces (or appends, for a brand-new class) a single class entry's level
+ * within a `classes` array — used to build "before this level" / "after this
+ * level" snapshots for the multiclass HP formula, without disturbing which
+ * entry is `classes[0]` (the original level-1 class, load-bearing for the
+ * "max die only once" rule). */
+function withClassLevel(classes: CharacterClassEntry[], classId: string, level: number): CharacterClassEntry[] {
+  const idx = classes.findIndex((c) => c.classId === classId)
+  if (idx === -1) return [...classes, { classId, level }]
+  return classes.map((c, i) => (i === idx ? { ...c, level } : c))
+}
+
 type AsiMode = 'one-plus-two' | 'two-plus-one'
 
 export function LevelUpPage() {
@@ -41,7 +54,12 @@ export function LevelUpPage() {
   const [error, setError] = useState<string | null>(null)
   const [saving, setSaving] = useState(false)
 
-  // Target level selection (before the stepper starts).
+  // Phase 0: which class this level-up session advances — an existing class
+  // entry, or a brand-new class taken via multiclassing.
+  const [track, setTrack] = useState<{ classId: string; isNewClass: boolean } | null>(null)
+
+  // Target level selection (existing-class path only — a new class always
+  // starts at level 1, so this phase is skipped for it).
   const [targetLevel, setTargetLevel] = useState<number | null>(null)
 
   // Stepper state.
@@ -86,9 +104,7 @@ export function LevelUpPage() {
   }
 
   if (error) {
-    return (
-      <ErrorScreen message={error} id={id} />
-    )
+    return <ErrorScreen message={error} id={id} />
   }
 
   if (!character) {
@@ -100,17 +116,8 @@ export function LevelUpPage() {
   }
 
   const data = character.data
-  const primaryClass = data.classes[0]
-  const classEntry = getClass(primaryClass.classId)
-  const currentCharacterLevel = primaryClass.level
-
-  if (!classEntry) {
-    return <ErrorScreen message={`Unknown class: ${primaryClass.classId}`} id={id} />
-  }
-
-  if (currentCharacterLevel >= 10) {
-    return <ErrorScreen message="This character is already level 10." id={id} />
-  }
+  const totalLevel = totalCharacterLevel(data.classes)
+  const roomLeft = 10 - totalLevel
 
   // Data-so-far, folding in every draft levelUp entry recorded this session,
   // used to compute "current" ability scores for capping ASI picks and to
@@ -122,24 +129,99 @@ export function LevelUpPage() {
   const scoresSoFar = finalAbilityScores(dataSoFar)
   const conModSoFar = abilityModifier(scoresSoFar.Constitution)
 
-  // ---- Phase 1: choose target level ----
+  // ---- Phase 0: choose which class this session advances ----
+  if (track === null) {
+    if (roomLeft <= 0) {
+      return <ErrorScreen message="This character is already level 10." id={id} />
+    }
+
+    const eligibleNewClasses = listClasses().filter(
+      (c) => !data.classes.some((entry) => entry.classId === c.id) && canMulticlassInto(data.classes, scoresSoFar, c.id),
+    )
+
+    return (
+      <PageShell id={id}>
+        <h1 className="pixel-title text-xl">Level Up: {character.name}</h1>
+        <p className="text-sm">Character level {totalLevel} / 10. Choose which class advances.</p>
+
+        <section className="flex flex-col gap-2">
+          <h2 className="pixel-title text-base">Level an existing class</h2>
+          <div className="flex flex-wrap gap-2">
+            {data.classes.map((entry) => {
+              const classEntry = getClass(entry.classId)
+              return (
+                <button
+                  key={entry.classId}
+                  type="button"
+                  className="pixel-btn pixel-btn-secondary"
+                  onClick={() => setTrack({ classId: entry.classId, isNewClass: false })}
+                >
+                  {classEntry?.name ?? entry.classId} (currently {entry.level})
+                </button>
+              )
+            })}
+          </div>
+        </section>
+
+        <section className="flex flex-col gap-2">
+          <h2 className="pixel-title text-base">Multiclass into a new class</h2>
+          {eligibleNewClasses.length === 0 ? (
+            <p className="text-sm italic">
+              No eligible classes — this character doesn't meet the ability-score prerequisite (13 in the new
+              class's primary ability, and in every current class's primary ability) for any class not already
+              held.
+            </p>
+          ) : (
+            <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+              {eligibleNewClasses.map((c) => (
+                <button
+                  key={c.id}
+                  type="button"
+                  className="pixel-btn pixel-btn-secondary"
+                  onClick={() => {
+                    resetLevelChoices()
+                    setTrack({ classId: c.id, isNewClass: true })
+                    setTargetLevel(1)
+                    setCurrentLevel(1)
+                  }}
+                >
+                  {c.name}
+                </button>
+              ))}
+            </div>
+          )}
+        </section>
+      </PageShell>
+    )
+  }
+
+  const { classId, isNewClass } = track
+  const classEntry = getClass(classId)
+  if (!classEntry) {
+    return <ErrorScreen message={`Unknown class: ${classId}`} id={id} />
+  }
+  const existingEntry = data.classes.find((c) => c.classId === classId)
+  const currentClassLevel = existingEntry?.level ?? 0
+  const maxTargetForClass = currentClassLevel + roomLeft
+
+  // ---- Phase 1: choose target level (existing-class path only) ----
   if (currentLevel === null) {
     return (
       <PageShell id={id}>
         <h1 className="pixel-title text-xl">Level Up: {character.name}</h1>
         <p className="text-sm">
-          Currently level {currentCharacterLevel} {classEntry.name}. Choose a target level to level up to.
+          Currently level {currentClassLevel} {classEntry.name}. Choose a target level to level up to.
         </p>
         <div className="flex flex-col gap-2">
           <label className="pixel-label" htmlFor="target-level">
-            Target level (max 10)
+            Target level (max {maxTargetForClass})
           </label>
           <input
             id="target-level"
             type="number"
             className="pixel-input w-32"
-            min={currentCharacterLevel + 1}
-            max={10}
+            min={currentClassLevel + 1}
+            max={maxTargetForClass}
             value={targetLevel ?? ''}
             onChange={(e) => {
               const v = parseInt(e.target.value, 10)
@@ -147,31 +229,37 @@ export function LevelUpPage() {
             }}
           />
         </div>
-        <button
-          type="button"
-          className="pixel-btn w-fit"
-          disabled={
-            targetLevel === null || targetLevel <= currentCharacterLevel || targetLevel > 10
-          }
-          onClick={() => {
-            resetLevelChoices()
-            setCurrentLevel(currentCharacterLevel + 1)
-          }}
-        >
-          Begin Leveling
-        </button>
+        <div className="flex gap-3">
+          <button type="button" className="pixel-btn pixel-btn-secondary w-fit" onClick={() => setTrack(null)}>
+            &larr; Choose a different class
+          </button>
+          <button
+            type="button"
+            className="pixel-btn w-fit"
+            disabled={
+              targetLevel === null || targetLevel <= currentClassLevel || targetLevel > maxTargetForClass
+            }
+            onClick={() => {
+              resetLevelChoices()
+              setCurrentLevel(currentClassLevel + 1)
+            }}
+          >
+            Begin Leveling
+          </button>
+        </div>
       </PageShell>
     )
   }
 
   // ---- Phase 3: stepper finished, show confirm screen ----
   if (targetLevel !== null && currentLevel > targetLevel) {
-    const finalHp = hitPoints(primaryClass.classId, targetLevel, conModSoFar, data.speciesId)
+    const finalClasses = withClassLevel(data.classes, classId, targetLevel)
+    const finalHp = hitPointsMulticlass(finalClasses, conModSoFar, data.speciesId)
     return (
       <PageShell id={id}>
         <h1 className="pixel-title text-xl">Level Up: {character.name}</h1>
         <p className="text-sm">
-          Ready to save {classEntry.name} level {currentCharacterLevel} &rarr; {targetLevel}.
+          Ready to save {classEntry.name} level {currentClassLevel} &rarr; {targetLevel}.
         </p>
         <div className="pixel-panel !p-3 text-sm">
           <p className="pixel-label">Summary</p>
@@ -200,7 +288,7 @@ export function LevelUpPage() {
             try {
               const updatedData: CharacterData = {
                 ...data,
-                classes: [{ classId: primaryClass.classId, level: targetLevel }],
+                classes: finalClasses,
                 levelUps: [...(data.levelUps ?? []), ...draftLevelUps],
               }
               const res = await fetch(`/api/characters/${id}`, {
@@ -227,14 +315,14 @@ export function LevelUpPage() {
 
   // ---- Phase 2: stepping through a level ----
   const level = currentLevel
-  const features = featuresForLevel(primaryClass.classId, level)
-  const asiLevel = isAsiLevel(primaryClass.classId, level)
+  const features = featuresForLevel(classId, level)
+  const asiLevel = isAsiLevel(classId, level)
   const selectedFeat = selectedFeatId ? listFeats('General').find((f) => f.id === selectedFeatId) : undefined
   const isAsiFeatSelected = selectedFeatId === 'ability-score-improvement'
   const isGrapplerFeatSelected = selectedFeatId === 'grappler'
 
-  const prevSlots = spellSlots(primaryClass.classId, level - 1)
-  const currSlots = spellSlots(primaryClass.classId, level)
+  const prevSlots = spellSlots(classId, level - 1)
+  const currSlots = spellSlots(classId, level)
   const isCaster = currSlots !== undefined
   const cantripDelta = isCaster ? currSlots!.cantrips - (prevSlots?.cantrips ?? 0) : 0
   const prevSlotTotal = prevSlots
@@ -253,14 +341,21 @@ export function LevelUpPage() {
       )
     : 0
 
-  const knownCantripsSoFar = [
-    ...(data.spells?.cantrips ?? []),
-    ...draftLevelUps.flatMap((e) => e.spellsAdded?.cantrips ?? []),
-  ]
-  const knownPreparedSoFar = [
-    ...(data.spells?.prepared ?? []),
-    ...draftLevelUps.flatMap((e) => e.spellsAdded?.prepared ?? []),
-  ]
+  // Spells known/prepared so far FOR THIS CLASS specifically — a new class's
+  // spell picks are independent of any other class's spell lists (SRD:
+  // spells prepared are determined per class individually).
+  const knownCantripsSoFar = isNewClass
+    ? []
+    : [
+        ...(data.spells?.cantrips ?? []),
+        ...draftLevelUps.flatMap((e) => e.spellsAdded?.cantrips ?? []),
+      ]
+  const knownPreparedSoFar = isNewClass
+    ? []
+    : [
+        ...(data.spells?.prepared ?? []),
+        ...draftLevelUps.flatMap((e) => e.spellsAdded?.prepared ?? []),
+      ]
 
   const candidateSpells = isCaster ? getSpellsByClass(classEntry.name) : []
   const cantripOptions = candidateSpells.filter(
@@ -309,9 +404,16 @@ export function LevelUpPage() {
   }
 
   function confirmLevel() {
+    // "Before this level" snapshot: for a brand-new class's very first level,
+    // that's simply the character's classes as they stand today (no entry
+    // for this class yet) — the HP formula treats that correctly since
+    // classes[0] (the max-die class) never changes identity.
+    const classesBefore =
+      isNewClass && level === 1 ? dataSoFar.classes : withClassLevel(dataSoFar.classes, classId, level - 1)
+    const classesAfter = withClassLevel(dataSoFar.classes, classId, level)
     const hpGain =
-      hitPoints(primaryClass.classId, level, conModSoFar, data.speciesId) -
-      hitPoints(primaryClass.classId, level - 1, conModSoFar, data.speciesId)
+      hitPointsMulticlass(classesAfter, conModSoFar, data.speciesId) -
+      hitPointsMulticlass(classesBefore, conModSoFar, data.speciesId)
 
     let abilityIncreases: Ability[] | undefined
     if (isAsiFeatSelected) {
@@ -324,6 +426,7 @@ export function LevelUpPage() {
     }
 
     const entry: LevelUpEntry = {
+      classId,
       level,
       hitPointGain: hpGain,
       ...(asiLevel && selectedFeatId
@@ -345,6 +448,13 @@ export function LevelUpPage() {
       <p className="text-sm">
         Stepping to level {level} of {targetLevel} ({classEntry.name})
       </p>
+
+      {isNewClass && level === 1 && classEntry.multiclassTraitsGranted && (
+        <section className="pixel-panel !p-3 text-sm">
+          <p className="pixel-label">Multiclass Proficiencies Gained</p>
+          <p>{classEntry.multiclassTraitsGranted}</p>
+        </section>
+      )}
 
       <section className="flex flex-col gap-2">
         <h2 className="pixel-title text-base">New Features</h2>

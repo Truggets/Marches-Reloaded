@@ -8,11 +8,14 @@ import type { CharacterData } from '../character-wizard/types'
 import {
   abilityModifier,
   armorClass,
+  combinedSpellSlots,
   finalAbilityScores,
-  hitPoints,
-  proficiencyBonus,
+  hitPointsMulticlass,
+  proficiencyBonusMulticlass,
   skillBonus,
   spellSlots,
+  totalCharacterLevel,
+  warlockPactMagic,
 } from '../engine/computeSheet'
 import { WilburCompanion } from '../WilburCompanion'
 
@@ -37,6 +40,28 @@ async function extractErrorMessage(res: Response): Promise<string> {
 
 function formatModifier(mod: number): string {
   return mod >= 0 ? `+${mod}` : `${mod}`
+}
+
+/** Spells known/prepared belong to a single class (SRD: determined per class
+ * individually). The wizard's top-level `data.spells` is always the
+ * original level-1 class's picks; every other class's spells arrive via
+ * `levelUps` entries carrying that class's `classId`. Old M5 saves (and
+ * `levelUps` entries predating M6) have no `classId` at all — treat those as
+ * belonging to the character's first class, same as everywhere else this
+ * absent-safe convention is used. */
+function spellsForClass(data: CharacterData, classId: string): { cantrips: string[]; prepared: string[] } {
+  const isFirstClass = data.classes[0]?.classId === classId
+  const ownLevelUps = (data.levelUps ?? []).filter((lu) => (lu.classId ?? data.classes[0]?.classId) === classId)
+  return {
+    cantrips: [
+      ...(isFirstClass ? data.spells?.cantrips ?? [] : []),
+      ...ownLevelUps.flatMap((lu) => lu.spellsAdded?.cantrips ?? []),
+    ],
+    prepared: [
+      ...(isFirstClass ? data.spells?.prepared ?? [] : []),
+      ...ownLevelUps.flatMap((lu) => lu.spellsAdded?.prepared ?? []),
+    ],
+  }
 }
 
 export function CharacterSheetPage() {
@@ -120,38 +145,38 @@ export function CharacterSheetPage() {
   const data = character.data
   const speciesEntry = getSpecies(data.speciesId)
   const backgroundEntry = getBackground(data.backgroundId)
+  // classes[0] is always the original level-1 class — equipment and armor
+  // proficiency come from it only (multiclassing grants no new equipment).
   const primaryClass = data.classes[0]
   const classEntry = getClass(primaryClass.classId)
+  const level = totalCharacterLevel(data.classes)
 
   const scores = finalAbilityScores(data)
-  const profBonus = classEntry ? proficiencyBonus(primaryClass.classId, primaryClass.level) : 0
+  const profBonus = classEntry ? proficiencyBonusMulticlass(data.classes) : 0
   const conMod = abilityModifier(scores.Constitution)
   const dexMod = abilityModifier(scores.Dexterity)
-  const hp = classEntry
-    ? hitPoints(primaryClass.classId, primaryClass.level, conMod, data.speciesId)
-    : undefined
+  const hp = classEntry ? hitPointsMulticlass(data.classes, conMod, data.speciesId) : undefined
   const ac = classEntry
     ? armorClass(primaryClass.classId, data.equipmentChoice, dexMod)
     : undefined
-  const slots = classEntry ? spellSlots(primaryClass.classId, primaryClass.level) : undefined
-
-  const allCantrips = [
-    ...(data.spells?.cantrips ?? []),
-    ...(data.levelUps ?? []).flatMap((lu) => lu.spellsAdded?.cantrips ?? []),
-  ]
-  const allPreparedSpells = [
-    ...(data.spells?.prepared ?? []),
-    ...(data.levelUps ?? []).flatMap((lu) => lu.spellsAdded?.prepared ?? []),
-  ]
+  // Combined full/half-caster slots (M6) plus Warlock Pact Magic as a wholly
+  // separate pool — never folded together (see engine/computeSheet.ts).
+  const combinedSlots = combinedSpellSlots(data.classes)
+  const pactSlots = warlockPactMagic(data.classes)
+  const totalCantripsKnown = data.classes.reduce(
+    (sum, c) => sum + (spellSlots(c.classId, c.level)?.cantrips ?? 0),
+    0,
+  )
 
   const equipmentOptions = classEntry ? parseEquipmentOptions(classEntry.startingEquipment) : []
   const chosenEquipment = equipmentOptions.find((o) => o.letter === data.equipmentChoice)
 
-  const headerLine = [
-    speciesEntry?.name ?? data.speciesId,
-    backgroundEntry?.name ?? data.backgroundId,
-    `${classEntry?.name ?? primaryClass.classId} ${primaryClass.level}`,
-  ].join(' ')
+  const classLine = data.classes
+    .map((entry) => `${getClass(entry.classId)?.name ?? entry.classId} ${entry.level}`)
+    .join(' / ')
+  const headerLine = [speciesEntry?.name ?? data.speciesId, backgroundEntry?.name ?? data.backgroundId, classLine].join(
+    ' ',
+  )
 
   return (
     <div className="sheet-page flex min-h-screen flex-col items-center gap-6 px-4 py-10">
@@ -160,7 +185,7 @@ export function CharacterSheetPage() {
           &larr; My Characters
         </Link>
         <div className="flex gap-3">
-          {primaryClass.level < 10 && (
+          {level < 10 && (
             <Link to={`/characters/${id}/level-up`} className="pixel-btn">
               Level Up
             </Link>
@@ -204,7 +229,7 @@ export function CharacterSheetPage() {
           <StatBox label="Proficiency Bonus" value={formatModifier(profBonus)} />
           <StatBox label="Hit Points" value={hp !== undefined ? String(hp) : '—'} />
           <StatBox label="Armor Class" value={ac !== undefined ? String(ac) : '—'} />
-          <StatBox label="Level" value={String(primaryClass.level)} />
+          <StatBox label="Level" value={String(level)} />
         </section>
 
         {/* Saving throws */}
@@ -255,41 +280,61 @@ export function CharacterSheetPage() {
         </section>
 
         {/* Spellcasting */}
-        {slots && (
+        {(combinedSlots || pactSlots) && (
           <section>
             <h2 className="pixel-title text-base mb-2">Spellcasting</h2>
             <p className="text-sm mb-2">
-              Cantrips known: {slots.cantrips}
-              {Object.keys(slots.slotsByLevel).length > 0 && (
+              Cantrips known: {totalCantripsKnown}
+              {combinedSlots && Object.keys(combinedSlots).length > 0 && (
                 <>
                   {' — '}
                   Slots:{' '}
-                  {Object.entries(slots.slotsByLevel)
+                  {Object.entries(combinedSlots)
                     .map(([lvl, count]) => `L${lvl}: ${count}`)
                     .join(', ')}
                 </>
               )}
             </p>
-            {data.spells && (
-              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                <div>
-                  <p className="pixel-label">Cantrips</p>
-                  <ul className="text-sm list-disc list-inside">
-                    {allCantrips.map((id) => (
-                      <li key={id}>{getSpell(id)?.name ?? id}</li>
-                    ))}
-                  </ul>
-                </div>
-                <div>
-                  <p className="pixel-label">Prepared Spells</p>
-                  <ul className="text-sm list-disc list-inside">
-                    {allPreparedSpells.map((id) => (
-                      <li key={id}>{getSpell(id)?.name ?? id}</li>
-                    ))}
-                  </ul>
-                </div>
-              </div>
+            {pactSlots && (
+              <p className="text-sm mb-2">
+                Pact Magic (Warlock, separate pool): {pactSlots.cantrips} cantrips —{' '}
+                {Object.entries(pactSlots.slotsByLevel)
+                  .map(([lvl, count]) => `L${lvl}: ${count}`)
+                  .join(', ')}
+              </p>
             )}
+
+            {/* Per-class spell lists — SRD: spells prepared/known are
+                determined per class individually, so each caster class gets
+                its own list rather than one merged pool. */}
+            <div className="flex flex-col gap-4">
+              {data.classes
+                .filter((c) => spellSlots(c.classId, c.level) !== undefined)
+                .map((c) => {
+                  const { cantrips, prepared } = spellsForClass(data, c.classId)
+                  if (cantrips.length === 0 && prepared.length === 0) return null
+                  return (
+                    <div key={c.classId} className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                      <div>
+                        <p className="pixel-label">{getClass(c.classId)?.name ?? c.classId} Cantrips</p>
+                        <ul className="text-sm list-disc list-inside">
+                          {cantrips.map((id) => (
+                            <li key={id}>{getSpell(id)?.name ?? id}</li>
+                          ))}
+                        </ul>
+                      </div>
+                      <div>
+                        <p className="pixel-label">{getClass(c.classId)?.name ?? c.classId} Prepared Spells</p>
+                        <ul className="text-sm list-disc list-inside">
+                          {prepared.map((id) => (
+                            <li key={id}>{getSpell(id)?.name ?? id}</li>
+                          ))}
+                        </ul>
+                      </div>
+                    </div>
+                  )
+                })}
+            </div>
           </section>
         )}
 

@@ -35,7 +35,10 @@ function parseCoreTraits(sectionHtml) {
 }
 
 function parseMulticlassTraits(sectionText) {
-  const m = sectionText.match(/#### As a Multiclass Character\s*\n\s*\n•\s*(.*?)(?:\n•|\n####|$)/s)
+  // Bullet style varies by class in the source markdown: Barbarian/Bard/Druid/
+  // Paladin/Wizard use the Unicode bullet "•", while Fighter/Cleric/Monk/
+  // Ranger/Rogue/Sorcerer/Warlock use a plain hyphen "-". Match either.
+  const m = sectionText.match(/#### As a Multiclass Character\s*\n\s*\n[•-]\s*(.*?)(?:\n[•-]|\n####|$)/s)
   return m ? m[1].trim().replace(/\s+/g, ' ') : ''
 }
 
