@@ -319,20 +319,25 @@ const HALF_CASTER_CLASS_IDS = ['paladin', 'ranger']
 
 /**
  * Combined caster level per SRD: all levels in full-caster classes, plus
- * half your levels (rounded UP) in Paladin/Ranger. Warlock is deliberately
- * excluded — its Pact Magic is a wholly separate slot pool (see
- * `warlockPactMagic`), never folded into this total.
+ * half your COMBINED levels in Paladin/Ranger (rounded UP once, after
+ * summing) — the SRD phrasing "half your levels ... in the Paladin and
+ * Ranger classes" refers to the total of both, not each rounded
+ * independently. This matters when a character has levels in BOTH:
+ * Paladin 1 / Ranger 1 must be half of 2 = 1, not ceil(1/2)+ceil(1/2) = 2.
+ * Warlock is deliberately excluded — its Pact Magic is a wholly separate
+ * slot pool (see `warlockPactMagic`), never folded into this total.
  */
 export function combinedCasterLevel(classes: CharacterClassEntry[]): number {
-  let level = 0
+  let fullLevels = 0
+  let halfLevels = 0
   for (const c of classes) {
     if (FULL_CASTER_CLASS_IDS.includes(c.classId)) {
-      level += c.level
+      fullLevels += c.level
     } else if (HALF_CASTER_CLASS_IDS.includes(c.classId)) {
-      level += Math.ceil(c.level / 2)
+      halfLevels += c.level
     }
   }
-  return level
+  return fullLevels + Math.ceil(halfLevels / 2)
 }
 
 /**

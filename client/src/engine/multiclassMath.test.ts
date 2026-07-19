@@ -84,6 +84,16 @@ describe('combinedCasterLevel / combinedSpellSlots', () => {
     expect(combinedCasterLevel([{ classId: 'ranger', level: 1 }])).toBe(1)
   })
 
+  it('sums BOTH half-caster classes before halving, not each rounded independently', () => {
+    // Paladin 1 / Ranger 1: half of the COMBINED 2 levels = 1, not
+    // ceil(1/2) + ceil(1/2) = 2 (which would double-round and overstate it).
+    const classes: CharacterClassEntry[] = [
+      { classId: 'paladin', level: 1 },
+      { classId: 'ranger', level: 1 },
+    ]
+    expect(combinedCasterLevel(classes)).toBe(1)
+  })
+
   it('matches the SRD worked example: level 4 Ranger / level 3 Sorcerer = combined level 5', () => {
     const classes: CharacterClassEntry[] = [
       { classId: 'ranger', level: 4 },
