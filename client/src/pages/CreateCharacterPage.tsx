@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { getBackground, getClass, getSpecies } from '@data'
+import { getBackground, getClass, getFeat, getSpecies, getSpell, listFeats } from '@data'
 import { StepClass } from '../character-wizard/steps/StepClass'
 import { StepOrigin } from '../character-wizard/steps/StepOrigin'
 import { StepAbilities } from '../character-wizard/steps/StepAbilities'
@@ -15,9 +15,20 @@ import { WilburCompanion } from '../WilburCompanion'
 import { WilburTip } from '../WilburTip'
 import type { ClassEntry, BackgroundEntry, SpeciesEntry } from '@data/schema'
 
+/** Background.feat is a display string like "Magic Initiate (Wizard)" — the
+ * parenthetical is a player sub-choice, not part of the feat's own name in
+ * feats.json — so strip it before matching against the feat data. */
+function findFeatByBackgroundFeatText(featText: string) {
+  const bareName = featText.replace(/\s*\(.*\)\s*$/, '').trim()
+  return listFeats().find((f) => f.name === bareName)
+}
+
 /** Basic building advice per wizard step, computed from whatever's already
  * selected — deliberately simple/static rather than deep per-trait content,
- * since the goal is quick orientation, not a full strategy guide. */
+ * since the goal is quick orientation, not a full strategy guide. Where the
+ * player has just picked a specific feat/spell, describe THAT one (its real
+ * benefit/description text) rather than only naming it, so they know what it
+ * actually does. */
 function wilburTipFor(
   step: string,
   classEntry: ClassEntry | undefined,
@@ -26,6 +37,8 @@ function wilburTipFor(
   hasSkillfulTrait: boolean,
   hasVersatileTrait: boolean,
   isCaster: boolean,
+  originFeatId: string | null,
+  lastSpellId: string | null,
 ): string {
   switch (step) {
     case 'class':
@@ -41,6 +54,8 @@ function wilburTipFor(
         const skillText = (backgroundEntry.skillProficiencies ?? []).join(' and ')
         const featText = backgroundEntry.feat ? `, plus the ${backgroundEntry.feat} feat` : ''
         parts.push(`${backgroundEntry.name} grants proficiency in ${skillText}${featText}.`)
+        const feat = backgroundEntry.feat ? findFeatByBackgroundFeatText(backgroundEntry.feat) : undefined
+        if (feat) parts.push(feat.benefit)
       }
       return parts.length > 0
         ? parts.join(' ')
@@ -52,18 +67,24 @@ function wilburTipFor(
         : 'Assign your highest scores to whichever abilities matter most for your class.'
     case 'skills':
       return 'Skills marked "(bg)" are already granted by your background — choosing a different skill here means broader coverage instead of a wasted pick.'
-    case 'speciesBonus':
+    case 'speciesBonus': {
+      const feat = originFeatId ? getFeat(originFeatId) : undefined
+      if (feat) return `${feat.name}: ${feat.benefit}`
       return hasSkillfulTrait && hasVersatileTrait
         ? 'Skillful lets you pick any one skill; Versatile lets you pick any Origin feat. Skilled is a solid all-purpose feat pick if you\'re unsure.'
         : hasSkillfulTrait
           ? 'Pick a skill you don\'t already have for the broadest coverage.'
           : 'Skilled is a solid all-purpose Origin feat pick if you\'re unsure — it grants proficiency in any 3 skills or tools.'
+    }
     case 'equipment':
       return 'Option A gets you fighting-ready gear immediately; Option B trades that for gold to buy exactly what you want later.'
-    case 'spells':
+    case 'spells': {
+      const spell = lastSpellId ? getSpell(lastSpellId) : undefined
+      if (spell) return `${spell.name} (Level ${spell.level}): ${spell.description}`
       return isCaster && classEntry
         ? `${classEntry.name} casters benefit from a mix of damage, utility, and defensive spells — try not to pick only one type.`
         : 'Pick a mix of damage, utility, and defensive spells rather than all one type.'
+    }
     case 'name':
       return "Give your character a name that fits their species and background!"
     default:
@@ -93,6 +114,7 @@ export function CreateCharacterPage() {
   const [equipmentChoice, setEquipmentChoice] = useState<string | null>(null)
   const [spellCantrips, setSpellCantrips] = useState<string[]>([])
   const [spellPrepared, setSpellPrepared] = useState<string[]>([])
+  const [lastSpellId, setLastSpellId] = useState<string | null>(null)
   const [name, setName] = useState('')
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -219,6 +241,8 @@ export function CreateCharacterPage() {
             hasSkillfulTrait,
             hasVersatileTrait,
             isCaster,
+            originFeatId,
+            lastSpellId,
           )}
         />
       </div>
@@ -279,8 +303,16 @@ export function CreateCharacterPage() {
             preparedCount={casterCounts.preparedOrKnown}
             cantrips={spellCantrips}
             prepared={spellPrepared}
-            onChangeCantrips={setSpellCantrips}
-            onChangePrepared={setSpellPrepared}
+            onChangeCantrips={(ids) => {
+              const added = ids.find((id) => !spellCantrips.includes(id))
+              if (added) setLastSpellId(added)
+              setSpellCantrips(ids)
+            }}
+            onChangePrepared={(ids) => {
+              const added = ids.find((id) => !spellPrepared.includes(id))
+              if (added) setLastSpellId(added)
+              setSpellPrepared(ids)
+            }}
           />
         )}
 
