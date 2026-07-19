@@ -48,8 +48,12 @@ sleep 1
 systemctl is-active --quiet marches-reload && echo "Service is active." || { echo "Service failed to start!" >&2; exit 1; }
 
 # Prune old releases, keeping the most recent N (current release is always kept).
+# Sort by directory NAME (timestamp-prefixed, so lexicographic order == chronological
+# order), not mtime: `rsync -a` from the shared $REPO_DIR working copy preserves each
+# release directory's mtime from that source, so release dirs can end up with
+# identical/stale mtimes and `ls -t` can't reliably tell newest from oldest.
 cd "$APP_ROOT/releases"
-ls -1t | tail -n +$((KEEP_RELEASES + 1)) | while read -r old; do
+ls -1 | sort -r | tail -n +$((KEEP_RELEASES + 1)) | while read -r old; do
   echo "Pruning old release: $old"
   rm -rf "$old"
 done

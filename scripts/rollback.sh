@@ -12,13 +12,19 @@ CURRENT_TARGET=$(readlink -f "$APP_ROOT/current" | xargs basename)
 if [ -n "${1:-}" ]; then
   TARGET="$1"
 else
-  TARGET=$(ls -1t | grep -v "^${CURRENT_TARGET}\$" | head -n 1)
+  # Sort by directory NAME (timestamp-prefixed => lexicographic order ==
+  # chronological order), not mtime: `rsync -a` in deploy.sh preserves each
+  # release's mtime from the shared $REPO_DIR working copy, so release dirs
+  # can end up with identical/stale mtimes and `ls -t` can't reliably tell
+  # newest from oldest (this is exactly what caused a bad rollback target
+  # once already).
+  TARGET=$(ls -1 | sort -r | grep -v "^${CURRENT_TARGET}\$" | head -n 1)
 fi
 
 if [ -z "$TARGET" ] || [ ! -d "$APP_ROOT/releases/$TARGET" ]; then
   echo "Could not find a release to roll back to (target: '${TARGET:-none}')." >&2
   echo "Available releases:" >&2
-  ls -1t >&2
+  ls -1 | sort -r >&2
   exit 1
 fi
 
