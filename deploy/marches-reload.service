@@ -7,6 +7,7 @@ Type=simple
 User=marches
 Group=marches
 WorkingDirectory=/opt/marches-reload/current/server
+Environment=APP_ROOT=/opt/marches-reload
 ExecStart=/usr/bin/node src/index.js
 Restart=on-failure
 RestartSec=3

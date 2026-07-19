@@ -30,6 +30,7 @@ rsync -a --exclude='.git' "$REPO_DIR/" "$RELEASE_DIR/"
 
 cd "$RELEASE_DIR/server"
 npm ci --omit=dev
+APP_ROOT="$APP_ROOT" node src/db/migrate.js
 
 cd "$RELEASE_DIR/client"
 npm ci
@@ -37,6 +38,7 @@ npm run build
 
 cd "$RELEASE_DIR"
 chown -R marches:marches "$RELEASE_DIR"
+chown -R marches:marches "$APP_ROOT/shared"
 
 ln -sfn "$RELEASE_DIR" "$APP_ROOT/current"
 echo "$RELEASE_NAME $(date -u -Iseconds)" >> "$APP_ROOT/RELEASES.md"
