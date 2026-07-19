@@ -1,6 +1,7 @@
 import { useState, type FormEvent } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useAuth } from '../auth/AuthContext'
+import { WilburCompanion } from '../WilburCompanion'
 
 export function RegisterPage() {
   const { register } = useAuth()
@@ -26,18 +27,15 @@ export function RegisterPage() {
   }
 
   return (
-    <div className="flex min-h-screen flex-col items-center justify-center gap-6">
-      <div className="flex flex-col items-center gap-1">
-        <h1 className="text-4xl font-bold">Marches Reloaded</h1>
-        <p className="text-gray-500">Create an account</p>
+    <div className="flex min-h-screen flex-col items-center justify-center gap-6 px-4">
+      <div className="flex flex-col items-center gap-2">
+        <h1 className="pixel-title text-2xl">Marches Reloaded</h1>
+        <p className="italic text-[var(--color-shadow)]/70">Create an account</p>
       </div>
 
-      <form
-        onSubmit={handleSubmit}
-        className="flex w-full max-w-sm flex-col gap-4 rounded-lg border border-gray-200 p-6 shadow-sm"
-      >
+      <form onSubmit={handleSubmit} className="pixel-panel flex w-full max-w-sm flex-col gap-4">
         <div className="flex flex-col gap-1">
-          <label htmlFor="username" className="text-sm font-medium text-gray-700">
+          <label htmlFor="username" className="pixel-label">
             Username
           </label>
           <input
@@ -48,12 +46,12 @@ export function RegisterPage() {
             required
             value={username}
             onChange={(e) => setUsername(e.target.value)}
-            className="rounded border border-gray-300 px-3 py-2 focus:border-gray-500 focus:outline-none"
+            className="pixel-input"
           />
         </div>
 
         <div className="flex flex-col gap-1">
-          <label htmlFor="password" className="text-sm font-medium text-gray-700">
+          <label htmlFor="password" className="pixel-label">
             Password
           </label>
           <input
@@ -64,12 +62,12 @@ export function RegisterPage() {
             required
             value={password}
             onChange={(e) => setPassword(e.target.value)}
-            className="rounded border border-gray-300 px-3 py-2 focus:border-gray-500 focus:outline-none"
+            className="pixel-input"
           />
         </div>
 
         <div className="flex flex-col gap-1">
-          <label htmlFor="inviteCode" className="text-sm font-medium text-gray-700">
+          <label htmlFor="inviteCode" className="pixel-label">
             Invite code
           </label>
           <input
@@ -80,27 +78,22 @@ export function RegisterPage() {
             required
             value={inviteCode}
             onChange={(e) => setInviteCode(e.target.value)}
-            className="rounded border border-gray-300 px-3 py-2 focus:border-gray-500 focus:outline-none"
+            className="pixel-input"
           />
         </div>
 
-        {error && <p className="text-sm text-red-600">{error}</p>}
+        {error && <p className="text-sm text-[var(--color-danger)]">{error}</p>}
 
-        <button
-          type="submit"
-          disabled={submitting}
-          className="rounded bg-gray-900 px-4 py-2 font-medium text-white disabled:opacity-50"
-        >
+        <button type="submit" disabled={submitting} className="pixel-btn">
           {submitting ? 'Registering…' : 'Register'}
         </button>
 
-        <p className="text-center text-sm text-gray-500">
-          Already have an account?{' '}
-          <Link to="/login" className="font-medium text-gray-900 underline">
-            Log in
-          </Link>
+        <p className="text-center text-sm">
+          Already have an account? <Link to="/login" className="pixel-link">Log in</Link>
         </p>
       </form>
+
+      <WilburCompanion />
     </div>
   )
 }

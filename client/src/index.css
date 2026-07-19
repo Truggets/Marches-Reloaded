@@ -1,1 +1,192 @@
 @import "tailwindcss";
+@import "@fontsource/press-start-2p";
+@import "@fontsource/im-fell-english";
+@import "@fontsource/im-fell-english/400-italic.css";
+
+/*
+ * Marches Reloaded — visual theme.
+ * 8-bit fantasy-scroll, styled after Netheril (Truman's campaign setting):
+ * an ancient arcane empire — parchment and old leather, ink and antique
+ * gold, arcane violet/blue spellglow. Pixel-chrome (thick zero-radius
+ * borders, corner rivets, stepped press states) carries the "8-bit" brief;
+ * the parchment/serif carries the "fantasy scroll" half.
+ */
+@theme {
+  --color-parchment: #ecdcac;
+  --color-parchment-deep: #cead74;
+  --color-ink: #2a1b0f;
+  --color-arcane: #6b4fa0;
+  --color-arcane-glow: #9c85cf;
+  --color-gold: #b4893d;
+  --color-shadow: #241708;
+  --color-danger: #7a2a22;
+
+  --font-pixel: "Press Start 2P", ui-monospace, monospace;
+  --font-scroll: "IM Fell English", ui-serif, Georgia, serif;
+}
+
+html,
+body {
+  height: 100%;
+}
+
+body {
+  background-color: var(--color-parchment-deep);
+  background-image:
+    radial-gradient(circle at 1px 1px, rgba(36, 23, 8, 0.12) 1px, transparent 0),
+    radial-gradient(circle at 13px 13px, rgba(36, 23, 8, 0.06) 1px, transparent 0);
+  background-size: 24px 24px;
+  color: var(--color-ink);
+  font-family: var(--font-scroll);
+}
+
+/* Retro chrome: no rounded corners anywhere, pixels don't round. */
+.pixel-panel,
+.pixel-btn,
+.pixel-input,
+.pixel-frame {
+  border-radius: 0;
+}
+
+.pixel-panel {
+  position: relative;
+  background-color: var(--color-parchment);
+  border: 4px solid var(--color-shadow);
+  box-shadow: inset 0 0 0 3px var(--color-gold);
+  padding: 1.75rem;
+}
+
+.pixel-panel::before,
+.pixel-panel::after {
+  content: "";
+  position: absolute;
+  width: 6px;
+  height: 6px;
+  background-color: var(--color-gold);
+}
+.pixel-panel::before {
+  top: 6px;
+  left: 6px;
+}
+.pixel-panel::after {
+  top: 6px;
+  right: 6px;
+}
+
+.pixel-title {
+  font-family: var(--font-pixel);
+  color: var(--color-shadow);
+  text-shadow: 2px 2px 0 var(--color-gold);
+  letter-spacing: 0.02em;
+  line-height: 1.6;
+}
+
+.pixel-label {
+  font-family: var(--font-pixel);
+  font-size: 0.65rem;
+  letter-spacing: 0.04em;
+  color: var(--color-shadow);
+  text-transform: uppercase;
+}
+
+.pixel-input {
+  background-color: var(--color-parchment-deep);
+  border: 3px solid var(--color-shadow);
+  box-shadow: inset 2px 2px 0 rgba(36, 23, 8, 0.25);
+  color: var(--color-ink);
+  font-family: var(--font-scroll);
+  font-size: 1.05rem;
+  padding: 0.5rem 0.65rem;
+}
+.pixel-input:focus {
+  outline: none;
+  box-shadow:
+    inset 2px 2px 0 rgba(36, 23, 8, 0.25),
+    0 0 0 3px var(--color-arcane-glow);
+}
+
+.pixel-btn {
+  font-family: var(--font-pixel);
+  font-size: 0.7rem;
+  letter-spacing: 0.03em;
+  color: var(--color-parchment);
+  background-color: var(--color-arcane);
+  border: 3px solid var(--color-shadow);
+  box-shadow: 3px 3px 0 var(--color-shadow);
+  padding: 0.65rem 1rem;
+  transition: transform 0.05s ease, box-shadow 0.05s ease;
+}
+.pixel-btn:hover:not(:disabled) {
+  background-color: var(--color-arcane-glow);
+}
+.pixel-btn:active:not(:disabled) {
+  transform: translate(3px, 3px);
+  box-shadow: 0 0 0 var(--color-shadow);
+}
+.pixel-btn:disabled {
+  opacity: 0.6;
+}
+.pixel-btn:focus-visible {
+  outline: 3px solid var(--color-gold);
+  outline-offset: 2px;
+}
+
+.pixel-btn-secondary {
+  background-color: var(--color-parchment);
+  color: var(--color-shadow);
+}
+.pixel-btn-secondary:hover:not(:disabled) {
+  background-color: var(--color-parchment-deep);
+}
+
+.pixel-link {
+  color: var(--color-arcane);
+  font-weight: 600;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+.pixel-link:hover {
+  color: var(--color-shadow);
+}
+
+/* Wilbur — the ever-present familiar, bottom-right on every page. */
+.pixel-frame {
+  border: 3px solid var(--color-shadow);
+  box-shadow: inset 0 0 0 2px var(--color-gold);
+  background-color: var(--color-parchment);
+  image-rendering: pixelated;
+}
+
+.wilbur-companion {
+  position: fixed;
+  right: 1rem;
+  bottom: 1rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.25rem;
+  z-index: 50;
+}
+
+.wilbur-companion img {
+  width: 64px;
+  height: 64px;
+  image-rendering: pixelated;
+  animation: wilbur-idle 1.6s steps(2) infinite;
+}
+
+@keyframes wilbur-idle {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-3px);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .wilbur-companion img {
+    animation: none;
+  }
+}

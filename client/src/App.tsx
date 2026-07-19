@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { useAuth } from './auth/AuthContext'
+import { WilburCompanion } from './WilburCompanion'
 
 function ChangePasswordForm({ onDone }: { onDone: () => void }) {
   const { changePassword } = useAuth()
@@ -23,13 +24,9 @@ function ChangePasswordForm({ onDone }: { onDone: () => void }) {
 
   if (success) {
     return (
-      <div className="mt-2 flex flex-col items-center gap-2 text-sm">
-        <p className="text-green-700">Password changed.</p>
-        <button
-          type="button"
-          onClick={onDone}
-          className="text-gray-500 underline hover:text-gray-700"
-        >
+      <div className="pixel-panel mt-2 flex flex-col items-center gap-2 text-sm">
+        <p className="text-[var(--color-arcane)]">Password changed.</p>
+        <button type="button" onClick={onDone} className="pixel-link text-sm">
           Close
         </button>
       </div>
@@ -39,41 +36,34 @@ function ChangePasswordForm({ onDone }: { onDone: () => void }) {
   return (
     <form
       onSubmit={(e) => void handleSubmit(e)}
-      className="mt-2 flex w-64 flex-col gap-2 rounded border border-gray-200 p-3"
+      className="pixel-panel mt-2 flex w-72 flex-col gap-3"
     >
-      <label className="flex flex-col gap-1 text-sm">
-        Current password
+      <label className="flex flex-col gap-1">
+        <span className="pixel-label">Current password</span>
         <input
           type="password"
           required
           value={currentPassword}
           onChange={(e) => setCurrentPassword(e.target.value)}
-          className="rounded border border-gray-300 px-2 py-1"
+          className="pixel-input"
         />
       </label>
-      <label className="flex flex-col gap-1 text-sm">
-        New password
+      <label className="flex flex-col gap-1">
+        <span className="pixel-label">New password</span>
         <input
           type="password"
           required
           value={newPassword}
           onChange={(e) => setNewPassword(e.target.value)}
-          className="rounded border border-gray-300 px-2 py-1"
+          className="pixel-input"
         />
       </label>
-      {error && <p className="text-sm text-red-600">{error}</p>}
+      {error && <p className="text-sm text-[var(--color-danger)]">{error}</p>}
       <div className="flex gap-2">
-        <button
-          type="submit"
-          className="rounded bg-gray-900 px-3 py-1.5 text-sm font-medium text-white hover:bg-gray-700"
-        >
+        <button type="submit" className="pixel-btn">
           Save
         </button>
-        <button
-          type="button"
-          onClick={onDone}
-          className="rounded border border-gray-300 px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-50"
-        >
+        <button type="button" onClick={onDone} className="pixel-btn pixel-btn-secondary">
           Cancel
         </button>
       </div>
@@ -86,27 +76,23 @@ function App() {
   const [showChangePassword, setShowChangePassword] = useState(false)
 
   return (
-    <div className="flex min-h-screen flex-col items-center justify-center gap-2">
-      <h1 className="text-4xl font-bold">Marches Reloaded</h1>
-      <p className="text-gray-500">Character builder — under construction</p>
+    <div className="flex min-h-screen flex-col items-center justify-center gap-3 px-4">
+      <h1 className="pixel-title text-3xl">Marches Reloaded</h1>
+      <p className="italic text-[var(--color-shadow)]/70">Character builder — under construction</p>
       {user && (
-        <div className="mt-4 flex flex-col items-center gap-2">
-          <p className="text-sm text-gray-500">
-            Logged in as <span className="font-medium text-gray-900">{user.username}</span>
+        <div className="mt-4 flex flex-col items-center gap-3">
+          <p className="text-sm">
+            Logged in as <span className="font-semibold">{user.username}</span>
           </p>
           <div className="flex gap-2">
             <button
               type="button"
               onClick={() => setShowChangePassword((v) => !v)}
-              className="rounded border border-gray-300 px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-50"
+              className="pixel-btn pixel-btn-secondary"
             >
               Change password
             </button>
-            <button
-              type="button"
-              onClick={() => void logout()}
-              className="rounded border border-gray-300 px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-50"
-            >
+            <button type="button" onClick={() => void logout()} className="pixel-btn pixel-btn-secondary">
               Log out
             </button>
           </div>
@@ -115,6 +101,7 @@ function App() {
           )}
         </div>
       )}
+      <WilburCompanion />
     </div>
   )
 }
