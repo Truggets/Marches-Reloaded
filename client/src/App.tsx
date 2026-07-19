@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { useAuth } from './auth/AuthContext'
 import { WilburCompanion } from './WilburCompanion'
+import { AdminInvites } from './AdminInvites'
 
 function ChangePasswordForm({ onDone }: { onDone: () => void }) {
   const { changePassword } = useAuth()
@@ -74,6 +75,7 @@ function ChangePasswordForm({ onDone }: { onDone: () => void }) {
 function App() {
   const { user, logout } = useAuth()
   const [showChangePassword, setShowChangePassword] = useState(false)
+  const [showInvites, setShowInvites] = useState(false)
 
   return (
     <div className="flex min-h-screen flex-col items-center justify-center gap-3 px-4">
@@ -95,10 +97,20 @@ function App() {
             <button type="button" onClick={() => void logout()} className="pixel-btn pixel-btn-secondary">
               Log out
             </button>
+            {user.isAdmin && (
+              <button
+                type="button"
+                onClick={() => setShowInvites((v) => !v)}
+                className="pixel-btn pixel-btn-secondary"
+              >
+                Invite codes
+              </button>
+            )}
           </div>
           {showChangePassword && (
             <ChangePasswordForm onDone={() => setShowChangePassword(false)} />
           )}
+          {showInvites && user.isAdmin && <AdminInvites />}
         </div>
       )}
       <WilburCompanion />
