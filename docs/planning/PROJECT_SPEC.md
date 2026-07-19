@@ -58,7 +58,7 @@ Ordered so each depends only on those before it. Early ones precise; later ones 
 
 | # | Milestone | What "done" looks like | Status |
 |---|---|---|---|
-| M0 | Skeleton + deploy | Empty app builds and serves at the target URL on the VPS via the git-deploy pipeline; TLS working. | Not started |
+| M0 | Skeleton + deploy | Empty app builds and serves at the target URL on the VPS via the git-deploy pipeline; TLS working. | **Done** (2026-07-19) — live at https://marches.therinkinc.com, `/api/health` returns 200 via Caddy reverse proxy, TLS auto-provisioned. |
 | M1 | Accounts & login | Invite-gated register, log in/out, hashed passwords (no email), DM/admin role, admin password reset. | Not started |
 | M2 | Content-driven data engine + SRD 5.2 pack | Engine reads all content (species, classes/subclasses, backgrounds, feats, spells, equipment) from a **content-pack format**; **SRD 5.2 ships as the default pack**; data is queryable and pack-scoped. This is now core architecture, not a late add-on. | Not started |
 | M2b | Content-pack import (admin) | Admin/DM can import an additional content pack into their instance (validated against the pack schema) so the group can use content it owns; characters record which pack each choice came from. | Not started |
