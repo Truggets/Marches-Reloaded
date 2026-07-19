@@ -12,6 +12,64 @@ import { StepName } from '../character-wizard/steps/StepName'
 import { getCasterCounts } from '../character-wizard/parsing'
 import type { AbilityScoresData, CharacterData } from '../character-wizard/types'
 import { WilburCompanion } from '../WilburCompanion'
+import { WilburTip } from '../WilburTip'
+import type { ClassEntry, BackgroundEntry, SpeciesEntry } from '@data/schema'
+
+/** Basic building advice per wizard step, computed from whatever's already
+ * selected — deliberately simple/static rather than deep per-trait content,
+ * since the goal is quick orientation, not a full strategy guide. */
+function wilburTipFor(
+  step: string,
+  classEntry: ClassEntry | undefined,
+  speciesEntry: SpeciesEntry | undefined,
+  backgroundEntry: BackgroundEntry | undefined,
+  hasSkillfulTrait: boolean,
+  hasVersatileTrait: boolean,
+  isCaster: boolean,
+): string {
+  switch (step) {
+    case 'class':
+      return classEntry
+        ? `${classEntry.name}'s primary ability is ${classEntry.primaryAbility}. Consider giving it your highest score.`
+        : 'Every class has a primary ability that matters most for attacks, saves, or spellcasting — pick one that fits how you want to play.'
+    case 'origin': {
+      const parts: string[] = []
+      if (speciesEntry) {
+        parts.push(`${speciesEntry.name} grants: ${speciesEntry.traits.map((t) => t.name).join(', ')}.`)
+      }
+      if (backgroundEntry) {
+        const skillText = (backgroundEntry.skillProficiencies ?? []).join(' and ')
+        const featText = backgroundEntry.feat ? `, plus the ${backgroundEntry.feat} feat` : ''
+        parts.push(`${backgroundEntry.name} grants proficiency in ${skillText}${featText}.`)
+      }
+      return parts.length > 0
+        ? parts.join(' ')
+        : 'Species shapes traits like Darkvision or bonus feats; Background grants free skill proficiencies and sometimes a bonus feat.'
+    }
+    case 'abilities':
+      return classEntry
+        ? `Since you're playing a ${classEntry.name}, aim to put your highest roll into ${classEntry.primaryAbility}.`
+        : 'Assign your highest scores to whichever abilities matter most for your class.'
+    case 'skills':
+      return 'Skills marked "(bg)" are already granted by your background — choosing a different skill here means broader coverage instead of a wasted pick.'
+    case 'speciesBonus':
+      return hasSkillfulTrait && hasVersatileTrait
+        ? 'Skillful lets you pick any one skill; Versatile lets you pick any Origin feat. Skilled is a solid all-purpose feat pick if you\'re unsure.'
+        : hasSkillfulTrait
+          ? 'Pick a skill you don\'t already have for the broadest coverage.'
+          : 'Skilled is a solid all-purpose Origin feat pick if you\'re unsure — it grants proficiency in any 3 skills or tools.'
+    case 'equipment':
+      return 'Option A gets you fighting-ready gear immediately; Option B trades that for gold to buy exactly what you want later.'
+    case 'spells':
+      return isCaster && classEntry
+        ? `${classEntry.name} casters benefit from a mix of damage, utility, and defensive spells — try not to pick only one type.`
+        : 'Pick a mix of damage, utility, and defensive spells rather than all one type.'
+    case 'name':
+      return "Give your character a name that fits their species and background!"
+    default:
+      return "Let's build your character!"
+  }
+}
 
 async function extractErrorMessage(res: Response): Promise<string> {
   try {
@@ -150,6 +208,20 @@ export function CreateCharacterPage() {
       <p className="pixel-label">
         Step {stepIndex + 1} of {steps.length}
       </p>
+
+      <div className="w-full max-w-2xl">
+        <WilburTip
+          tip={wilburTipFor(
+            step,
+            classEntry,
+            speciesEntry,
+            backgroundEntry,
+            hasSkillfulTrait,
+            hasVersatileTrait,
+            isCaster,
+          )}
+        />
+      </div>
 
       <div className="pixel-panel flex w-full max-w-2xl flex-col gap-6">
         {step === 'class' && <StepClass classId={classId} onSelect={setClassId} />}
