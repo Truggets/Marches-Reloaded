@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { Link } from 'react-router-dom'
 import { useAuth } from './auth/AuthContext'
 import { WilburCompanion } from './WilburCompanion'
 import { AdminInvites } from './AdminInvites'
@@ -88,6 +89,9 @@ function App() {
             Logged in as <span className="font-semibold">{user.username}</span>
           </p>
           <div className="flex gap-2">
+            <Link to="/characters" className="pixel-btn">
+              My Characters
+            </Link>
             <button
               type="button"
               onClick={() => setShowChangePassword((v) => !v)}

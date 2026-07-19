@@ -37,8 +37,18 @@ function createTables() {
       used_by_user_id INTEGER NULL REFERENCES users(id),
       used_at TEXT NULL
     );
+
+    CREATE TABLE IF NOT EXISTS characters (
+      id INTEGER PRIMARY KEY,
+      owner_id INTEGER NOT NULL REFERENCES users(id),
+      name TEXT NOT NULL,
+      pack_id TEXT NOT NULL,
+      data TEXT NOT NULL,
+      created_at TEXT NOT NULL,
+      updated_at TEXT NOT NULL
+    );
   `);
-  console.log("[migrate] tables ensured: users, sessions, invites");
+  console.log("[migrate] tables ensured: users, sessions, invites, characters");
 }
 
 async function seedAdmin() {
