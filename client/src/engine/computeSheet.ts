@@ -1,7 +1,7 @@
 // Pure rules-engine functions: turn a saved CharacterData's stored *choices*
 // back into computed numbers for the character sheet view (M4). No React,
 // no side effects — every function here is a plain, testable transform.
-import { getClass, listEquipment } from '@data'
+import { getClass, getSpecies, listEquipment } from '@data'
 import { parseEquipmentOptions } from '../character-wizard/parsing'
 import type { Ability, CharacterData } from '../character-wizard/types'
 
@@ -34,6 +34,16 @@ export function finalAbilityScores(data: CharacterData): Record<Ability, number>
     }
   }
 
+  // M5: fold in Ability Score Improvement choices recorded during leveling.
+  // Absent-safe — older M3/M4 saved characters have no `levelUps` at all.
+  for (const entry of data.levelUps ?? []) {
+    const abilityIncreases = entry.featChoice?.abilityIncreases
+    if (!abilityIncreases) continue
+    for (const ability of abilityIncreases) {
+      result[ability] = result[ability] + 1
+    }
+  }
+
   for (const ability of Object.keys(result) as Ability[]) {
     if (result[ability] > 20) result[ability] = 20
   }
@@ -41,26 +51,44 @@ export function finalAbilityScores(data: CharacterData): Record<Ability, number>
   return result
 }
 
-/** Parses the "+N" proficiency bonus off the class's level-1 feature-table row. */
-export function proficiencyBonus(classId: string): number {
+/** Parses the "+N" proficiency bonus off the class's featureTable row for the
+ * given target level (1-10). */
+export function proficiencyBonus(classId: string, level: number): number {
   const classEntry = getClass(classId)
   if (!classEntry) throw new Error(`Unknown class: ${classId}`)
-  const row = classEntry.featureTable.find((r) => r.level === 1)
-  if (!row) throw new Error(`No level-1 feature row for class: ${classId}`)
+  const row = classEntry.featureTable.find((r) => r.level === level)
+  if (!row) throw new Error(`No level-${level} feature row for class: ${classId}`)
   const match = row.proficiencyBonus.match(/\+(\d+)/)
   if (!match) throw new Error(`Unparseable proficiencyBonus for class: ${classId}`)
   return parseInt(match[1], 10)
 }
 
-/** Parses the hit-die max off hitPointDie ("D6 per Wizard level" -> 6), adds
- * the Constitution modifier, minimum 1. */
-export function hitPoints(classId: string, conModifier: number): number {
+/**
+ * Total HP at the given level. Level 1 = hit-die max + Con modifier (minimum
+ * 1), unchanged from M4. Levels 2..N each add a fixed per-level amount
+ * (derived from hitPointDie as floor(dieMax/2)+1, e.g. d6->4, d8->5, d10->6,
+ * d12->7) + Con modifier, minimum 1 per level (SRD fixed-HP-per-level rule;
+ * no die-roll option in scope). Dwarven Toughness (speciesId "dwarf") adds
+ * +1 at level 1 and +1 more at every level gained thereafter.
+ */
+export function hitPoints(classId: string, level: number, conModifier: number, speciesId: string): number {
   const classEntry = getClass(classId)
   if (!classEntry) throw new Error(`Unknown class: ${classId}`)
   const match = classEntry.hitPointDie.match(/D(\d+)/i)
   if (!match) throw new Error(`Unparseable hitPointDie for class: ${classId}`)
   const dieMax = parseInt(match[1], 10)
-  return Math.max(1, dieMax + conModifier)
+  const fixedPerLevel = Math.floor(dieMax / 2) + 1
+
+  const species = getSpecies(speciesId)
+  const isDwarf = species?.name === 'Dwarf'
+
+  let total = Math.max(1, dieMax + conModifier) + (isDwarf ? 1 : 0)
+
+  for (let lvl = 2; lvl <= level; lvl++) {
+    total += Math.max(1, fixedPerLevel + conModifier) + (isDwarf ? 1 : 0)
+  }
+
+  return total
 }
 
 /** Strips a leading quantity ("8 Javelins" -> "Javelins") and a leading
@@ -136,22 +164,22 @@ export interface SpellSlotInfo {
 }
 
 /**
- * Level-1 spellcasting numbers for a class, or undefined for non-casters.
- * Most casters expose spellSlotTable directly; Warlock has none and instead
- * carries its Pact Magic counts as string columns on the level-1
- * featureTable row (Cantrips / Spell Slots / Slot Level).
+ * Spellcasting numbers for a class at the given target level, or undefined
+ * for non-casters. Most casters expose spellSlotTable directly; Warlock has
+ * none and instead carries its Pact Magic counts as string columns on that
+ * level's featureTable row (Cantrips / Spell Slots / Slot Level).
  */
-export function spellSlots(classId: string): SpellSlotInfo | undefined {
+export function spellSlots(classId: string, level: number): SpellSlotInfo | undefined {
   const classEntry = getClass(classId)
   if (!classEntry) throw new Error(`Unknown class: ${classId}`)
 
   if (classEntry.spellSlotTable) {
-    const row = classEntry.spellSlotTable.find((r) => r.level === 1)
+    const row = classEntry.spellSlotTable.find((r) => r.level === level)
     if (!row) return undefined
     return { cantrips: row.cantrips ?? 0, slotsByLevel: row.slotsByLevel }
   }
 
-  const featureRow = classEntry.featureTable.find((r) => r.level === 1)
+  const featureRow = classEntry.featureTable.find((r) => r.level === level)
   const cols = featureRow?.extraColumns
   if (cols && 'Cantrips' in cols && 'Spell Slots' in cols && 'Slot Level' in cols) {
     const cantrips = parseInt(cols['Cantrips'], 10) || 0
@@ -161,6 +189,21 @@ export function spellSlots(classId: string): SpellSlotInfo | undefined {
   }
 
   return undefined
+}
+
+/** Feature names granted exactly at the given level (that level's
+ * featureTable row's feature list). Returns [] if the class has no row for
+ * that level. */
+export function featuresForLevel(classId: string, level: number): string[] {
+  const classEntry = getClass(classId)
+  if (!classEntry) throw new Error(`Unknown class: ${classId}`)
+  const row = classEntry.featureTable.find((r) => r.level === level)
+  return row ? row.features : []
+}
+
+/** True if the class gains "Ability Score Improvement" at the given level. */
+export function isAsiLevel(classId: string, level: number): boolean {
+  return featuresForLevel(classId, level).includes('Ability Score Improvement')
 }
 
 /** Standard SRD 5e skill -> governing-ability mapping (not present in the

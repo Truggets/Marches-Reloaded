@@ -10,6 +10,7 @@ import { RegisterPage } from './pages/RegisterPage'
 import { CharacterListPage } from './pages/CharacterListPage'
 import { CreateCharacterPage } from './pages/CreateCharacterPage'
 import { CharacterSheetPage } from './pages/CharacterSheetPage'
+import { LevelUpPage } from './pages/LevelUpPage'
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
@@ -47,6 +48,14 @@ createRoot(document.getElementById('root')!).render(
             element={
               <RequireAuth>
                 <CharacterSheetPage />
+              </RequireAuth>
+            }
+          />
+          <Route
+            path="/characters/:id/level-up"
+            element={
+              <RequireAuth>
+                <LevelUpPage />
               </RequireAuth>
             }
           />

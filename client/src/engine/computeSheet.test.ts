@@ -3,8 +3,10 @@ import { getBackground, getClass } from '@data'
 import {
   abilityModifier,
   armorClass,
+  featuresForLevel,
   finalAbilityScores,
   hitPoints,
+  isAsiLevel,
   proficiencyBonus,
   skillBonus,
   spellSlots,
@@ -58,8 +60,8 @@ describe('Wizard (Human, Sage background)', () => {
     expect(abilityModifier(scores.Constitution)).toBe(2)
   })
 
-  it('computes 8 HP (D6 + 2 Con)', () => {
-    expect(hitPoints('wizard', 2)).toBe(8)
+  it('computes 8 HP (D6 + 2 Con) at level 1 (Human, no species HP trait)', () => {
+    expect(hitPoints('wizard', 1, 2, 'human')).toBe(8)
   })
 
   it('matches the real wizard spellSlotTable level-1 row', () => {
@@ -67,13 +69,40 @@ describe('Wizard (Human, Sage background)', () => {
     const realRow = wizardClass?.spellSlotTable?.find((r) => r.level === 1)
     expect(realRow).toBeDefined()
 
-    const result = spellSlots('wizard')
+    const result = spellSlots('wizard', 1)
     expect(result).toBeDefined()
     expect(result?.cantrips).toBe(realRow?.cantrips)
     expect(result?.slotsByLevel[1]).toBe(realRow?.slotsByLevel[1])
     // Confirmed live values from the real data pack.
     expect(result?.cantrips).toBe(3)
     expect(result?.slotsByLevel[1]).toBe(2)
+  })
+
+  it('Wizard level 5 proficiency bonus is +3', () => {
+    expect(proficiencyBonus('wizard', 5)).toBe(3)
+  })
+
+  it('Wizard level 5 has 2 slots at spell-level 3', () => {
+    const result = spellSlots('wizard', 5)
+    expect(result?.slotsByLevel[3]).toBe(2)
+  })
+})
+
+describe('Paladin (half-caster) spell slots', () => {
+  it('Paladin level 5 has 2 slots at spell-level 2', () => {
+    const result = spellSlots('paladin', 5)
+    expect(result?.slotsByLevel[2]).toBe(2)
+  })
+})
+
+describe('featuresForLevel / isAsiLevel', () => {
+  it('Fighter is an ASI level at 4 but not at 5', () => {
+    expect(isAsiLevel('fighter', 4)).toBe(true)
+    expect(isAsiLevel('fighter', 5)).toBe(false)
+  })
+
+  it('featuresForLevel returns the real featureTable feature list for that level', () => {
+    expect(featuresForLevel('fighter', 4)).toEqual(['Ability Score Improvement'])
   })
 })
 
@@ -110,12 +139,22 @@ describe('Fighter (Dwarf, Soldier background)', () => {
     expect(abilityModifier(scores.Strength)).toBe(4)
   })
 
-  it('computes 12 HP (D10 + 2 Con)', () => {
-    expect(hitPoints('fighter', 2)).toBe(12)
+  it('computes 13 HP at level 1 (D10 + 2 Con + 1 Dwarven Toughness)', () => {
+    expect(hitPoints('fighter', 1, 2, 'dwarf')).toBe(13)
   })
 
   it('proficiency bonus at level 1 is +2', () => {
-    expect(proficiencyBonus('fighter')).toBe(2)
+    expect(proficiencyBonus('fighter', 1)).toBe(2)
+  })
+
+  it('Dwarf Fighter leveled 1->5 with +2 Con: hand-computed total HP including Dwarven Toughness', () => {
+    // Fighter hitPointDie D10 -> fixedPerLevel = floor(10/2)+1 = 6.
+    // Level 1: 10 (die max) + 2 (Con) + 1 (Dwarven Toughness) = 13.
+    // Levels 2-5 (4 levels): each (6 + 2 Con + 1 Dwarven Toughness) = 9 -> 4 * 9 = 36.
+    // Total: 13 + 36 = 49.
+    const expected = 13 + 4 * 9
+    expect(expected).toBe(49)
+    expect(hitPoints('fighter', 5, 2, 'dwarf')).toBe(49)
   })
 
   it('option A (Chain Mail) gives flat AC 16 regardless of Dex', () => {
@@ -131,5 +170,51 @@ describe('Fighter (Dwarf, Soldier background)', () => {
   it('Athletics is proficient via Soldier background: 4 (Str mod) + 2 (prof) = 6', () => {
     const scores = { Strength: 18, Dexterity: 12, Constitution: 14, Intelligence: 10, Wisdom: 10, Charisma: 8 }
     expect(skillBonus('Athletics', scores, ['Athletics', 'Intimidation'], 2)).toBe(6)
+  })
+
+  it('finalAbilityScores folds in levelUps[].featChoice.abilityIncreases on top of background increases', () => {
+    // Strength is 18 after the plusTwo background increase (16 -> 18, see above).
+    // An ASI entry at level 4 encodes +2-to-one-ability as the ability
+    // appearing twice (each array entry is +1) -> 18 -> 20.
+    const leveledData: CharacterData = {
+      ...data,
+      classes: [{ classId: 'fighter', level: 4 }],
+      levelUps: [
+        {
+          level: 4,
+          hitPointGain: 8,
+          featChoice: {
+            featId: 'ability-score-improvement',
+            abilityIncreases: ['Strength', 'Strength'],
+          },
+        },
+      ],
+    }
+    const scores = finalAbilityScores(leveledData)
+    expect(scores.Strength).toBe(20)
+  })
+
+  it('finalAbilityScores caps at 20 even when a levelUps increase would push past it', () => {
+    // Strength is already 18 from the background increase; a further +2 ASI
+    // would be 20 (exactly the cap), a second +2 ASI must still cap at 20,
+    // not overflow to 22.
+    const leveledData: CharacterData = {
+      ...data,
+      classes: [{ classId: 'fighter', level: 8 }],
+      levelUps: [
+        {
+          level: 4,
+          hitPointGain: 8,
+          featChoice: { featId: 'ability-score-improvement', abilityIncreases: ['Strength', 'Strength'] },
+        },
+        {
+          level: 6,
+          hitPointGain: 8,
+          featChoice: { featId: 'ability-score-improvement', abilityIncreases: ['Strength', 'Strength'] },
+        },
+      ],
+    }
+    const scores = finalAbilityScores(leveledData)
+    expect(scores.Strength).toBe(20)
   })
 })

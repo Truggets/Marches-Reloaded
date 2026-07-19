@@ -51,14 +51,25 @@ export interface AbilityScoresData {
   backgroundIncrease: { plusTwo?: string; plusOne?: string[] }
 }
 
+/** One record per level gained above 1 (M5 leveling). Older saved M3/M4
+ * characters won't have this field at all — treat `levelUps` as optional and
+ * absent-safe (default to `[]`) everywhere it's read. */
+export interface LevelUpEntry {
+  level: number // 2..10
+  hitPointGain: number // the fixed value used that level (die-average+1, +1 more if Dwarf)
+  featChoice?: { featId: string; abilityIncreases?: Ability[] } // only present at ASI-granting levels
+  spellsAdded?: { cantrips: string[]; prepared: string[] } // only present for casters at levels where slot/cantrip counts grow
+}
+
 export interface CharacterData {
   speciesId: string
   backgroundId: string
-  classes: [{ classId: string; level: 1 }]
+  classes: [{ classId: string; level: number }]
   abilityScores: AbilityScoresData
   skillProficiencies: string[]
   equipmentChoice: string
   spells?: { cantrips: string[]; prepared: string[] }
+  levelUps?: LevelUpEntry[]
 }
 
 export const WIZARD_STEPS = [

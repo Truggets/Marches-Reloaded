@@ -124,14 +124,25 @@ export function CharacterSheetPage() {
   const classEntry = getClass(primaryClass.classId)
 
   const scores = finalAbilityScores(data)
-  const profBonus = classEntry ? proficiencyBonus(primaryClass.classId) : 0
+  const profBonus = classEntry ? proficiencyBonus(primaryClass.classId, primaryClass.level) : 0
   const conMod = abilityModifier(scores.Constitution)
   const dexMod = abilityModifier(scores.Dexterity)
-  const hp = classEntry ? hitPoints(primaryClass.classId, conMod) : undefined
+  const hp = classEntry
+    ? hitPoints(primaryClass.classId, primaryClass.level, conMod, data.speciesId)
+    : undefined
   const ac = classEntry
     ? armorClass(primaryClass.classId, data.equipmentChoice, dexMod)
     : undefined
-  const slots = classEntry ? spellSlots(primaryClass.classId) : undefined
+  const slots = classEntry ? spellSlots(primaryClass.classId, primaryClass.level) : undefined
+
+  const allCantrips = [
+    ...(data.spells?.cantrips ?? []),
+    ...(data.levelUps ?? []).flatMap((lu) => lu.spellsAdded?.cantrips ?? []),
+  ]
+  const allPreparedSpells = [
+    ...(data.spells?.prepared ?? []),
+    ...(data.levelUps ?? []).flatMap((lu) => lu.spellsAdded?.prepared ?? []),
+  ]
 
   const equipmentOptions = classEntry ? parseEquipmentOptions(classEntry.startingEquipment) : []
   const chosenEquipment = equipmentOptions.find((o) => o.letter === data.equipmentChoice)
@@ -149,6 +160,11 @@ export function CharacterSheetPage() {
           &larr; My Characters
         </Link>
         <div className="flex gap-3">
+          {primaryClass.level < 10 && (
+            <Link to={`/characters/${id}/level-up`} className="pixel-btn">
+              Level Up
+            </Link>
+          )}
           <button type="button" className="pixel-btn pixel-btn-secondary" onClick={() => window.print()}>
             Print
           </button>
@@ -259,7 +275,7 @@ export function CharacterSheetPage() {
                 <div>
                   <p className="pixel-label">Cantrips</p>
                   <ul className="text-sm list-disc list-inside">
-                    {data.spells.cantrips.map((id) => (
+                    {allCantrips.map((id) => (
                       <li key={id}>{getSpell(id)?.name ?? id}</li>
                     ))}
                   </ul>
@@ -267,7 +283,7 @@ export function CharacterSheetPage() {
                 <div>
                   <p className="pixel-label">Prepared Spells</p>
                   <ul className="text-sm list-disc list-inside">
-                    {data.spells.prepared.map((id) => (
+                    {allPreparedSpells.map((id) => (
                       <li key={id}>{getSpell(id)?.name ?? id}</li>
                     ))}
                   </ul>
