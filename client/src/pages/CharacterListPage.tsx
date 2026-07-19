@@ -24,6 +24,9 @@ export function CharacterListPage() {
   const [characters, setCharacters] = useState<CharacterSummary[] | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [deletingId, setDeletingId] = useState<number | null>(null)
+  const [renamingId, setRenamingId] = useState<number | null>(null)
+  const [renameValue, setRenameValue] = useState('')
+  const [savingRename, setSavingRename] = useState(false)
 
   const load = useCallback(async () => {
     setError(null)
@@ -45,6 +48,38 @@ export function CharacterListPage() {
   useEffect(() => {
     void load()
   }, [load])
+
+  function startRename(c: CharacterSummary) {
+    setRenamingId(c.id)
+    setRenameValue(c.name)
+  }
+
+  async function handleRename(c: CharacterSummary) {
+    const name = renameValue.trim()
+    if (!name) return
+    setSavingRename(true)
+    setError(null)
+    try {
+      // The PUT endpoint has no partial-patch mode — it requires the full
+      // `data` object and overwrites it wholesale, so a rename must resend
+      // the character's existing data verbatim, not just the new name.
+      const res = await fetch(`/api/characters/${c.id}`, {
+        method: 'PUT',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name, data: c.data }),
+      })
+      if (!res.ok) {
+        throw new Error(await extractErrorMessage(res))
+      }
+      setRenamingId(null)
+      await load()
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to rename character')
+    } finally {
+      setSavingRename(false)
+    }
+  }
 
   async function handleDelete(id: number) {
     setDeletingId(id)
@@ -96,28 +131,69 @@ export function CharacterListPage() {
             .map((entry) => `${getClass(entry.classId)?.name ?? entry.classId} ${entry.level}`)
             .join(' / ')
 
+          const isRenaming = renamingId === c.id
+
           return (
-            <div key={c.id} className="pixel-panel flex items-center justify-between gap-4">
-              <div className="flex items-center gap-3">
+            <div key={c.id} className="pixel-panel flex flex-wrap items-center justify-between gap-4">
+              <div className="flex min-w-0 items-center gap-3">
                 <CharacterAvatar id={c.id} label={c.name} size={48} />
-                <div>
-                  <Link to={`/characters/${c.id}`} className="pixel-link">
-                    <p className="pixel-title text-sm">{c.name}</p>
-                  </Link>
+                <div className="min-w-0">
+                  {isRenaming ? (
+                    <div className="flex flex-wrap items-center gap-2">
+                      <input
+                        type="text"
+                        value={renameValue}
+                        onChange={(e) => setRenameValue(e.target.value)}
+                        className="pixel-input"
+                        autoFocus
+                      />
+                      <button
+                        type="button"
+                        onClick={() => void handleRename(c)}
+                        disabled={savingRename || !renameValue.trim()}
+                        className="pixel-btn"
+                      >
+                        {savingRename ? 'Saving…' : 'Save'}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setRenamingId(null)}
+                        disabled={savingRename}
+                        className="pixel-btn pixel-btn-secondary"
+                      >
+                        Cancel
+                      </button>
+                    </div>
+                  ) : (
+                    <Link to={`/characters/${c.id}`} className="pixel-link">
+                      <p className="pixel-title text-sm">{c.name}</p>
+                    </Link>
+                  )}
                   <p className="text-sm">
                     {species?.name ?? c.data.speciesId} {background?.name ?? c.data.backgroundId} —{' '}
                     {classNames}
                   </p>
                 </div>
               </div>
-              <button
-                type="button"
-                onClick={() => void handleDelete(c.id)}
-                disabled={deletingId === c.id}
-                className="pixel-btn pixel-btn-secondary"
-              >
-                {deletingId === c.id ? 'Deleting…' : 'Delete'}
-              </button>
+              {!isRenaming && (
+                <div className="flex gap-2">
+                  <button
+                    type="button"
+                    onClick={() => startRename(c)}
+                    className="pixel-btn pixel-btn-secondary"
+                  >
+                    Rename
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => void handleDelete(c.id)}
+                    disabled={deletingId === c.id}
+                    className="pixel-btn pixel-btn-secondary"
+                  >
+                    {deletingId === c.id ? 'Deleting…' : 'Delete'}
+                  </button>
+                </div>
+              )}
             </div>
           )
         })}

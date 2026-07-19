@@ -6,6 +6,7 @@ import { ABILITIES, ALL_SKILLS } from '../character-wizard/types'
 import { parseEquipmentOptions } from '../character-wizard/parsing'
 import type { CharacterData } from '../character-wizard/types'
 import { CharacterAvatar } from '../CharacterAvatar'
+import { useAuth } from '../auth/AuthContext'
 import {
   abilityModifier,
   armorClass,
@@ -67,6 +68,7 @@ function spellsForClass(data: CharacterData, classId: string): { cantrips: strin
 
 export function CharacterSheetPage() {
   const { id } = useParams<{ id: string }>()
+  const { user } = useAuth()
   const [character, setCharacter] = useState<CharacterRecord | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [notFound, setNotFound] = useState(false)
@@ -186,7 +188,9 @@ export function CharacterSheetPage() {
           &larr; My Characters
         </Link>
         <div className="flex gap-3">
-          {level < 10 && (
+          {/* Level Up mutates this character — only the owner sees it. An
+              admin viewing via the party view gets a read-only sheet. */}
+          {level < 10 && user?.id === character.ownerId && (
             <Link to={`/characters/${id}/level-up`} className="pixel-btn">
               Level Up
             </Link>

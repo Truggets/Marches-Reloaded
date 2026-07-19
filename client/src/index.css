@@ -168,6 +168,16 @@ body {
   z-index: 50;
 }
 
+/* Purely decorative (aria-hidden) — fixed-position, so on narrow viewports
+ * it floats on top of real content (e.g. the last ability-score card on the
+ * sheet page) no matter how small it shrinks. Hide it rather than let it
+ * obscure anything real. */
+@media (max-width: 640px) {
+  .wilbur-companion {
+    display: none;
+  }
+}
+
 .wilbur-companion img {
   width: 64px;
   height: 64px;

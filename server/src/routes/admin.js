@@ -76,4 +76,27 @@ router.post("/invites", (req, res) => {
   return res.status(201).json({ code });
 });
 
+// M8 party view: every character across every account, read-only. DM does
+// not edit/delete others' characters here — that's out of scope.
+router.get("/characters", (req, res) => {
+  const rows = db
+    .prepare(
+      `SELECT characters.*, users.username AS owner_username
+       FROM characters JOIN users ON users.id = characters.owner_id
+       ORDER BY users.username, characters.id`
+    )
+    .all();
+  const characters = rows.map((row) => ({
+    id: row.id,
+    ownerId: row.owner_id,
+    ownerUsername: row.owner_username,
+    name: row.name,
+    packId: row.pack_id,
+    data: JSON.parse(row.data),
+    createdAt: row.created_at,
+    updatedAt: row.updated_at,
+  }));
+  return res.status(200).json({ characters });
+});
+
 export default router;

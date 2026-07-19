@@ -92,6 +92,11 @@ function App() {
             <Link to="/characters" className="pixel-btn">
               My Characters
             </Link>
+            {user.isAdmin && (
+              <Link to="/party" className="pixel-btn pixel-btn-secondary">
+                Party
+              </Link>
+            )}
             <button
               type="button"
               onClick={() => setShowChangePassword((v) => !v)}
