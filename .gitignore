@@ -30,3 +30,9 @@ Thumbs.db
 # Editor
 .vscode/
 .idea/
+
+# Non-SRD content-pack import output (never bundled/shipped — see CLAUDE.md
+# SRD-only constraint). The fixtures themselves are small representative
+# samples and stay tracked; only parser *output* written under this dir is
+# ignored.
+data/build/fixtures/*-output.json

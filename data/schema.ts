@@ -98,7 +98,7 @@ export interface BackgroundEntry {
 export interface FeatEntry {
   id: string
   name: string
-  category: 'Origin' | 'General' | 'Fighting Style' | 'Epic Boon'
+  category: 'Origin' | 'General' | 'General / Racial' | 'Fighting Style' | 'Epic Boon'
   prerequisite?: string
   repeatable: boolean
   benefit: string

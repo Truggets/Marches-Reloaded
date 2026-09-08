@@ -1,0 +1,44 @@
+{
+  "feats": [
+    {
+      "name": "Alert",
+      "category": "Origin",
+      "source": "Player's Handbook (2024)",
+      "prerequisite": "None",
+      "mechanics": "Danger doesn't easily catch you off guard. You gain the following benefits.\n\n*Initiative Proficiency.* When you roll Initiative, you can add your proficiency bonus to the roll.\n\n*Initiative Swap.* Immediately after you roll Initiative, you can swap your Initiative with the Initiative of one willing ally in the same combat.",
+      "lore": "You've learned to trust your senses and stay alert to danger, whether from a lurking predator or a rival adventuring party."
+    },
+    {
+      "name": "Crafter",
+      "category": "Origin",
+      "source": "Player's Handbook (2024)",
+      "prerequisite": "None",
+      "mechanics": "You've mastered the fundamentals of crafting, granting you the following benefits.\n\n*Tool Proficiency.* You gain proficiency with three different Artisan's Tools of your choice.\n\n*Discount.* Whenever you buy a nonmagical item from a business, you receive a 20 percent discount on it.",
+      "lore": "You spend much of your free time in workshops, turning raw materials into finished goods."
+    },
+    {
+      "name": "Magic Initiate",
+      "category": "General",
+      "source": "Player's Handbook (2024)",
+      "prerequisite": "None",
+      "mechanics": "You learn two cantrips of your choice from the Bard, Cleric, Druid, Sorcerer, Warlock, or Wizard spell list, choosing the same class each time. You also learn one 1st-level spell from that class's spell list. Whenever you finish a Long Rest, you can replace one of the spells you learned with this feat with a different eligible spell. The spellcasting ability for these spells depends on the class you chose: Charisma for Bard, Sorcerer, or Warlock; Wisdom for Cleric or Druid; or Intelligence for Wizard.",
+      "lore": "You've studied minor magic passed down from those who came before you."
+    },
+    {
+      "name": "Fade Away",
+      "category": "General / Racial",
+      "source": "Player's Handbook (2024)",
+      "prerequisite": "Gnome",
+      "mechanics": "You can give yourself the Invisible condition as a Reaction, triggered by taking damage. This benefit lasts until the end of your next turn or until you attack, deal damage, or force someone to make a saving throw. Once you use this feat, you can't do so again until you finish a Long Rest unless you expend a spell slot to use it again.",
+      "lore": "Gnomish resilience runs deeper than most realize; when threatened, some gnomes simply vanish."
+    },
+    {
+      "name": "Weapon Master",
+      "category": "General",
+      "source": "Player's Handbook (2024)",
+      "prerequisite": "Level 4+",
+      "mechanics": "You have practiced extensively with a variety of weapons, granting you the following benefits.\n\n*Weapon Proficiency.* You gain proficiency with four weapons of your choice.\n\n*Bonus Proficiency.* Whenever you gain the Ability Score Improvement feat, you can replace one of your weapon proficiencies from this feat with a different one.",
+      "lore": "Whether through formal training or countless hours of practice, you've become adept with an array of weapons."
+    }
+  ]
+}

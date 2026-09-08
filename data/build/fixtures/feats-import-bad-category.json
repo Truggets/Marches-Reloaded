@@ -1,0 +1,12 @@
+{
+  "feats": [
+    {
+      "name": "Mystery Feat",
+      "category": "Legendary",
+      "source": "Player's Handbook (2024)",
+      "prerequisite": "None",
+      "mechanics": "This feat has a category string that doesn't map to any of the five known FeatEntry categories, to exercise the parser's error path.",
+      "lore": "Placeholder lore."
+    }
+  ]
+}
