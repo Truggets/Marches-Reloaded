@@ -180,13 +180,37 @@ describe('Fighter (Dwarf, Soldier background)', () => {
   })
 
   it('option A (Chain Mail) gives flat AC 16 regardless of Dex', () => {
-    expect(armorClass('fighter', 'A', 5)).toBe(16)
-    expect(armorClass('fighter', 'A', -1)).toBe(16)
+    const fighter = [{ classId: 'fighter', level: 1 }]
+    const scoresDex20 = { Strength: 10, Dexterity: 20, Constitution: 10, Intelligence: 10, Wisdom: 10, Charisma: 10 }
+    const scoresDex8 = { ...scoresDex20, Dexterity: 8 }
+    expect(armorClass(fighter, 'A', scoresDex20)).toBe(16)
+    expect(armorClass(fighter, 'A', scoresDex8)).toBe(16)
   })
 
   it('option B (Studded Leather Armor) gives 12 + Dex modifier', () => {
+    const fighter = [{ classId: 'fighter', level: 1 }]
+    const scores = { Strength: 10, Dexterity: 12, Constitution: 10, Intelligence: 10, Wisdom: 10, Charisma: 10 }
     const dexMod = abilityModifier(12)
-    expect(armorClass('fighter', 'B', dexMod)).toBe(12 + dexMod)
+    expect(armorClass(fighter, 'B', scores)).toBe(12 + dexMod)
+  })
+
+  it('Monk Unarmored Defense: 10 + Dex + Wis (issue #12 — ties to live Test boi repro: Dex 16/+3, Wis 15/+2 -> 15)', () => {
+    const monk = [{ classId: 'monk', level: 1 }]
+    const scores = { Strength: 16, Dexterity: 16, Constitution: 11, Intelligence: 13, Wisdom: 15, Charisma: 8 }
+    expect(armorClass(monk, 'A', scores)).toBe(15)
+  })
+
+  it('Barbarian Unarmored Defense: 10 + Dex + Con', () => {
+    const barbarian = [{ classId: 'barbarian', level: 1 }]
+    const scores = { Strength: 16, Dexterity: 14, Constitution: 16, Intelligence: 10, Wisdom: 10, Charisma: 8 }
+    const expected = 10 + abilityModifier(14) + abilityModifier(16)
+    expect(armorClass(barbarian, 'A', scores)).toBe(expected)
+  })
+
+  it('non-Unarmored-Defense class (Wizard) unarmored still falls back to flat 10 + Dex (regression guard)', () => {
+    const wizard = [{ classId: 'wizard', level: 1 }]
+    const scores = { Strength: 8, Dexterity: 14, Constitution: 12, Intelligence: 16, Wisdom: 10, Charisma: 10 }
+    expect(armorClass(wizard, 'A', scores)).toBe(10 + abilityModifier(14))
   })
 
   it('Athletics is proficient via Soldier background: 4 (Str mod) + 2 (prof) = 6', () => {

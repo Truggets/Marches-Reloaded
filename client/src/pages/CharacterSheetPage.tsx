@@ -170,10 +170,9 @@ export function CharacterSheetPage() {
   const scores = finalAbilityScores(data)
   const profBonus = classEntry ? proficiencyBonusMulticlass(data.classes) : 0
   const conMod = abilityModifier(scores.Constitution)
-  const dexMod = abilityModifier(scores.Dexterity)
   const hp = classEntry ? hitPointsMulticlass(data.classes, conMod, data.speciesId) : undefined
   const ac = classEntry
-    ? armorClass(primaryClass.classId, data.equipmentChoice, dexMod)
+    ? armorClass(data.classes, data.equipmentChoice, scores)
     : undefined
   // Combined full/half-caster slots (M6) plus Warlock Pact Magic as a wholly
   // separate pool — never folded together (see engine/computeSheet.ts).

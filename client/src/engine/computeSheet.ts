@@ -3,6 +3,7 @@
 // no side effects — every function here is a plain, testable transform.
 import { getClass, getSpecies, listEquipment } from '@data'
 import { parseEquipmentOptions } from '../character-wizard/parsing'
+import { ABILITIES } from '../character-wizard/types'
 import type { Ability, CharacterClassEntry, CharacterData } from '../character-wizard/types'
 
 /** floor((score - 10) / 2). Must use Math.floor (not truncation) so odd
@@ -103,16 +104,48 @@ function cleanItemToken(raw: string): string {
 }
 
 /**
- * Computes AC for a class/equipment-choice/Dex-modifier combination.
- *
- * Known, accepted gap: this does not special-case Barbarian/Monk Unarmored
- * Defense (which use Con or Wis in place of a flat 10) — every class that
- * ends up with no matched armor falls back to the plain 10 + dexModifier
- * unarmored formula.
+ * Parses the ability named in an "Unarmored Defense"-style feature
+ * description ("...10 plus your Dexterity and X modifiers...") and returns
+ * it, or undefined if the feature text doesn't match that shape at all
+ * (i.e. the class has no such feature). Throws if a match is found but the
+ * captured ability name isn't one of the six real abilities — a homebrew
+ * pack phrasing this differently should fail loudly, not silently produce
+ * NaN downstream.
  */
-export function armorClass(classId: string, equipmentChoiceLetter: string, dexModifier: number): number {
-  const classEntry = getClass(classId)
-  if (!classEntry) throw new Error(`Unknown class: ${classId}`)
+function parseUnarmoredDefenseAbility(classEntry: ReturnType<typeof getClass>): Ability | undefined {
+  const feature = classEntry?.features.find((f) => f.name === 'Unarmored Defense')
+  if (!feature) return undefined
+  const match = feature.description.match(/Dexterity and (\w+) modifiers?/i)
+  if (!match) return undefined
+  const ability = ABILITIES.find((a) => a.toLowerCase() === match[1].toLowerCase())
+  if (!ability) {
+    throw new Error(`Unparseable Unarmored Defense ability for class: ${classEntry?.id} ("${match[1]}")`)
+  }
+  return ability
+}
+
+/**
+ * Computes AC for a character's classes/equipment-choice/ability-scores.
+ * `classes[0]` supplies equipment/armor training (multiclassing grants no
+ * new equipment — unchanged existing rule). When no matched body armor is
+ * worn, checks every class for an "Unarmored Defense"-style feature
+ * (SRD: Barbarian uses Con, Monk uses Wisdom in place of a flat 10) and
+ * uses whichever grants the highest AC — SRD 5.2 multiclassing rule: "If
+ * you have multiple ways to calculate your Armor Class, you can benefit
+ * from only one at a time." Monk's own feature text voids the benefit
+ * while wielding a Shield; Barbarian's does not.
+ */
+export function armorClass(
+  classes: CharacterClassEntry[],
+  equipmentChoiceLetter: string,
+  abilityScores: Record<Ability, number>,
+): number {
+  if (classes.length === 0) throw new Error('No classes')
+  const primaryClassId = classes[0].classId
+  const classEntry = getClass(primaryClassId)
+  if (!classEntry) throw new Error(`Unknown class: ${primaryClassId}`)
+
+  const dexModifier = abilityModifier(abilityScores.Dexterity)
 
   const options = parseEquipmentOptions(classEntry.startingEquipment)
   const chosen = options.find((o) => o.letter.toUpperCase() === equipmentChoiceLetter.toUpperCase())
@@ -147,8 +180,20 @@ export function armorClass(classId: string, equipmentChoiceLetter: string, dexMo
       base = flatMatch ? parseInt(flatMatch[1], 10) : 10 + dexModifier
     }
   } else {
-    // Unarmored fallback (gap noted above: doesn't handle Unarmored Defense).
+    // Unarmored: default 10 + Dex, unless a class grants Unarmored Defense.
     base = 10 + dexModifier
+    for (const c of classes) {
+      const entry = getClass(c.classId)
+      const secondaryAbility = parseUnarmoredDefenseAbility(entry)
+      if (!secondaryAbility) continue
+      // Monk's Unarmored Defense text explicitly voids the benefit while
+      // wielding a Shield; only skip for classes whose feature says so.
+      if (hasShield && entry?.features.find((f) => f.name === 'Unarmored Defense')?.description.includes('wielding a Shield')) {
+        continue
+      }
+      const candidate = 10 + dexModifier + abilityModifier(abilityScores[secondaryAbility])
+      if (candidate > base) base = candidate
+    }
   }
 
   if (hasShield) {
