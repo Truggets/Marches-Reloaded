@@ -1,0 +1,19 @@
+{
+  "alert": 3,
+  "magic-initiate": 4,
+  "savage-attacker": 1,
+  "skilled": 2,
+  "ability-score-improvement": 3,
+  "grappler": 3,
+  "archery": 3,
+  "defense": 2,
+  "great-weapon-fighting": 2,
+  "two-weapon-fighting": 2,
+  "boon-of-combat-prowess": 4,
+  "boon-of-dimensional-travel": 3,
+  "boon-of-fate": 4,
+  "boon-of-irresistible-offense": 2,
+  "boon-of-spell-recall": 3,
+  "boon-of-the-night-spirit": 3,
+  "boon-of-truesight": 2
+}
