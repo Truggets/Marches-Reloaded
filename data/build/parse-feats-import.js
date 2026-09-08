@@ -20,6 +20,20 @@ const PACK = 'phb-2024'
 // (approved schema change, see plan doc §5).
 const VALID_CATEGORIES = ['Origin', 'General', 'General / Racial', 'Fighting Style', 'Epic Boon']
 
+// Feats known, by name, to grant spells (and so must parse via
+// parseFeatSpellLists in client/src/engine/computeSheet.ts once rendered).
+// This is an identity-based check, not a parse-based one — deliberately.
+// parseFeatSpellLists returns [] both for "this feat has no spells" (56 of
+// 58 feats, expected) and for "this feat has spells but the regex didn't
+// match" (a real bug that would silently drop the #15 spell-list picker),
+// and those two cases are indistinguishable from the return value alone.
+// Naming the feats that MUST produce a non-empty list catches the second
+// case. Kept as a small duplicated regex here (not imported from
+// computeSheet.ts, a TS/ESM client module this CJS build script can't
+// easily consume) — if that function's patterns change, update this too.
+const SPELL_GRANTING_FEATS = new Set(['Magic Initiate'])
+const SPELL_LIST_PATTERNS = [/from the ([^.]+) spell list/i, /[Cc]hoose one spellcasting class:\s*([^.]+)/]
+
 // Feats known, by name, to actually be repeatable per the real 2024 rules.
 // The vault has no `repeatable` field at all (confirmed: zero of 58 feats
 // carry one), so this is a deliberately curated default rather than
@@ -58,6 +72,15 @@ function parseFeatEntry(vaultFeat) {
   // maps to `undefined` (the field is optional on FeatEntry). Every other
   // value passes through unchanged.
   const normalizedPrerequisite = prerequisite === 'None' ? undefined : prerequisite
+
+  if (SPELL_GRANTING_FEATS.has(name)) {
+    const parses = SPELL_LIST_PATTERNS.some((pattern) => pattern.test(mechanics))
+    if (!parses) {
+      throw new Error(
+        `Feat "${name}" is expected to grant spells (in SPELL_GRANTING_FEATS) but its "mechanics" text doesn't match either known spell-list phrasing — the wizard's spell-list picker would silently never appear for it. Check the source text or update the parser's patterns.`
+      )
+    }
+  }
 
   return {
     id: `${PACK}:${slugify(name)}`,

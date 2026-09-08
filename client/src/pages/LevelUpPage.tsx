@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { getClass, getSpellsByClass, listClasses, listFeats } from '@data'
 import { renderEmphasis } from '../EmphasisText'
+import { FeatPicker } from '../FeatPicker'
 import type { Ability, CharacterClassEntry, CharacterData, LevelUpEntry } from '../character-wizard/types'
 import { ABILITIES } from '../character-wizard/types'
 import {
@@ -479,18 +480,7 @@ export function LevelUpPage() {
       {asiLevel && (
         <section className="flex flex-col gap-3">
           <h2 className="pixel-title text-base">Choose a General Feat</h2>
-          <div className="flex flex-wrap gap-2">
-            {listFeats('General').map((feat) => (
-              <button
-                key={feat.id}
-                type="button"
-                className={`pixel-btn ${selectedFeatId === feat.id ? '' : 'pixel-btn-secondary'}`}
-                onClick={() => setSelectedFeatId(feat.id)}
-              >
-                {feat.name}
-              </button>
-            ))}
-          </div>
+          <FeatPicker feats={listFeats('General')} selectedId={selectedFeatId} onSelect={setSelectedFeatId} />
           {selectedFeat && <p className="text-sm">{renderEmphasis(selectedFeat.benefit)}</p>}
 
           {isAsiFeatSelected && (

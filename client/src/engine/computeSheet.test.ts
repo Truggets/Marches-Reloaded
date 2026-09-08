@@ -273,6 +273,23 @@ describe('Fighter (Dwarf, Soldier background)', () => {
     expect(parseFeatSpellAbilities(feat)).toEqual([])
   })
 
+  it('parseFeatSpellLists: PHB-2024 "Choose one spellcasting class" phrasing also parses (6 classes)', () => {
+    const feat = {
+      id: 'phb-2024:magic-initiate',
+      benefit:
+        "Choose one spellcasting class: Bard, Cleric, Druid, Sorcerer, Warlock, or Wizard. You learn two Cantrips of your choice and one 1st-level spell of your choice from that class's spell list.",
+    }
+    expect(parseFeatSpellLists(feat)).toEqual(['Bard', 'Cleric', 'Druid', 'Sorcerer', 'Warlock', 'Wizard'])
+  })
+
+  it('parseFeatSpellAbilities: PHB-2024 phrasing has no free-choice ability sentence, returns [] (derived-from-class mode)', () => {
+    const feat = {
+      id: 'phb-2024:magic-initiate',
+      benefit: 'The spellcasting ability modifier for these spells is the one associated with the chosen class.',
+    }
+    expect(parseFeatSpellAbilities(feat)).toEqual([])
+  })
+
   it('Athletics is proficient via Soldier background: 4 (Str mod) + 2 (prof) = 6', () => {
     const scores = { Strength: 18, Dexterity: 12, Constitution: 14, Intelligence: 10, Wisdom: 10, Charisma: 8 }
     expect(skillBonus('Athletics', scores, ['Athletics', 'Intimidation'], 2)).toBe(6)

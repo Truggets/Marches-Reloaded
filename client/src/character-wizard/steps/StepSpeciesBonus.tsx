@@ -1,6 +1,7 @@
-import { listFeats } from '@data'
-import { parseFeatSpellAbilities, parseFeatSpellLists } from '../../engine/computeSheet'
+import { getClass, listFeats } from '@data'
+import { parseFeatSpellAbilities, parseFeatSpellLists, parseSpellcastingAbility } from '../../engine/computeSheet'
 import { renderEmphasis } from '../../EmphasisText'
+import { FeatPicker } from '../../FeatPicker'
 import { ALL_SKILLS } from '../types'
 
 interface Props {
@@ -43,6 +44,21 @@ export function StepSpeciesBonus({
   const selectedFeat = originFeatId ? originFeats.find((f) => f.id === originFeatId) : undefined
   const spellLists = selectedFeat ? parseFeatSpellLists(selectedFeat).filter((l) => l !== excludeSpellList) : []
   const spellAbilities = selectedFeat ? parseFeatSpellAbilities(selectedFeat) : []
+  // PHB-2024-style Magic Initiate has no free ability choice — its
+  // spellcasting ability is whichever the chosen class already uses (see
+  // parseSpellcastingAbility's docs). Distinguishing "this feat has no
+  // spells" from "this feat's ability is derived, not chosen" by whether
+  // spellLists is non-empty while spellAbilities is empty.
+  const abilityIsDerivedFromClass = spellLists.length > 0 && spellAbilities.length === 0
+
+  function handleChooseSpellList(list: string) {
+    onChangeOriginFeatSpellList(list)
+    if (abilityIsDerivedFromClass) {
+      const classEntry = getClass(list.toLowerCase())
+      const derivedAbility = classEntry && parseSpellcastingAbility(classEntry)
+      if (derivedAbility) onChangeOriginFeatSpellAbility(derivedAbility)
+    }
+  }
 
   return (
     <div className="flex flex-col gap-6">
@@ -76,18 +92,7 @@ export function StepSpeciesBonus({
       {hasVersatileTrait && (
         <div className="flex flex-col gap-2">
           <p className="pixel-label">Versatile: choose 1 Origin feat</p>
-          <div className="flex flex-wrap gap-2">
-            {originFeats.map((feat) => (
-              <button
-                key={feat.id}
-                type="button"
-                onClick={() => onChangeOriginFeat(feat.id)}
-                className={`pixel-btn ${originFeatId === feat.id ? '' : 'pixel-btn-secondary'}`}
-              >
-                {feat.name}
-              </button>
-            ))}
-          </div>
+          <FeatPicker feats={originFeats} selectedId={originFeatId} onSelect={onChangeOriginFeat} />
           {selectedFeat && <p className="text-sm">{renderEmphasis(selectedFeat.benefit)}</p>}
 
           {spellLists.length > 0 && (
@@ -98,13 +103,19 @@ export function StepSpeciesBonus({
                   <button
                     key={list}
                     type="button"
-                    onClick={() => onChangeOriginFeatSpellList(list)}
+                    onClick={() => handleChooseSpellList(list)}
                     className={`pixel-btn ${originFeatSpellList === list ? '' : 'pixel-btn-secondary'}`}
                   >
                     {list}
                   </button>
                 ))}
               </div>
+              {abilityIsDerivedFromClass && originFeatSpellAbility && (
+                <p className="text-sm">
+                  Spellcasting ability: <span className="font-bold">{originFeatSpellAbility}</span> (matches{' '}
+                  {originFeatSpellList}'s own spellcasting ability)
+                </p>
+              )}
             </div>
           )}
 

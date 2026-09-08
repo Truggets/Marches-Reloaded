@@ -262,8 +262,16 @@ export function spellSlots(classId: string, level: number): SpellSlotInfo | unde
  * for a non-caster class (no feature matches). Throws if a match is found
  * but the captured word isn't one of the six real abilities, matching this
  * file's established convention for parsed-from-prose values.
+ *
+ * Exported for reuse by StepSpeciesBonus: a PHB-2024-style Magic Initiate
+ * derives its spellcasting ability from whichever class's spell list the
+ * player picked, rather than offering a free Int/Wis/Cha choice like the
+ * SRD 5.2 version — reusing this trusted per-class parser avoids relying on
+ * the feat's own prose to state the mapping (which, checked against the
+ * real text, is incomplete/example-only, not a clean list). See
+ * docs/planning/m2b-phase1-feats-plan.md.
  */
-function parseSpellcastingAbility(classEntry: ReturnType<typeof getClass>): Ability | undefined {
+export function parseSpellcastingAbility(classEntry: ReturnType<typeof getClass>): Ability | undefined {
   for (const feature of classEntry?.features ?? []) {
     const match = feature.description.match(/(\w+) is (?:your|the) spellcasting ability/i)
     if (!match) continue
@@ -277,16 +285,21 @@ function parseSpellcastingAbility(classEntry: ReturnType<typeof getClass>): Abil
 }
 
 /**
- * Spell lists a feat lets the player choose from (e.g. Magic Initiate:
- * "learn two cantrips of your choice from the Cleric, Druid, or Wizard spell
- * list" -> ['Cleric', 'Druid', 'Wizard']). Returns [] for a feat with no such
+ * Spell lists a feat lets the player choose from. Two known SRD phrasings:
+ * the SRD 5.2 bundled Magic Initiate ("learn two cantrips of your choice
+ * from the Cleric, Druid, or Wizard spell list" -> ['Cleric', 'Druid',
+ * 'Wizard']), and the PHB-2024 imported-pack phrasing ("Choose one
+ * spellcasting class: Bard, Cleric, Druid, Sorcerer, Warlock, or Wizard" ->
+ * the same shape, one entry per class). Returns [] for a feat with no such
  * text (most Origin feats don't grant spells) — that's expected, not an
- * error. Throws only if the sentence is present but doesn't parse into class
- * names, matching this file's parsed-from-prose convention. See
- * docs/planning/issue-15-plan.md.
+ * error. Throws only if a matching sentence is present but doesn't parse
+ * into names, matching this file's parsed-from-prose convention. See
+ * docs/planning/issue-15-plan.md and docs/planning/m2b-phase1-feats-plan.md.
  */
 export function parseFeatSpellLists(feat: { id: string; benefit: string }): string[] {
-  const match = feat.benefit.match(/from the ([^.]+) spell list/i)
+  const match =
+    feat.benefit.match(/from the ([^.]+) spell list/i) ??
+    feat.benefit.match(/[Cc]hoose one spellcasting class:\s*([^.]+)/)
   if (!match) return []
   const lists = match[1]
     .replace(/,? or /i, ', ')

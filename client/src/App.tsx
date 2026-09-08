@@ -97,6 +97,11 @@ function App() {
                 Party
               </Link>
             )}
+            {user.isAdmin && (
+              <Link to="/admin/packs/import" className="pixel-btn pixel-btn-secondary">
+                Import Pack
+              </Link>
+            )}
             <button
               type="button"
               onClick={() => setShowChangePassword((v) => !v)}

@@ -1,6 +1,7 @@
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import { BrowserRouter, Routes, Route } from 'react-router-dom'
+import { initPacks } from '@data'
 import './index.css'
 import App from './App.tsx'
 import { ErrorBoundary } from './ErrorBoundary'
@@ -14,14 +15,21 @@ import { CharacterSheetPage } from './pages/CharacterSheetPage'
 import { LevelUpPage } from './pages/LevelUpPage'
 import { PartyViewPage } from './pages/PartyViewPage'
 import { AdminEditJsonPage } from './pages/AdminEditJsonPage'
+import { AdminPackImportPage } from './pages/AdminPackImportPage'
 import { NotFoundPage } from './pages/NotFoundPage'
 
-createRoot(document.getElementById('root')!).render(
-  <StrictMode>
-    <ErrorBoundary>
-      <BrowserRouter>
-        <AuthProvider>
-          <Routes>
+// M2b: merge any admin-imported content packs in before the app renders, so
+// every synchronous @data call (listFeats, getFeat, etc.) sees complete data
+// on its very first render — no loading states scattered through the
+// wizard. Degrades gracefully (see initPacks) rather than blocking on
+// failure, so this is a fast, bounded wait, not a real risk of hanging.
+void initPacks().then(() => {
+  createRoot(document.getElementById('root')!).render(
+    <StrictMode>
+      <ErrorBoundary>
+        <BrowserRouter>
+          <AuthProvider>
+            <Routes>
             <Route path="/login" element={<LoginPage />} />
             <Route path="/register" element={<RegisterPage />} />
             <Route
@@ -73,6 +81,14 @@ createRoot(document.getElementById('root')!).render(
               }
             />
             <Route
+              path="/admin/packs/import"
+              element={
+                <RequireAuth>
+                  <AdminPackImportPage />
+                </RequireAuth>
+              }
+            />
+            <Route
               path="/party"
               element={
                 <RequireAuth>
@@ -81,9 +97,10 @@ createRoot(document.getElementById('root')!).render(
               }
             />
             <Route path="*" element={<NotFoundPage />} />
-          </Routes>
-        </AuthProvider>
-      </BrowserRouter>
-    </ErrorBoundary>
-  </StrictMode>,
-)
+            </Routes>
+          </AuthProvider>
+        </BrowserRouter>
+      </ErrorBoundary>
+    </StrictMode>,
+  )
+})

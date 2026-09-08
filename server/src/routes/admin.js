@@ -6,6 +6,7 @@ import express from "express";
 import argon2 from "argon2";
 import db from "../db/index.js";
 import { requireAuth, requireRole } from "../middleware/auth.js";
+import { parseFeatsImport } from "../../../data/build/parse-feats-import.js";
 
 const router = express.Router();
 
@@ -97,6 +98,46 @@ router.get("/characters", (req, res) => {
     updatedAt: row.updated_at,
   }));
   return res.status(200).json({ characters });
+});
+
+// M2b: import an additional content pack (currently: feats only, Phase 1).
+// The pack is stored in pack_content (shared/data/marches.sqlite), never in
+// the shipped data/ directory — see CLAUDE.md's SRD-only bundling rule and
+// docs/planning/m2b-execution-plan.md. Body shape: { packId, packName,
+// feats: <vault-shaped feats JSON's top-level object, i.e. {feats: [...]}> }.
+// Runs the entries through the exact same parser/validator used by the
+// build-time CLI (parse-feats-import.js) — reject the whole pack, name the
+// offending entry, per the plan's "validation moves to the import boundary"
+// decision. Not wrapped in a DB transaction here: a single INSERT/REPLACE
+// is already atomic in SQLite.
+router.post("/packs/import", (req, res) => {
+  const { packId, packName, feats } = req.body || {};
+
+  if (typeof packId !== "string" || !packId.trim()) {
+    return res.status(400).json({ error: "packId is required" });
+  }
+  if (typeof packName !== "string" || !packName.trim()) {
+    return res.status(400).json({ error: "packName is required" });
+  }
+
+  let parsedFeats;
+  try {
+    parsedFeats = parseFeatsImport(feats);
+  } catch (err) {
+    return res.status(400).json({ error: `Import rejected: ${err.message}` });
+  }
+
+  const manifest = JSON.stringify({ id: packId, name: packName, importedAt: new Date().toISOString() });
+  const content = JSON.stringify({ feats: parsedFeats });
+
+  db.prepare(
+    `INSERT INTO pack_content (pack_id, manifest, content, imported_by_user_id, created_at)
+     VALUES (?, ?, ?, ?, ?)
+     ON CONFLICT(pack_id) DO UPDATE SET manifest = excluded.manifest, content = excluded.content,
+       imported_by_user_id = excluded.imported_by_user_id, created_at = excluded.created_at`
+  ).run(packId, manifest, content, req.session.userId, new Date().toISOString());
+
+  return res.status(200).json({ ok: true, packId, featCount: parsedFeats.length });
 });
 
 export default router;

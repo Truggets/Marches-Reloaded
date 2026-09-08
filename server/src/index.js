@@ -17,6 +17,7 @@ import SqliteSessionStore from "./lib/sessionStore.js";
 import authRouter from "./routes/auth.js";
 import adminRouter from "./routes/admin.js";
 import charactersRouter from "./routes/characters.js";
+import packsRouter from "./routes/packs.js";
 
 const app = express();
 
@@ -48,6 +49,7 @@ app.get("/api/health", (req, res) => {
 app.use("/api/auth", authRouter);
 app.use("/api/admin", adminRouter);
 app.use("/api/characters", charactersRouter);
+app.use("/api/packs", packsRouter);
 
 // Central JSON error handler — keep stack traces out of responses.
 app.use((err, req, res, next) => {

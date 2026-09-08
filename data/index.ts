@@ -23,11 +23,43 @@ const manifest = manifestJson as PackManifest
 const classes = classesJson as unknown as ClassEntry[]
 const species = speciesJson as unknown as SpeciesEntry[]
 const backgrounds = backgroundsJson as unknown as BackgroundEntry[]
-const feats = featsJson as unknown as FeatEntry[]
+const bundledFeats = featsJson as unknown as FeatEntry[]
 const spells = spellsJson as unknown as SpellEntry[]
 const equipment = equipmentJson as unknown as EquipmentEntry[]
 
-export const srdPack: ContentPack = { manifest, classes, species, backgrounds, feats, spells, equipment }
+export const srdPack: ContentPack = { manifest, classes, species, backgrounds, feats: bundledFeats, spells, equipment }
+
+// M2b: admin-imported content packs (e.g. PHB-2024 feats), fetched once at
+// app boot (see initPacks() below, called from main.tsx before the router
+// mounts) and merged in here. Every other function in this file stays
+// synchronous — call sites (listFeats, getFeat, etc.) never had to become
+// async, since the merge happens before any of them are ever called.
+let importedFeats: FeatEntry[] = []
+let importedPackManifests: { id: string; name: string }[] = []
+
+/** Fetches this instance's admin-imported packs and merges their feats in.
+ * Degrades gracefully on any failure (network error, or a 401 for a
+ * logged-out visitor on /login or /register, which is expected, not an
+ * error) — the app proceeds with SRD-only content rather than blocking.
+ * Call once, before rendering the app (see main.tsx). */
+export async function initPacks(): Promise<void> {
+  try {
+    const res = await fetch('/api/packs', { credentials: 'include' })
+    if (!res.ok) return // not authenticated yet, or a transient error — SRD-only is fine
+    const body = (await res.json()) as { packs: { packId: string; manifest: { name: string }; content: { feats?: FeatEntry[] } }[] }
+    importedFeats = body.packs.flatMap((p) => p.content.feats ?? [])
+    importedPackManifests = body.packs.map((p) => ({ id: p.packId, name: p.manifest.name }))
+  } catch {
+    // Network failure, malformed response, etc. — degrade to SRD-only.
+  }
+}
+
+/** Every pack currently loaded (bundled SRD + any imported), for UI that
+ * needs to group content per-pack (e.g. the collapsible per-pack picker
+ * sections). Bundled SRD is always first. */
+export function listLoadedPacks(): { id: string; name: string }[] {
+  return [{ id: manifest.id, name: manifest.name }, ...importedPackManifests]
+}
 
 export function getManifest(): PackManifest {
   return manifest
@@ -58,11 +90,12 @@ export function getBackground(id: string): BackgroundEntry | undefined {
 }
 
 export function listFeats(category?: FeatEntry['category']): FeatEntry[] {
-  return category ? feats.filter((f) => f.category === category) : feats
+  const all = [...bundledFeats, ...importedFeats]
+  return category ? all.filter((f) => f.category === category) : all
 }
 
 export function getFeat(id: string): FeatEntry | undefined {
-  return feats.find((f) => f.id === id)
+  return bundledFeats.find((f) => f.id === id) ?? importedFeats.find((f) => f.id === id)
 }
 
 export function listSpells(): SpellEntry[] {

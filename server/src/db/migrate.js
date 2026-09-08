@@ -47,8 +47,38 @@ function createTables() {
       created_at TEXT NOT NULL,
       updated_at TEXT NOT NULL
     );
+
+    -- M2b: admin-imported content packs (e.g. PHB-2024 feats), stored here
+    -- rather than under data/ — this is non-SRD content and must never be
+    -- shipped/bundled, per CLAUDE.md. Survives deploys (shared/data/marches.sqlite
+    -- is outside the pruned releases/ tree, see server/src/config.js).
+    CREATE TABLE IF NOT EXISTS pack_content (
+      pack_id TEXT PRIMARY KEY,
+      manifest TEXT NOT NULL,
+      content TEXT NOT NULL,
+      imported_by_user_id INTEGER NOT NULL REFERENCES users(id),
+      created_at TEXT NOT NULL
+    );
   `);
-  console.log("[migrate] tables ensured: users, sessions, invites, characters");
+  console.log("[migrate] tables ensured: users, sessions, invites, characters, pack_content");
+}
+
+// characters.verified: whether a DM has signed off on a character whose
+// bones rating flagged a demon-bone combo (docs/planning/power-bones-plan.md
+// §4/§5). Deliberately NOT in the player-owned `data` JSON blob — that blob
+// has no server-side validation (see #14's admin JSON editor), so a trust
+// claim there would be player-editable. Added via ALTER TABLE (SQLite has no
+// "ADD COLUMN IF NOT EXISTS", so check PRAGMA table_info first) rather than
+// baked into the CREATE TABLE above, since that only runs for a brand-new DB.
+function addVerifiedColumn() {
+  const columns = db.prepare("PRAGMA table_info(characters)").all();
+  const hasVerified = columns.some((c) => c.name === "verified");
+  if (hasVerified) {
+    console.log("[migrate] characters.verified already present — skipping");
+    return;
+  }
+  db.exec("ALTER TABLE characters ADD COLUMN verified INTEGER NOT NULL DEFAULT 0");
+  console.log("[migrate] added characters.verified column");
 }
 
 async function seedAdmin() {
@@ -108,6 +138,7 @@ function seedInvite() {
 
 export async function migrate() {
   createTables();
+  addVerifiedColumn();
   await seedAdmin();
   seedInvite();
   console.log("[migrate] done");
