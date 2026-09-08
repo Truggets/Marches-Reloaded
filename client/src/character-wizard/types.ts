@@ -93,6 +93,11 @@ export interface CharacterData {
   // Optional/absent-safe — only present for species with such a trait, and
   // absent on characters saved before this was implemented.
   originFeatId?: string
+  // Spells chosen for a spell-granting Origin feat granted by the
+  // character's Background (e.g. Sage's fixed "Magic Initiate (Wizard)").
+  // Separate from class spellcasting `spells` above — populated only when
+  // the background grants such a feat. See docs/planning/issue-2-plan.md.
+  originFeatSpells?: { cantrips: string[]; prepared: string[] }
 }
 
 export const WIZARD_STEPS = [

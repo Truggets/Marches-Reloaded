@@ -23,6 +23,18 @@ function findFeatByBackgroundFeatText(featText: string) {
   return listFeats().find((f) => f.name === bareName)
 }
 
+/** If the background's fixed feat is Magic Initiate, returns the spell list
+ * class name from its parenthetical (e.g. "Wizard"); undefined otherwise.
+ * Magic Initiate is currently the only Origin feat in the pack that grants
+ * spells — this is a targeted check, not a generic "does this feat grant
+ * spells" data field (that would need a data-pack schema change; not
+ * warranted for one feat). See docs/planning/issue-2-plan.md. */
+function backgroundFeatSpellList(featText: string | undefined): string | undefined {
+  if (!featText) return undefined
+  if (findFeatByBackgroundFeatText(featText)?.id !== 'magic-initiate') return undefined
+  return featText.match(/\(([^)]+)\)/)?.[1]
+}
+
 /** Basic building advice per wizard step, computed from whatever's already
  * selected — deliberately simple/static rather than deep per-trait content,
  * since the goal is quick orientation, not a full strategy guide. Where the
@@ -114,6 +126,8 @@ export function CreateCharacterPage() {
   const [equipmentChoice, setEquipmentChoice] = useState<string | null>(null)
   const [spellCantrips, setSpellCantrips] = useState<string[]>([])
   const [spellPrepared, setSpellPrepared] = useState<string[]>([])
+  const [featSpellCantrips, setFeatSpellCantrips] = useState<string[]>([])
+  const [featSpellPrepared, setFeatSpellPrepared] = useState<string[]>([])
   const [lastSpellId, setLastSpellId] = useState<string | null>(null)
   const [name, setName] = useState('')
   const [saving, setSaving] = useState(false)
@@ -124,6 +138,8 @@ export function CreateCharacterPage() {
   const backgroundEntry = backgroundId ? getBackground(backgroundId) : undefined
   const casterCounts = classEntry ? getCasterCounts(classEntry) : null
   const isCaster = casterCounts !== null
+  const featSpellList = backgroundFeatSpellList(backgroundEntry?.feat)
+  const hasFeatSpells = !!featSpellList
   const hasSkillfulTrait = !!speciesEntry?.traits.some((t) => t.name === 'Skillful')
   const hasVersatileTrait = !!speciesEntry?.traits.some((t) => t.name === 'Versatile')
   const hasSpeciesBonusStep = hasSkillfulTrait || hasVersatileTrait
@@ -131,9 +147,9 @@ export function CreateCharacterPage() {
   const steps = useMemo(
     () =>
       (['class', 'origin', 'abilities', 'skills', 'speciesBonus', 'equipment', 'spells', 'name'] as const).filter(
-        (s) => (s !== 'spells' || isCaster) && (s !== 'speciesBonus' || hasSpeciesBonusStep),
+        (s) => (s !== 'spells' || isCaster || hasFeatSpells) && (s !== 'speciesBonus' || hasSpeciesBonusStep),
       ),
-    [isCaster, hasSpeciesBonusStep],
+    [isCaster, hasFeatSpells, hasSpeciesBonusStep],
   )
   const [stepIndex, setStepIndex] = useState(0)
   const step = steps[stepIndex]
@@ -162,9 +178,11 @@ export function CreateCharacterPage() {
         return (!hasSkillfulTrait || !!bonusSkill) && (!hasVersatileTrait || !!originFeatId)
       case 'equipment':
         return !!equipmentChoice
-      case 'spells':
-        if (!casterCounts) return true
-        return spellCantrips.length === casterCounts.cantrips && spellPrepared.length === casterCounts.preparedOrKnown
+      case 'spells': {
+        const casterDone = !casterCounts || (spellCantrips.length === casterCounts.cantrips && spellPrepared.length === casterCounts.preparedOrKnown)
+        const featDone = !hasFeatSpells || (featSpellCantrips.length === 2 && featSpellPrepared.length === 1)
+        return casterDone && featDone
+      }
       case 'name':
         return name.trim().length > 0
       default:
@@ -204,6 +222,7 @@ export function CreateCharacterPage() {
       equipmentChoice,
       ...(isCaster ? { spells: { cantrips: spellCantrips, prepared: spellPrepared } } : {}),
       ...(originFeatId ? { originFeatId } : {}),
+      ...(hasFeatSpells ? { originFeatSpells: { cantrips: featSpellCantrips, prepared: featSpellPrepared } } : {}),
     }
 
     try {
@@ -296,24 +315,51 @@ export function CreateCharacterPage() {
           />
         )}
 
-        {step === 'spells' && classEntry && casterCounts && (
-          <StepSpells
-            className={classEntry.name}
-            cantripCount={casterCounts.cantrips}
-            preparedCount={casterCounts.preparedOrKnown}
-            cantrips={spellCantrips}
-            prepared={spellPrepared}
-            onChangeCantrips={(ids) => {
-              const added = ids.find((id) => !spellCantrips.includes(id))
-              if (added) setLastSpellId(added)
-              setSpellCantrips(ids)
-            }}
-            onChangePrepared={(ids) => {
-              const added = ids.find((id) => !spellPrepared.includes(id))
-              if (added) setLastSpellId(added)
-              setSpellPrepared(ids)
-            }}
-          />
+        {step === 'spells' && (
+          <div className="flex flex-col gap-8">
+            {classEntry && casterCounts && (
+              <StepSpells
+                className={classEntry.name}
+                heading={featSpellList ? `${classEntry.name} Spells` : 'Spells'}
+                cantripCount={casterCounts.cantrips}
+                preparedCount={casterCounts.preparedOrKnown}
+                cantrips={spellCantrips}
+                prepared={spellPrepared}
+                excludeIds={[...featSpellCantrips, ...featSpellPrepared]}
+                onChangeCantrips={(ids) => {
+                  const added = ids.find((id) => !spellCantrips.includes(id))
+                  if (added) setLastSpellId(added)
+                  setSpellCantrips(ids)
+                }}
+                onChangePrepared={(ids) => {
+                  const added = ids.find((id) => !spellPrepared.includes(id))
+                  if (added) setLastSpellId(added)
+                  setSpellPrepared(ids)
+                }}
+              />
+            )}
+            {featSpellList && (
+              <StepSpells
+                className={featSpellList}
+                heading={`${backgroundEntry?.feat ?? 'Magic Initiate'} Spells`}
+                cantripCount={2}
+                preparedCount={1}
+                cantrips={featSpellCantrips}
+                prepared={featSpellPrepared}
+                excludeIds={[...spellCantrips, ...spellPrepared]}
+                onChangeCantrips={(ids) => {
+                  const added = ids.find((id) => !featSpellCantrips.includes(id))
+                  if (added) setLastSpellId(added)
+                  setFeatSpellCantrips(ids)
+                }}
+                onChangePrepared={(ids) => {
+                  const added = ids.find((id) => !featSpellPrepared.includes(id))
+                  if (added) setLastSpellId(added)
+                  setFeatSpellPrepared(ids)
+                }}
+              />
+            )}
+          </div>
         )}
 
         {step === 'name' && <StepName name={name} onChange={setName} />}

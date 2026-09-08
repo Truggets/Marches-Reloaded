@@ -415,6 +415,26 @@ export function CharacterSheetPage() {
               <span className="font-bold">Feat:</span> {backgroundEntry.feat}
             </p>
           )}
+          {data.originFeatSpells && (
+            <div className="mt-2 grid grid-cols-1 gap-4 sm:grid-cols-2">
+              <div>
+                <p className="pixel-label">Cantrips</p>
+                <ul className="text-sm list-disc list-inside">
+                  {data.originFeatSpells.cantrips.map((id) => (
+                    <li key={id}>{getSpell(id)?.name ?? id}</li>
+                  ))}
+                </ul>
+              </div>
+              <div>
+                <p className="pixel-label">Spell</p>
+                <ul className="text-sm list-disc list-inside">
+                  {data.originFeatSpells.prepared.map((id) => (
+                    <li key={id}>{getSpell(id)?.name ?? id}</li>
+                  ))}
+                </ul>
+              </div>
+            </div>
+          )}
         </section>
 
         {/* Equipment */}
