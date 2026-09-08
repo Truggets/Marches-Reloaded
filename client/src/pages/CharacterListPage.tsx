@@ -1,8 +1,9 @@
 import { useCallback, useEffect, useState } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { getBackground, getClass, getSpecies } from '@data'
 import type { CharacterData } from '../character-wizard/types'
 import { CharacterAvatar } from '../CharacterAvatar'
+import { useAuth } from '../auth/AuthContext'
 import { WilburCompanion } from '../WilburCompanion'
 
 interface CharacterSummary {
@@ -21,9 +22,12 @@ async function extractErrorMessage(res: Response): Promise<string> {
 }
 
 export function CharacterListPage() {
+  const { user } = useAuth()
+  const navigate = useNavigate()
   const [characters, setCharacters] = useState<CharacterSummary[] | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [deletingId, setDeletingId] = useState<number | null>(null)
+  const [duplicatingId, setDuplicatingId] = useState<number | null>(null)
   const [renamingId, setRenamingId] = useState<number | null>(null)
   const [renameValue, setRenameValue] = useState('')
   const [savingRename, setSavingRename] = useState(false)
@@ -78,6 +82,32 @@ export function CharacterListPage() {
       setError(err instanceof Error ? err.message : 'Failed to rename character')
     } finally {
       setSavingRename(false)
+    }
+  }
+
+  // Admin/QA tool (issue #14) — duplicates a character then sends the admin
+  // straight to its raw JSON editor, so bug repro starts from a real,
+  // currently-valid character instead of a hand-maintained template that
+  // would drift as CharacterData grows new fields.
+  async function handleDuplicate(c: CharacterSummary) {
+    setDuplicatingId(c.id)
+    setError(null)
+    try {
+      const res = await fetch('/api/characters', {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: `${c.name} (copy)`, data: c.data }),
+      })
+      if (!res.ok) {
+        throw new Error(await extractErrorMessage(res))
+      }
+      const body = (await res.json()) as { character: { id: number } }
+      navigate(`/characters/${body.character.id}/edit-json`)
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to duplicate character')
+    } finally {
+      setDuplicatingId(null)
     }
   }
 
@@ -184,6 +214,16 @@ export function CharacterListPage() {
                   >
                     Rename
                   </button>
+                  {user?.isAdmin && (
+                    <button
+                      type="button"
+                      onClick={() => void handleDuplicate(c)}
+                      disabled={duplicatingId === c.id}
+                      className="pixel-btn pixel-btn-secondary"
+                    >
+                      {duplicatingId === c.id ? 'Duplicating…' : 'Duplicate'}
+                    </button>
+                  )}
                   <button
                     type="button"
                     onClick={() => void handleDelete(c.id)}

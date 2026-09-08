@@ -213,6 +213,14 @@ export function CharacterSheetPage() {
           <button type="button" className="pixel-btn" onClick={handleDownloadJson}>
             Download JSON
           </button>
+          {/* Admin/QA tool — see docs/planning/issue-14-plan.md. Shown for any
+              character, not just the admin's own, matching what the server's
+              canAccess() already permits. */}
+          {user?.isAdmin && (
+            <Link to={`/characters/${id}/edit-json`} className="pixel-btn pixel-btn-secondary">
+              Edit JSON
+            </Link>
+          )}
         </div>
       </div>
 

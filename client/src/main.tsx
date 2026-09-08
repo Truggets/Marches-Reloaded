@@ -13,6 +13,7 @@ import { CreateCharacterPage } from './pages/CreateCharacterPage'
 import { CharacterSheetPage } from './pages/CharacterSheetPage'
 import { LevelUpPage } from './pages/LevelUpPage'
 import { PartyViewPage } from './pages/PartyViewPage'
+import { AdminEditJsonPage } from './pages/AdminEditJsonPage'
 import { NotFoundPage } from './pages/NotFoundPage'
 
 createRoot(document.getElementById('root')!).render(
@@ -60,6 +61,14 @@ createRoot(document.getElementById('root')!).render(
               element={
                 <RequireAuth>
                   <LevelUpPage />
+                </RequireAuth>
+              }
+            />
+            <Route
+              path="/characters/:id/edit-json"
+              element={
+                <RequireAuth>
+                  <AdminEditJsonPage />
                 </RequireAuth>
               }
             />
