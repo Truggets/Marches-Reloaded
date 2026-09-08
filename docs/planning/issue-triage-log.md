@@ -4,4 +4,4 @@ Running log of issues worked by the `daily-issue-review` skill. One row per issu
 
 | Issue | Date | Status | Plan |
 |---|---|---|---|
-| #12 | 2026-09-08 | planned | docs/planning/issue-12-plan.md |
+| #12 | 2026-09-08 | fixed & deployed | docs/planning/issue-12-plan.md |
