@@ -16,6 +16,7 @@ import {
   hitPointsMulticlass,
   proficiencyBonusMulticlass,
   skillBonus,
+  spellcastingInfo,
   spellSlots,
   totalCharacterLevel,
   warlockPactMagic,
@@ -362,32 +363,46 @@ export function CharacterSheetPage() {
                 .map((c) => {
                   const { cantrips, prepared } = spellsForClass(data, c.classId)
                   if (cantrips.length === 0 && prepared.length === 0) return null
+                  const casting = spellcastingInfo(c.classId, data.classes, scores)
                   return (
-                    <div key={c.classId} className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                      <div>
-                        <p className="pixel-label">{getClass(c.classId)?.name ?? c.classId} Cantrips</p>
-                        <ul className="text-sm list-disc list-inside">
-                          {cantrips.map((id) => (
-                            <li key={id}>{getSpell(id)?.name ?? id}</li>
-                          ))}
-                        </ul>
-                      </div>
-                      <div>
-                        <p className="pixel-label">{getClass(c.classId)?.name ?? c.classId} Prepared Spells</p>
-                        <ul className="flex flex-col gap-2 text-sm">
-                          {prepared.map((id) => {
-                            const spell = getSpell(id)
-                            return (
-                              <li key={id}>
-                                <p>
-                                  <span className="font-bold">{spell?.name ?? id}</span>
-                                  {spell && <span className="text-xs italic"> (Level {spell.level})</span>}
-                                </p>
-                                {spell && <p className="text-xs">{spell.description}</p>}
-                              </li>
-                            )
-                          })}
-                        </ul>
+                    <div key={c.classId} className="flex flex-col gap-2">
+                      {casting && (
+                        <p className="text-sm">
+                          {getClass(c.classId)?.name ?? c.classId} Spell Attack{' '}
+                          <span className="font-bold">
+                            {casting.attackBonus >= 0 ? '+' : ''}
+                            {casting.attackBonus}
+                          </span>
+                          {' · '}
+                          Spell Save DC <span className="font-bold">{casting.saveDC}</span>
+                        </p>
+                      )}
+                      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                        <div>
+                          <p className="pixel-label">{getClass(c.classId)?.name ?? c.classId} Cantrips</p>
+                          <ul className="text-sm list-disc list-inside">
+                            {cantrips.map((id) => (
+                              <li key={id}>{getSpell(id)?.name ?? id}</li>
+                            ))}
+                          </ul>
+                        </div>
+                        <div>
+                          <p className="pixel-label">{getClass(c.classId)?.name ?? c.classId} Prepared Spells</p>
+                          <ul className="flex flex-col gap-2 text-sm">
+                            {prepared.map((id) => {
+                              const spell = getSpell(id)
+                              return (
+                                <li key={id}>
+                                  <p>
+                                    <span className="font-bold">{spell?.name ?? id}</span>
+                                    {spell && <span className="text-xs italic"> (Level {spell.level})</span>}
+                                  </p>
+                                  {spell && <p className="text-xs">{spell.description}</p>}
+                                </li>
+                              )
+                            })}
+                          </ul>
+                        </div>
                       </div>
                     </div>
                   )
@@ -421,6 +436,11 @@ export function CharacterSheetPage() {
           {backgroundEntry?.feat && (
             <p className="text-sm">
               <span className="font-bold">Feat:</span> {backgroundEntry.feat}
+            </p>
+          )}
+          {backgroundEntry?.toolProficiency && (
+            <p className="text-sm">
+              <span className="font-bold">Tool Proficiency:</span> {backgroundEntry.toolProficiency}
             </p>
           )}
           {data.originFeatSpells && (

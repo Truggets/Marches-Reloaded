@@ -7,3 +7,5 @@ Running log of issues worked by the `daily-issue-review` skill. One row per issu
 | #12 | 2026-09-08 | fixed & deployed | docs/planning/issue-12-plan.md |
 | #2 | 2026-09-08 | fixed & deployed | docs/planning/issue-2-plan.md |
 | #14 | 2026-09-08 | fixed & deployed | docs/planning/issue-14-plan.md |
+| #10 | 2026-09-08 | planned | docs/planning/issue-10-plan.md |
+| #4 | 2026-09-08 | planned (tool proficiencies only; languages split to #16) | docs/planning/issue-4-plan.md |

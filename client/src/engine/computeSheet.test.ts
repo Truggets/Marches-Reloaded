@@ -9,6 +9,7 @@ import {
   isAsiLevel,
   proficiencyBonus,
   skillBonus,
+  spellcastingInfo,
   spellSlots,
   unarmoredDefenseVoidedByShield,
 } from './computeSheet'
@@ -220,6 +221,34 @@ describe('Fighter (Dwarf, Soldier background)', () => {
     expect(unarmoredDefenseVoidedByShield(monkText)).toBe(true)
     expect(unarmoredDefenseVoidedByShield(barbarianText)).toBe(false)
     expect(() => unarmoredDefenseVoidedByShield('some reworded pack text mentioning a Shield')).toThrow()
+  })
+
+  it('spellcastingInfo: Wizard L1 uses Intelligence (spellAttack = prof+mod, saveDC = 8+prof+mod)', () => {
+    const wizard = [{ classId: 'wizard', level: 1 }]
+    const scores = { Strength: 8, Dexterity: 14, Constitution: 12, Intelligence: 16, Wisdom: 10, Charisma: 10 }
+    const info = spellcastingInfo('wizard', wizard, scores)
+    expect(info).toEqual({ ability: 'Intelligence', attackBonus: 2 + 3, saveDC: 8 + 2 + 3 })
+  })
+
+  it('spellcastingInfo: Cleric L1 uses Wisdom', () => {
+    const cleric = [{ classId: 'cleric', level: 1 }]
+    const scores = { Strength: 10, Dexterity: 10, Constitution: 12, Intelligence: 8, Wisdom: 16, Charisma: 10 }
+    const info = spellcastingInfo('cleric', cleric, scores)
+    expect(info?.ability).toBe('Wisdom')
+    expect(info?.attackBonus).toBe(2 + 3)
+  })
+
+  it('spellcastingInfo: Warlock L1 uses Charisma (its feature text says "the spellcasting ability", not "your")', () => {
+    const warlock = [{ classId: 'warlock', level: 1 }]
+    const scores = { Strength: 10, Dexterity: 10, Constitution: 12, Intelligence: 8, Wisdom: 10, Charisma: 16 }
+    const info = spellcastingInfo('warlock', warlock, scores)
+    expect(info?.ability).toBe('Charisma')
+  })
+
+  it('spellcastingInfo: non-caster class returns undefined', () => {
+    const fighter = [{ classId: 'fighter', level: 1 }]
+    const scores = { Strength: 16, Dexterity: 14, Constitution: 14, Intelligence: 10, Wisdom: 10, Charisma: 10 }
+    expect(spellcastingInfo('fighter', fighter, scores)).toBeUndefined()
   })
 
   it('Athletics is proficient via Soldier background: 4 (Str mod) + 2 (prof) = 6', () => {

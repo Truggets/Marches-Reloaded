@@ -254,6 +254,60 @@ export function spellSlots(classId: string, level: number): SpellSlotInfo | unde
   return undefined
 }
 
+/**
+ * Parses a class's spellcasting ability from its own feature text — scans
+ * every feature (not just one named "Spellcasting", since Warlock's
+ * equivalent feature is named "Pact Magic") for the SRD's standard
+ * "<Ability> is your/the spellcasting ability" phrasing. Returns undefined
+ * for a non-caster class (no feature matches). Throws if a match is found
+ * but the captured word isn't one of the six real abilities, matching this
+ * file's established convention for parsed-from-prose values.
+ */
+function parseSpellcastingAbility(classEntry: ReturnType<typeof getClass>): Ability | undefined {
+  for (const feature of classEntry?.features ?? []) {
+    const match = feature.description.match(/(\w+) is (?:your|the) spellcasting ability/i)
+    if (!match) continue
+    const ability = ABILITIES.find((a) => a.toLowerCase() === match[1].toLowerCase())
+    if (!ability) {
+      throw new Error(`Unparseable spellcasting ability for class: ${classEntry?.id} ("${match[1]}")`)
+    }
+    return ability
+  }
+  return undefined
+}
+
+export interface SpellcastingInfo {
+  ability: Ability
+  attackBonus: number
+  saveDC: number
+}
+
+/**
+ * Spell attack bonus and spell save DC for one of a character's classes, or
+ * undefined for a non-caster class. Proficiency bonus is keyed off *total*
+ * character level (via proficiencyBonusMulticlass), matching how a
+ * multiclass character's proficiency bonus works everywhere else on the
+ * sheet — each caster class still uses its own spellcasting ability.
+ */
+export function spellcastingInfo(
+  classId: string,
+  classes: CharacterClassEntry[],
+  abilityScores: Record<Ability, number>,
+): SpellcastingInfo | undefined {
+  const classEntry = getClass(classId)
+  if (!classEntry) throw new Error(`Unknown class: ${classId}`)
+  const ability = parseSpellcastingAbility(classEntry)
+  if (!ability) return undefined
+
+  const profBonus = proficiencyBonusMulticlass(classes)
+  const abilityMod = abilityModifier(abilityScores[ability])
+  return {
+    ability,
+    attackBonus: profBonus + abilityMod,
+    saveDC: 8 + profBonus + abilityMod,
+  }
+}
+
 /** Feature names granted exactly at the given level (that level's
  * featureTable row's feature list). Returns [] if the class has no row for
  * that level. */
