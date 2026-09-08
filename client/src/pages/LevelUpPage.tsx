@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { getClass, getSpellsByClass, listClasses, listFeats } from '@data'
+import { renderEmphasis } from '../EmphasisText'
 import type { Ability, CharacterClassEntry, CharacterData, LevelUpEntry } from '../character-wizard/types'
 import { ABILITIES } from '../character-wizard/types'
 import {
@@ -490,7 +491,7 @@ export function LevelUpPage() {
               </button>
             ))}
           </div>
-          {selectedFeat && <p className="text-sm">{selectedFeat.benefit}</p>}
+          {selectedFeat && <p className="text-sm">{renderEmphasis(selectedFeat.benefit)}</p>}
 
           {isAsiFeatSelected && (
             <div className="pixel-panel !p-3 flex flex-col gap-2">

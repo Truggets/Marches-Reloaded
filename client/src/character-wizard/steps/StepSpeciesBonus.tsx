@@ -1,5 +1,6 @@
 import { listFeats } from '@data'
 import { parseFeatSpellAbilities, parseFeatSpellLists } from '../../engine/computeSheet'
+import { renderEmphasis } from '../../EmphasisText'
 import { ALL_SKILLS } from '../types'
 
 interface Props {
@@ -87,7 +88,7 @@ export function StepSpeciesBonus({
               </button>
             ))}
           </div>
-          {selectedFeat && <p className="text-sm">{selectedFeat.benefit}</p>}
+          {selectedFeat && <p className="text-sm">{renderEmphasis(selectedFeat.benefit)}</p>}
 
           {spellLists.length > 0 && (
             <div className="flex flex-col gap-2">

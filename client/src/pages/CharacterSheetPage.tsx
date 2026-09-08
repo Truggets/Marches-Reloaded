@@ -6,6 +6,7 @@ import { ABILITIES, ALL_SKILLS } from '../character-wizard/types'
 import { parseEquipmentOptions } from '../character-wizard/parsing'
 import type { CharacterData } from '../character-wizard/types'
 import { CharacterAvatar } from '../CharacterAvatar'
+import { renderEmphasis } from '../EmphasisText'
 import { useAuth } from '../auth/AuthContext'
 import {
   abilityModifier,
@@ -397,7 +398,7 @@ export function CharacterSheetPage() {
                                     <span className="font-bold">{spell?.name ?? id}</span>
                                     {spell && <span className="text-xs italic"> (Level {spell.level})</span>}
                                   </p>
-                                  {spell && <p className="text-xs">{spell.description}</p>}
+                                  {spell && <p className="text-xs">{renderEmphasis(spell.description)}</p>}
                                 </li>
                               )
                             })}
@@ -417,7 +418,7 @@ export function CharacterSheetPage() {
           <div className="flex flex-col gap-2">
             {speciesEntry?.traits.map((trait) => (
               <div key={trait.name} className="text-sm">
-                <span className="font-bold">{trait.name}.</span> {trait.description}
+                <span className="font-bold">{trait.name}.</span> {renderEmphasis(trait.description)}
               </div>
             ))}
             {data.originFeatId && (

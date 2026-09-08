@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { renderEmphasis } from './EmphasisText'
 
 interface Props {
   tip: string
@@ -30,7 +31,7 @@ export function WilburTip({ tip }: Props) {
       />
       <div className="flex-1">
         <p className="text-sm">
-          <span className="pixel-label">Wilbur says:</span> {displayText}
+          <span className="pixel-label">Wilbur says:</span> {renderEmphasis(displayText)}
         </p>
         {isLong && (
           <button
