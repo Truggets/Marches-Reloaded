@@ -10,6 +10,7 @@ import {
   proficiencyBonus,
   skillBonus,
   spellSlots,
+  unarmoredDefenseVoidedByShield,
 } from './computeSheet'
 import type { CharacterData } from '../character-wizard/types'
 
@@ -211,6 +212,14 @@ describe('Fighter (Dwarf, Soldier background)', () => {
     const wizard = [{ classId: 'wizard', level: 1 }]
     const scores = { Strength: 8, Dexterity: 14, Constitution: 12, Intelligence: 16, Wisdom: 10, Charisma: 10 }
     expect(armorClass(wizard, 'A', scores)).toBe(10 + abilityModifier(14))
+  })
+
+  it('unarmoredDefenseVoidedByShield: positive-tests the two known SRD phrasings (not a loose substring match on "Shield")', () => {
+    const monkText = getClass('monk')?.features.find((f) => f.name === 'Unarmored Defense')?.description ?? ''
+    const barbarianText = getClass('barbarian')?.features.find((f) => f.name === 'Unarmored Defense')?.description ?? ''
+    expect(unarmoredDefenseVoidedByShield(monkText)).toBe(true)
+    expect(unarmoredDefenseVoidedByShield(barbarianText)).toBe(false)
+    expect(() => unarmoredDefenseVoidedByShield('some reworded pack text mentioning a Shield')).toThrow()
   })
 
   it('Athletics is proficient via Soldier background: 4 (Str mod) + 2 (prof) = 6', () => {

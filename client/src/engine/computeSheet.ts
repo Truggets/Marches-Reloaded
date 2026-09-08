@@ -125,6 +125,21 @@ function parseUnarmoredDefenseAbility(classEntry: ReturnType<typeof getClass>): 
 }
 
 /**
+ * Whether a class's Unarmored Defense feature text says a Shield voids the
+ * benefit entirely (Monk: "...aren't wearing armor or wielding a Shield...")
+ * vs. explicitly allows it (Barbarian: "You can use a Shield and still gain
+ * this benefit."). Tests for the two known SRD phrasings positively rather
+ * than a loose substring match (both phrasings mention "Shield") and throws
+ * on neither matching, so a reworded pack fails loudly instead of silently
+ * picking the wrong behavior.
+ */
+export function unarmoredDefenseVoidedByShield(description: string): boolean {
+  if (/aren't wearing armor or wielding a Shield/i.test(description)) return true
+  if (/can use a Shield and still gain this benefit/i.test(description)) return false
+  throw new Error(`Unparseable Shield interaction in Unarmored Defense text: "${description}"`)
+}
+
+/**
  * Computes AC for a character's classes/equipment-choice/ability-scores.
  * `classes[0]` supplies equipment/armor training (multiclassing grants no
  * new equipment — unchanged existing rule). When no matched body armor is
@@ -187,8 +202,9 @@ export function armorClass(
       const secondaryAbility = parseUnarmoredDefenseAbility(entry)
       if (!secondaryAbility) continue
       // Monk's Unarmored Defense text explicitly voids the benefit while
-      // wielding a Shield; only skip for classes whose feature says so.
-      if (hasShield && entry?.features.find((f) => f.name === 'Unarmored Defense')?.description.includes('wielding a Shield')) {
+      // wielding a Shield; Barbarian's explicitly doesn't.
+      const featureText = entry?.features.find((f) => f.name === 'Unarmored Defense')?.description ?? ''
+      if (hasShield && unarmoredDefenseVoidedByShield(featureText)) {
         continue
       }
       const candidate = 10 + dexModifier + abilityModifier(abilityScores[secondaryAbility])
