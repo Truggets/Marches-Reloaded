@@ -162,5 +162,14 @@ console.log('\nDuplicate ids throw and name both offenders:')
   check('error names the duplicate id', message.includes('phb-2024:alert'), true)
 }
 
+// --- Check 10: an explicit packId is actually used, not the hardcoded default ---
+console.log('\nExplicit packId is threaded through (not silently hardcoded):')
+{
+  const featsFromOtherPack = parseFeatsImport(vaultDoc, 'some-other-pack')
+  const alert = featsFromOtherPack.find((f) => f.name === 'Alert')
+  check('id uses the given packId', alert?.id, 'some-other-pack:alert')
+  check('pack field uses the given packId', alert?.pack, 'some-other-pack')
+}
+
 console.log(`\n${failures === 0 ? 'ALL CHECKS PASSED' : `${failures} CHECK(S) FAILED`}`)
 process.exit(failures === 0 ? 0 : 1)

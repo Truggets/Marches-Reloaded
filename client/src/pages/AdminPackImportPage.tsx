@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { Link, Navigate } from 'react-router-dom'
+import { initPacks } from '@data'
 import { useAuth } from '../auth/AuthContext'
 import { WilburCompanion } from '../WilburCompanion'
 
@@ -53,6 +54,7 @@ export function AdminPackImportPage() {
       })
       if (!res.ok) throw new Error(await extractErrorMessage(res))
       const body = (await res.json()) as { featCount: number }
+      await initPacks() // so the admin's own freshly-imported pack shows up without a manual refresh
       setResult({ featCount: body.featCount })
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to import pack')

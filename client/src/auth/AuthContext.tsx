@@ -6,6 +6,7 @@ import {
   useState,
   type ReactNode,
 } from 'react'
+import { initPacks } from '@data'
 
 export interface User {
   id: number
@@ -85,6 +86,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       throw new Error(await extractErrorMessage(res))
     }
     const data = (await res.json()) as UserResponse
+    // main.tsx's initPacks() call runs once, before the router mounts —
+    // for a visitor who wasn't already holding a valid session cookie,
+    // that fetch 401s (GET /api/packs is auth-gated) and is swallowed as
+    // "SRD-only for now." Re-run it now that we actually have a session,
+    // so pages mounted after this (character wizard, level-up) see any
+    // imported content instead of staying SRD-only for the whole session.
+    await initPacks()
     setUser(data.user)
   }, [])
 
@@ -100,6 +108,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         throw new Error(await extractErrorMessage(res))
       }
       const data = (await res.json()) as UserResponse
+      await initPacks() // same reasoning as login() above
       setUser(data.user)
     },
     [],

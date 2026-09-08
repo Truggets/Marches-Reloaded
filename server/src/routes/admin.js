@@ -122,7 +122,7 @@ router.post("/packs/import", (req, res) => {
 
   let parsedFeats;
   try {
-    parsedFeats = parseFeatsImport(feats);
+    parsedFeats = parseFeatsImport(feats, packId);
   } catch (err) {
     return res.status(400).json({ error: `Import rejected: ${err.message}` });
   }

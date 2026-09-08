@@ -42,8 +42,28 @@ export function StepSpeciesBonus({
 }: Props) {
   const originFeats = listFeats('Origin')
   const selectedFeat = originFeatId ? originFeats.find((f) => f.id === originFeatId) : undefined
-  const spellLists = selectedFeat ? parseFeatSpellLists(selectedFeat).filter((l) => l !== excludeSpellList) : []
-  const spellAbilities = selectedFeat ? parseFeatSpellAbilities(selectedFeat) : []
+  // Both parsers throw on a malformed-but-matching sentence — correct for
+  // the bundled SRD feats (build-time verified), but selectedFeat here can
+  // be admin-imported prose that was never run through that same check
+  // (import-time validation only identity-checks feats named "Magic
+  // Initiate", not every feat that merely *looks* spell-granting). Guard
+  // the render path itself so one bad imported feat can't crash the
+  // Species Bonus step for every player — degrade to "no spell picker"
+  // rather than a blank screen.
+  let spellLists: string[] = []
+  let spellAbilities: ReturnType<typeof parseFeatSpellAbilities> = []
+  if (selectedFeat) {
+    try {
+      spellLists = parseFeatSpellLists(selectedFeat).filter((l) => l !== excludeSpellList)
+    } catch (err) {
+      console.warn(`Feat "${selectedFeat.name}" (${selectedFeat.id}): couldn't parse its spell list`, err)
+    }
+    try {
+      spellAbilities = parseFeatSpellAbilities(selectedFeat)
+    } catch (err) {
+      console.warn(`Feat "${selectedFeat.name}" (${selectedFeat.id}): couldn't parse its spellcasting ability`, err)
+    }
+  }
   // PHB-2024-style Magic Initiate has no free ability choice — its
   // spellcasting ability is whichever the chosen class already uses (see
   // parseSpellcastingAbility's docs). Distinguishing "this feat has no

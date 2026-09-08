@@ -11,7 +11,13 @@
 const fs = require('fs')
 const path = require('path')
 
-const PACK = 'phb-2024'
+// Default pack id for the CLI (--pack-id overrides it) and for direct calls
+// to parseFeatsImport/parseFeatEntry that don't pass one — kept only as a
+// fallback. The real per-import pack id comes from the caller: the admin
+// import endpoint (server/src/routes/admin.js) passes whatever the admin
+// typed into "Pack ID" on AdminPackImportPage, so two different imports
+// (e.g. a future non-PHB pack) don't collide under the same hardcoded id.
+const DEFAULT_PACK = 'phb-2024'
 
 // Every category the vault is known to use, mapped 1:1 onto FeatEntry's
 // category union (data/schema.ts). This is a validation allowlist, not a
@@ -49,7 +55,7 @@ function slugify(name) {
 // Converts one vault feat object into a FeatEntry. Throws on the first
 // problem found, naming the offending feat, per the "reject the whole
 // pack, name the offender" convention (plan doc §3.1).
-function parseFeatEntry(vaultFeat) {
+function parseFeatEntry(vaultFeat, packId = DEFAULT_PACK) {
   const { name, category, source, prerequisite, mechanics } = vaultFeat
 
   if (!name || typeof name !== 'string') {
@@ -83,23 +89,26 @@ function parseFeatEntry(vaultFeat) {
   }
 
   return {
-    id: `${PACK}:${slugify(name)}`,
+    id: `${packId}:${slugify(name)}`,
     name,
     category,
     prerequisite: normalizedPrerequisite,
     repeatable: REPEATABLE_ALLOWLIST.has(name),
     benefit: mechanics,
-    pack: PACK,
+    pack: packId,
     source: { book: source },
   }
 }
 
 // Converts a whole vault-shaped `{ feats: [...] }` document into FeatEntry[].
-function parseFeatsImport(vaultDoc) {
+function parseFeatsImport(vaultDoc, packId = DEFAULT_PACK) {
   if (!vaultDoc || !Array.isArray(vaultDoc.feats)) {
     throw new Error('Expected a document shaped { feats: [...] }')
   }
-  const feats = vaultDoc.feats.map(parseFeatEntry)
+  if (typeof packId !== 'string' || !packId.trim()) {
+    throw new Error('packId is required and must be a non-empty string')
+  }
+  const feats = vaultDoc.feats.map((f) => parseFeatEntry(f, packId))
 
   // Reject the whole pack, naming both offenders, rather than silently
   // dropping or overwriting a collision (matches the "reject the whole
@@ -125,16 +134,17 @@ function main() {
 
   const inputPath = getArg('--input')
   const outputPath = getArg('--output')
+  const packId = getArg('--pack-id') ?? DEFAULT_PACK
   // Both flags required, no default output path: this is PHB-2024 (non-SRD)
   // content, which must never land in data/ (the shipped SRD-only dataset)
   // by accident. See CLAUDE.md's SRD-only bundling constraint.
   if (!inputPath || !outputPath) {
-    console.error('Usage: node parse-feats-import.js --input <vault-feats.json> --output <out.json>')
+    console.error('Usage: node parse-feats-import.js --input <vault-feats.json> --output <out.json> [--pack-id <id>]')
     process.exit(1)
   }
 
   const vaultDoc = JSON.parse(fs.readFileSync(path.resolve(inputPath), 'utf8'))
-  const feats = parseFeatsImport(vaultDoc)
+  const feats = parseFeatsImport(vaultDoc, packId)
 
   fs.writeFileSync(outputPath, JSON.stringify(feats, null, 2))
   console.log(`Parsed ${feats.length} feats from ${inputPath}`)
@@ -145,4 +155,4 @@ if (require.main === module) {
   main()
 }
 
-module.exports = { parseFeatsImport, parseFeatEntry, slugify, VALID_CATEGORIES, REPEATABLE_ALLOWLIST, PACK }
+module.exports = { parseFeatsImport, parseFeatEntry, slugify, VALID_CATEGORIES, REPEATABLE_ALLOWLIST, DEFAULT_PACK }
