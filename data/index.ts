@@ -89,9 +89,11 @@ export function getBackground(id: string): BackgroundEntry | undefined {
   return backgrounds.find((b) => b.id === id)
 }
 
-export function listFeats(category?: FeatEntry['category']): FeatEntry[] {
+export function listFeats(category?: FeatEntry['category'] | FeatEntry['category'][]): FeatEntry[] {
   const all = [...bundledFeats, ...importedFeats]
-  return category ? all.filter((f) => f.category === category) : all
+  if (!category) return all
+  const categories = Array.isArray(category) ? category : [category]
+  return all.filter((f) => categories.includes(f.category))
 }
 
 export function getFeat(id: string): FeatEntry | undefined {

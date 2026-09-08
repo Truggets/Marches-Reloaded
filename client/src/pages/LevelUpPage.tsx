@@ -319,7 +319,7 @@ export function LevelUpPage() {
   const level = currentLevel
   const features = featuresForLevel(classId, level)
   const asiLevel = isAsiLevel(classId, level)
-  const selectedFeat = selectedFeatId ? listFeats('General').find((f) => f.id === selectedFeatId) : undefined
+  const selectedFeat = selectedFeatId ? listFeats(['General', 'General / Racial']).find((f) => f.id === selectedFeatId) : undefined
   const isAsiFeatSelected = selectedFeatId === 'ability-score-improvement'
   const isGrapplerFeatSelected = selectedFeatId === 'grappler'
 
@@ -480,7 +480,7 @@ export function LevelUpPage() {
       {asiLevel && (
         <section className="flex flex-col gap-3">
           <h2 className="pixel-title text-base">Choose a General Feat</h2>
-          <FeatPicker feats={listFeats('General')} selectedId={selectedFeatId} onSelect={setSelectedFeatId} />
+          <FeatPicker feats={listFeats(['General', 'General / Racial'])} selectedId={selectedFeatId} onSelect={setSelectedFeatId} />
           {selectedFeat && <p className="text-sm">{renderEmphasis(selectedFeat.benefit)}</p>}
 
           {isAsiFeatSelected && (

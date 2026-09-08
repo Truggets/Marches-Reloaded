@@ -24,7 +24,9 @@ const app = express();
 const SEVEN_DAYS_MS = 7 * 24 * 60 * 60 * 1000;
 
 app.set("trust proxy", 1);
-app.use(express.json());
+// Default 100kb is too small for a pasted content-pack import (raw vault
+// prose, including lore text, easily exceeds it for a book-sized pack).
+app.use(express.json({ limit: '5mb' }));
 
 app.use(
   session({
