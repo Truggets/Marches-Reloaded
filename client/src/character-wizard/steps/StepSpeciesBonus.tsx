@@ -1,4 +1,5 @@
 import { listFeats } from '@data'
+import { parseFeatSpellAbilities, parseFeatSpellLists } from '../../engine/computeSheet'
 import { ALL_SKILLS } from '../types'
 
 interface Props {
@@ -9,6 +10,14 @@ interface Props {
   onChangeBonusSkill: (skill: string) => void
   originFeatId: string | null
   onChangeOriginFeat: (featId: string) => void
+  // Spell list already used by a background-granted feat of the same name
+  // (e.g. Sage's "Magic Initiate (Wizard)") — excluded from the choices here
+  // per Magic Initiate's "different spell list each time" rule.
+  excludeSpellList?: string
+  originFeatSpellList: string | null
+  onChangeOriginFeatSpellList: (list: string) => void
+  originFeatSpellAbility: string | null
+  onChangeOriginFeatSpellAbility: (ability: string) => void
 }
 
 /** Handles species traits that grant an open-ended bonus choice (currently
@@ -23,9 +32,16 @@ export function StepSpeciesBonus({
   onChangeBonusSkill,
   originFeatId,
   onChangeOriginFeat,
+  excludeSpellList,
+  originFeatSpellList,
+  onChangeOriginFeatSpellList,
+  originFeatSpellAbility,
+  onChangeOriginFeatSpellAbility,
 }: Props) {
   const originFeats = listFeats('Origin')
   const selectedFeat = originFeatId ? originFeats.find((f) => f.id === originFeatId) : undefined
+  const spellLists = selectedFeat ? parseFeatSpellLists(selectedFeat).filter((l) => l !== excludeSpellList) : []
+  const spellAbilities = selectedFeat ? parseFeatSpellAbilities(selectedFeat) : []
 
   return (
     <div className="flex flex-col gap-6">
@@ -72,6 +88,42 @@ export function StepSpeciesBonus({
             ))}
           </div>
           {selectedFeat && <p className="text-sm">{selectedFeat.benefit}</p>}
+
+          {spellLists.length > 0 && (
+            <div className="flex flex-col gap-2">
+              <p className="pixel-label">Choose a spell list</p>
+              <div className="flex flex-wrap gap-2">
+                {spellLists.map((list) => (
+                  <button
+                    key={list}
+                    type="button"
+                    onClick={() => onChangeOriginFeatSpellList(list)}
+                    className={`pixel-btn ${originFeatSpellList === list ? '' : 'pixel-btn-secondary'}`}
+                  >
+                    {list}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {spellAbilities.length > 0 && (
+            <div className="flex flex-col gap-2">
+              <p className="pixel-label">Choose a spellcasting ability</p>
+              <div className="flex flex-wrap gap-2">
+                {spellAbilities.map((ability) => (
+                  <button
+                    key={ability}
+                    type="button"
+                    onClick={() => onChangeOriginFeatSpellAbility(ability)}
+                    className={`pixel-btn ${originFeatSpellAbility === ability ? '' : 'pixel-btn-secondary'}`}
+                  >
+                    {ability}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
       )}
     </div>

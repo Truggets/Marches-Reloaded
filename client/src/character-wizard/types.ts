@@ -98,6 +98,16 @@ export interface CharacterData {
   // Separate from class spellcasting `spells` above — populated only when
   // the background grants such a feat. See docs/planning/issue-2-plan.md.
   originFeatSpells?: { cantrips: string[]; prepared: string[] }
+  // Spell list and spellcasting ability chosen for a Versatile-species-granted
+  // spell-casting Origin feat (e.g. Magic Initiate), plus the spells picked
+  // from that list. Independent of originFeatSpells above (which is
+  // background-only) — a character can have both a background-granted and a
+  // Versatile-granted Magic Initiate simultaneously, each with its own list
+  // per the feat's "different spell list each time" rule. Optional/absent-safe.
+  // See docs/planning/issue-15-plan.md.
+  originFeatSpellList?: string
+  originFeatSpellAbility?: string
+  versatileFeatSpells?: { cantrips: string[]; prepared: string[] }
 }
 
 export const WIZARD_STEPS = [

@@ -276,6 +276,51 @@ function parseSpellcastingAbility(classEntry: ReturnType<typeof getClass>): Abil
   return undefined
 }
 
+/**
+ * Spell lists a feat lets the player choose from (e.g. Magic Initiate:
+ * "learn two cantrips of your choice from the Cleric, Druid, or Wizard spell
+ * list" -> ['Cleric', 'Druid', 'Wizard']). Returns [] for a feat with no such
+ * text (most Origin feats don't grant spells) — that's expected, not an
+ * error. Throws only if the sentence is present but doesn't parse into class
+ * names, matching this file's parsed-from-prose convention. See
+ * docs/planning/issue-15-plan.md.
+ */
+export function parseFeatSpellLists(feat: { id: string; benefit: string }): string[] {
+  const match = feat.benefit.match(/from the ([^.]+) spell list/i)
+  if (!match) return []
+  const lists = match[1]
+    .replace(/,? or /i, ', ')
+    .split(',')
+    .map((s) => s.trim())
+    .filter(Boolean)
+  if (lists.length === 0) {
+    throw new Error(`Unparseable feat spell list for feat: ${feat.id} ("${match[1]}")`)
+  }
+  return lists
+}
+
+/**
+ * Spellcasting abilities a feat lets the player choose between for its
+ * spells (e.g. Magic Initiate: "Intelligence, Wisdom, or Charisma is your
+ * spellcasting ability for this feat's spells" -> ['Intelligence', 'Wisdom',
+ * 'Charisma']). Returns [] for a feat with no such text. Throws if the
+ * sentence is present but a captured word isn't a real ability.
+ */
+export function parseFeatSpellAbilities(feat: { id: string; benefit: string }): Ability[] {
+  const match = feat.benefit.match(/([\w, ]+?) is your spellcasting ability for this feat/i)
+  if (!match) return []
+  const words = match[1]
+    .replace(/,? or /i, ', ')
+    .split(',')
+    .map((s) => s.trim())
+    .filter(Boolean)
+  const abilities = words.map((w) => ABILITIES.find((a) => a.toLowerCase() === w.toLowerCase()))
+  if (abilities.length === 0 || abilities.some((a) => !a)) {
+    throw new Error(`Unparseable feat spellcasting ability for feat: ${feat.id} ("${match[1]}")`)
+  }
+  return abilities as Ability[]
+}
+
 export interface SpellcastingInfo {
   ability: Ability
   attackBonus: number

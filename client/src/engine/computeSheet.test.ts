@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { getBackground, getClass } from '@data'
+import { getBackground, getClass, getFeat } from '@data'
 import {
   abilityModifier,
   armorClass,
@@ -7,6 +7,8 @@ import {
   finalAbilityScores,
   hitPoints,
   isAsiLevel,
+  parseFeatSpellAbilities,
+  parseFeatSpellLists,
   proficiencyBonus,
   skillBonus,
   spellcastingInfo,
@@ -249,6 +251,26 @@ describe('Fighter (Dwarf, Soldier background)', () => {
     const fighter = [{ classId: 'fighter', level: 1 }]
     const scores = { Strength: 16, Dexterity: 14, Constitution: 14, Intelligence: 10, Wisdom: 10, Charisma: 10 }
     expect(spellcastingInfo('fighter', fighter, scores)).toBeUndefined()
+  })
+
+  it('parseFeatSpellLists: Magic Initiate parses Cleric/Druid/Wizard from its own benefit text', () => {
+    const feat = getFeat('magic-initiate')!
+    expect(parseFeatSpellLists(feat)).toEqual(['Cleric', 'Druid', 'Wizard'])
+  })
+
+  it('parseFeatSpellLists: a non-spell Origin feat returns []', () => {
+    const feat = getFeat('alert')!
+    expect(parseFeatSpellLists(feat)).toEqual([])
+  })
+
+  it('parseFeatSpellAbilities: Magic Initiate parses Intelligence/Wisdom/Charisma', () => {
+    const feat = getFeat('magic-initiate')!
+    expect(parseFeatSpellAbilities(feat)).toEqual(['Intelligence', 'Wisdom', 'Charisma'])
+  })
+
+  it('parseFeatSpellAbilities: a non-spell Origin feat returns []', () => {
+    const feat = getFeat('alert')!
+    expect(parseFeatSpellAbilities(feat)).toEqual([])
   })
 
   it('Athletics is proficient via Soldier background: 4 (Str mod) + 2 (prof) = 6', () => {

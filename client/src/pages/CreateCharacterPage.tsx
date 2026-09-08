@@ -10,6 +10,7 @@ import { StepEquipment } from '../character-wizard/steps/StepEquipment'
 import { StepSpells } from '../character-wizard/steps/StepSpells'
 import { StepName } from '../character-wizard/steps/StepName'
 import { getCasterCounts } from '../character-wizard/parsing'
+import { parseFeatSpellLists } from '../engine/computeSheet'
 import type { AbilityScoresData, CharacterData } from '../character-wizard/types'
 import { WilburCompanion } from '../WilburCompanion'
 import { WilburTip } from '../WilburTip'
@@ -128,6 +129,10 @@ export function CreateCharacterPage() {
   const [spellPrepared, setSpellPrepared] = useState<string[]>([])
   const [featSpellCantrips, setFeatSpellCantrips] = useState<string[]>([])
   const [featSpellPrepared, setFeatSpellPrepared] = useState<string[]>([])
+  const [originFeatSpellList, setOriginFeatSpellList] = useState<string | null>(null)
+  const [originFeatSpellAbility, setOriginFeatSpellAbility] = useState<string | null>(null)
+  const [versatileSpellCantrips, setVersatileSpellCantrips] = useState<string[]>([])
+  const [versatileSpellPrepared, setVersatileSpellPrepared] = useState<string[]>([])
   const [lastSpellId, setLastSpellId] = useState<string | null>(null)
   const [name, setName] = useState('')
   const [saving, setSaving] = useState(false)
@@ -143,13 +148,17 @@ export function CreateCharacterPage() {
   const hasSkillfulTrait = !!speciesEntry?.traits.some((t) => t.name === 'Skillful')
   const hasVersatileTrait = !!speciesEntry?.traits.some((t) => t.name === 'Versatile')
   const hasSpeciesBonusStep = hasSkillfulTrait || hasVersatileTrait
+  const originFeat = originFeatId ? getFeat(originFeatId) : undefined
+  const grantsVersatileSpells = originFeat ? parseFeatSpellLists(originFeat).length > 0 : false
 
   const steps = useMemo(
     () =>
       (['class', 'origin', 'abilities', 'skills', 'speciesBonus', 'equipment', 'spells', 'name'] as const).filter(
-        (s) => (s !== 'spells' || isCaster || hasFeatSpells) && (s !== 'speciesBonus' || hasSpeciesBonusStep),
+        (s) =>
+          (s !== 'spells' || isCaster || hasFeatSpells || grantsVersatileSpells) &&
+          (s !== 'speciesBonus' || hasSpeciesBonusStep),
       ),
-    [isCaster, hasFeatSpells, hasSpeciesBonusStep],
+    [isCaster, hasFeatSpells, grantsVersatileSpells, hasSpeciesBonusStep],
   )
   const [stepIndex, setStepIndex] = useState(0)
   const step = steps[stepIndex]
@@ -175,19 +184,37 @@ export function CreateCharacterPage() {
         return count > 0 && count === parseInt(classEntry.skillProficiencies.match(/Choose\s+(?:any\s+)?(\d+)/i)?.[1] ?? '0', 10)
       }
       case 'speciesBonus':
-        return (!hasSkillfulTrait || !!bonusSkill) && (!hasVersatileTrait || !!originFeatId)
+        return (
+          (!hasSkillfulTrait || !!bonusSkill) &&
+          (!hasVersatileTrait || !!originFeatId) &&
+          (!grantsVersatileSpells || (!!originFeatSpellList && !!originFeatSpellAbility))
+        )
       case 'equipment':
         return !!equipmentChoice
       case 'spells': {
         const casterDone = !casterCounts || (spellCantrips.length === casterCounts.cantrips && spellPrepared.length === casterCounts.preparedOrKnown)
         const featDone = !hasFeatSpells || (featSpellCantrips.length === 2 && featSpellPrepared.length === 1)
-        return casterDone && featDone
+        const versatileDone = !grantsVersatileSpells || (versatileSpellCantrips.length === 2 && versatileSpellPrepared.length === 1)
+        return casterDone && featDone && versatileDone
       }
       case 'name':
         return name.trim().length > 0
       default:
         return false
     }
+  }
+
+  // Switching the Versatile-granted Origin feat invalidates any previously
+  // chosen spell list/ability/spells for it (a new feat may not grant spells
+  // at all, or may offer a different set of lists) — clear them so stale
+  // picks don't survive into handleSave for a feat the character no longer
+  // has. See docs/planning/issue-15-plan.md.
+  function handleChangeOriginFeat(featId: string) {
+    setOriginFeatId(featId)
+    setOriginFeatSpellList(null)
+    setOriginFeatSpellAbility(null)
+    setVersatileSpellCantrips([])
+    setVersatileSpellPrepared([])
   }
 
   function goNext() {
@@ -223,6 +250,11 @@ export function CreateCharacterPage() {
       ...(isCaster ? { spells: { cantrips: spellCantrips, prepared: spellPrepared } } : {}),
       ...(originFeatId ? { originFeatId } : {}),
       ...(hasFeatSpells ? { originFeatSpells: { cantrips: featSpellCantrips, prepared: featSpellPrepared } } : {}),
+      ...(grantsVersatileSpells && originFeatSpellList ? { originFeatSpellList } : {}),
+      ...(grantsVersatileSpells && originFeatSpellAbility ? { originFeatSpellAbility } : {}),
+      ...(grantsVersatileSpells
+        ? { versatileFeatSpells: { cantrips: versatileSpellCantrips, prepared: versatileSpellPrepared } }
+        : {}),
     }
 
     try {
@@ -303,7 +335,16 @@ export function CreateCharacterPage() {
             bonusSkill={bonusSkill}
             onChangeBonusSkill={setBonusSkill}
             originFeatId={originFeatId}
-            onChangeOriginFeat={setOriginFeatId}
+            onChangeOriginFeat={handleChangeOriginFeat}
+            excludeSpellList={featSpellList}
+            originFeatSpellList={originFeatSpellList}
+            onChangeOriginFeatSpellList={(list) => {
+              setOriginFeatSpellList(list)
+              setVersatileSpellCantrips([])
+              setVersatileSpellPrepared([])
+            }}
+            originFeatSpellAbility={originFeatSpellAbility}
+            onChangeOriginFeatSpellAbility={setOriginFeatSpellAbility}
           />
         )}
 
@@ -325,7 +366,7 @@ export function CreateCharacterPage() {
                 preparedCount={casterCounts.preparedOrKnown}
                 cantrips={spellCantrips}
                 prepared={spellPrepared}
-                excludeIds={[...featSpellCantrips, ...featSpellPrepared]}
+                excludeIds={[...featSpellCantrips, ...featSpellPrepared, ...versatileSpellCantrips, ...versatileSpellPrepared]}
                 onChangeCantrips={(ids) => {
                   const added = ids.find((id) => !spellCantrips.includes(id))
                   if (added) setLastSpellId(added)
@@ -346,7 +387,7 @@ export function CreateCharacterPage() {
                 preparedCount={1}
                 cantrips={featSpellCantrips}
                 prepared={featSpellPrepared}
-                excludeIds={[...spellCantrips, ...spellPrepared]}
+                excludeIds={[...spellCantrips, ...spellPrepared, ...versatileSpellCantrips, ...versatileSpellPrepared]}
                 onChangeCantrips={(ids) => {
                   const added = ids.find((id) => !featSpellCantrips.includes(id))
                   if (added) setLastSpellId(added)
@@ -356,6 +397,27 @@ export function CreateCharacterPage() {
                   const added = ids.find((id) => !featSpellPrepared.includes(id))
                   if (added) setLastSpellId(added)
                   setFeatSpellPrepared(ids)
+                }}
+              />
+            )}
+            {grantsVersatileSpells && originFeatSpellList && (
+              <StepSpells
+                className={originFeatSpellList}
+                heading={`${originFeat?.name ?? 'Magic Initiate'} Spells (Versatile)`}
+                cantripCount={2}
+                preparedCount={1}
+                cantrips={versatileSpellCantrips}
+                prepared={versatileSpellPrepared}
+                excludeIds={[...spellCantrips, ...spellPrepared, ...featSpellCantrips, ...featSpellPrepared]}
+                onChangeCantrips={(ids) => {
+                  const added = ids.find((id) => !versatileSpellCantrips.includes(id))
+                  if (added) setLastSpellId(added)
+                  setVersatileSpellCantrips(ids)
+                }}
+                onChangePrepared={(ids) => {
+                  const added = ids.find((id) => !versatileSpellPrepared.includes(id))
+                  if (added) setLastSpellId(added)
+                  setVersatileSpellPrepared(ids)
                 }}
               />
             )}
