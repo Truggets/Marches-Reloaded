@@ -133,3 +133,18 @@ than assuming. The bubble shows citations for whatever entry is currently open/e
    append a new row rather than silently expanding M2b's definition).
 3. Any risk in the A1/A2 "no new dependency" call given the scale of content this is about
    to hold.
+
+## Decisions (confirmed by Truman, 2026-09-08)
+- Flavor text: truncate/collapse the real source text, no generated summaries.
+- Citations: player-facing, not admin-only.
+- WilburCompanion stays bottom-right; the citation bubble anchors there too.
+- Sandbox ships as a caster-only v0 first; martial support follows the weapon chain
+  (M2b Phase 4 + issue #3) later.
+- Monsters get a real `MonsterEntry` schema category in `schema.ts`, same pack/source
+  pattern as every other category — not throwaway sandbox-only data.
+- A3 (Wilbur mechanical-delta relay) is deferred — filed as its own follow-up issue,
+  not built as part of this wave.
+- The sandbox gets its own row in `PROJECT_SPEC.md`'s milestones table.
+- Implementation starts with **M2b Phase 1: feats import** (see
+  `docs/planning/m2b-execution-plan.md` §3) — highest value, zero new UI, closes #13,
+  no dependency on anything else in this doc.
