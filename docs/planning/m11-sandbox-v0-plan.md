@@ -1,4 +1,4 @@
-# M11 — Combat Sandbox, Caster-Only v0 — Execution Plan (draft)
+# M11 — Combat Sandbox, Caster-Only v0 — Execution Plan (built 2026-09-09, not yet browser-verified)
 
 ## Goal
 Per `docs/planning/content-ux-and-sandbox-plan.md` §B (research + decisions already
@@ -109,10 +109,30 @@ task 6 depends on 2-5 landing first. No step here touches push/deploy/migrate.
 
 ## Definition of done
 - `node data/build/verify-monsters.js` passes; `npm --prefix client run build`/`test`
-  clean.
+  clean. **Done** — 71/71 tests, clean build, both confirmed multiple times across
+  the 3-round implementation.
 - A live manual walkthrough: pick a saved caster character, enter the sandbox, select
   1-2 of the 10 monsters, resolve at least one full attack-and-response turn, confirm
-  hit/miss and (where curated) damage match hand-calculation.
+  hit/miss and (where curated) damage match hand-calculation. **Not yet done** — this
+  build was verified via unit tests + build/typecheck + code review, not an actual
+  browser session. Worth doing before/at first real use, same caveat M2b's phases
+  carried.
 - Explicitly NOT in scope for v0 (confirmed by the original research + Truman's
   decisions): martial characters, persistence, multiplayer, homebrew/imported
   monsters, map authoring, real monster AI.
+
+## What actually shipped vs. the original plan
+- UI scope was deliberately narrowed from the original research's "CSS-grid battle
+  view, tokens on a grid" to a two-panel You-vs-Monster layout with pickers and a
+  turn log — the token-positioning idea added real UI surface for no gameplay value
+  once the turn-resolution logic was already built; a flat picker/log UI is simpler
+  and ships the same functional v0. Flagging this as a deliberate scope call made
+  during implementation, not an oversight.
+- Review across all 3 rounds caught real bugs every round: the monster parser's
+  attack-roll detection was narrower than the phrasing it needed to catch (fixed);
+  the sandbox page's HP/AC computation only validated `classes[0]`'s id before
+  calling functions that iterate every class and throw on an invalid one (fixed);
+  caster-class selection took the first spellcasting-shaped class only, silently
+  wrong or falsely negative for real multiclass casters like Paladin/Ranger-first or
+  Cleric/Wizard dual-caster builds (fixed) — see `docs/planning/build-retro.md` for
+  the pattern-level takeaway.
