@@ -163,12 +163,21 @@ Tasks 1-2 run in parallel (review-as-landed on each); task 3 starts once both la
 
 - Unit tests pass for the parser (all 12 classes' real prose, including both edge
   cases: a gold-only pick, and Fighter's 3-option shape) and the new resolver.
-- `npm --prefix client run build`/`test` clean.
+  **Done** — 100/100 tests pass, `tsc -b`/`vite build` clean.
 - **Live browser walkthrough with a real martial multiclass** (Fighter/Rogue, per the
-  boss's specified test case): create or reuse a saved Fighter 3/Rogue 2 character,
-  open the sandbox, confirm the weapon picker shows exactly the weapons from
-  `classes[0]`'s (Fighter's) chosen starting-equipment option, resolve at least one
-  full weapon-attack-and-monster-counterattack turn, and separately verify a
-  gold-only-equipment character renders the empty state instead of crashing.
+  boss's specified test case). **Done (2026-09-09)** — three Fighter 3/Rogue 2
+  fixtures verified live: (1) a STR>DEX build with Fighter's option A
+  (Greatsword/Flail/Javelin, all non-Finesse) — attack bonus and damage correctly
+  STR-derived (`+6`, `2d6 + 3 Slashing`), a full miss/hit/counterattack turn resolved
+  correctly, HP tracked down; (2) a DEX>STR build with option B (Scimitar/Shortsword,
+  Finesse; Longbow, Ammunition) — both the Finesse weapon and the bow correctly used
+  DEX (`+6` on both), confirming the ability-derivation heuristic in the browser, not
+  just unit tests, per the boss's explicit ask; (3) a gold-only equipment pick (option
+  C) with no caster class — rendered the friendly "no spells or weapons" empty state,
+  no crash. No console errors across any of the three. Review caught and fixed one
+  real bug before this walkthrough (weapon damage was missing its ability modifier —
+  see build-retro.md's dated entry); nothing found *during* the walkthrough itself
+  changed scope.
 - If the walkthrough surfaces something that changes scope (not just a bug), stop and
-  flag it before pushing — same standing instruction as the caster v0 round.
+  flag it before pushing — same standing instruction as the caster v0 round. **N/A —
+  walkthrough passed clean, nothing scope-changing found.**
