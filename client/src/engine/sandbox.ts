@@ -1,11 +1,11 @@
 // M11 combat sandbox v0: attack-roll resolution for the caster-vs-monster
 // scratch space (docs/planning/m11-sandbox-v0-plan.md). Lives in its own file
 // rather than computeSheet.ts because it depends on `MonsterEntry` (a
-// sandbox/bestiary concept, imported straight from `@data/schema` rather than
-// `@data` itself since `listMonsters`/`getMonster` aren't wired into
-// data/index.ts yet — see this file's consumers for that caveat) and because
-// it's sandbox-specific turn resolution, not general character-sheet rules
-// math like the rest of computeSheet.ts.
+// sandbox/bestiary concept, imported as a type straight from `@data/schema`
+// since only the type is needed here — `@data`'s `listMonsters()`/
+// `getMonster()` are used by the sandbox page itself, not by this module)
+// and because it's sandbox-specific turn resolution, not general
+// character-sheet rules math like the rest of computeSheet.ts.
 import type { MonsterEntry } from '@data/schema'
 import { spellDamageFor } from './spellDamage'
 

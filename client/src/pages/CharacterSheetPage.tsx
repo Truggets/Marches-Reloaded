@@ -54,7 +54,7 @@ function formatModifier(mod: number): string {
  * `levelUps` entries predating M6) have no `classId` at all — treat those as
  * belonging to the character's first class, same as everywhere else this
  * absent-safe convention is used. */
-function spellsForClass(data: CharacterData, classId: string): { cantrips: string[]; prepared: string[] } {
+export function spellsForClass(data: CharacterData, classId: string): { cantrips: string[]; prepared: string[] } {
   const isFirstClass = data.classes[0]?.classId === classId
   const ownLevelUps = (data.levelUps ?? []).filter((lu) => (lu.classId ?? data.classes[0]?.classId) === classId)
   return {
@@ -209,6 +209,12 @@ export function CharacterSheetPage() {
               Level Up
             </Link>
           )}
+          {/* M11: caster-only combat scratch space (docs/planning/m11-sandbox-v0-plan.md).
+              Shown for any viewer, same as Print/Download — it's a read-only-ish
+              exploration tool, not a mutation of the saved character. */}
+          <Link to={`/characters/${id}/sandbox`} className="pixel-btn pixel-btn-secondary">
+            Combat Sandbox
+          </Link>
           <button type="button" className="pixel-btn pixel-btn-secondary" onClick={() => window.print()}>
             Print
           </button>
