@@ -8,6 +8,8 @@ import db from "../db/index.js";
 import { requireAuth, requireRole } from "../middleware/auth.js";
 import { parseFeatsImport } from "../../../data/build/parse-feats-import.js";
 import { parseBackgroundsImport } from "../../../data/build/parse-backgrounds-import.js";
+import { parseSpeciesImport } from "../../../data/build/parse-species-import.js";
+import { parseEquipmentImport } from "../../../data/build/parse-equipment-import.js";
 
 const router = express.Router();
 
@@ -101,22 +103,25 @@ router.get("/characters", (req, res) => {
   return res.status(200).json({ characters });
 });
 
-// M2b: import an additional content pack (feats and/or backgrounds; at
-// least one required). The pack is stored in pack_content (shared/data/
-// marches.sqlite), never in the shipped data/ directory — see CLAUDE.md's
-// SRD-only bundling rule and docs/planning/m2b-execution-plan.md /
-// m2b-phase2-backgrounds-plan.md. Body shape: { packId, packName, feats?,
-// backgrounds? } (each the vault-shaped top-level object for that content
-// type, e.g. {feats: [...]} / {backgrounds: [...]}). Runs each provided
-// field through the same parser/validator used by its build-time CLI
-// (parse-feats-import.js / parse-backgrounds-import.js) — reject the whole
-// pack, name the offending entry, per the plan's "validation moves to the
-// import boundary" decision. Not wrapped in an explicit DB transaction: the
-// SELECT-then-INSERT below isn't atomic across statements in general, but
-// better-sqlite3 is synchronous and this is a single-process deployment, so
-// no other request can interleave in that window (see M2b Phase 2 review).
+// M2b: import an additional content pack (feats, backgrounds, species,
+// and/or equipment; at least one required). The pack is stored in
+// pack_content (shared/data/marches.sqlite), never in the shipped data/
+// directory — see CLAUDE.md's SRD-only bundling rule and
+// docs/planning/m2b-execution-plan.md / m2b-phase2-backgrounds-plan.md /
+// m2b-phase3-4-species-equipment-plan.md. Body shape: { packId, packName,
+// feats?, backgrounds?, species?, equipment? } (each the vault-shaped
+// top-level object for that content type, e.g. {feats: [...]} /
+// {species: [...]}). Runs each provided field through the same
+// parser/validator used by its build-time CLI (parse-feats-import.js /
+// parse-backgrounds-import.js / parse-species-import.js /
+// parse-equipment-import.js) — reject the whole pack, name the offending
+// entry, per the plan's "validation moves to the import boundary" decision.
+// Not wrapped in an explicit DB transaction: the SELECT-then-INSERT below
+// isn't atomic across statements in general, but better-sqlite3 is
+// synchronous and this is a single-process deployment, so no other request
+// can interleave in that window (see M2b Phase 2 review).
 router.post("/packs/import", (req, res) => {
-  const { packId, packName, feats, backgrounds } = req.body || {};
+  const { packId, packName, feats, backgrounds, species, equipment } = req.body || {};
 
   if (typeof packId !== "string" || !packId.trim()) {
     return res.status(400).json({ error: "packId is required" });
@@ -124,8 +129,15 @@ router.post("/packs/import", (req, res) => {
   if (typeof packName !== "string" || !packName.trim()) {
     return res.status(400).json({ error: "packName is required" });
   }
-  if (feats === undefined && backgrounds === undefined) {
-    return res.status(400).json({ error: "At least one of feats or backgrounds is required" });
+  if (
+    feats === undefined &&
+    backgrounds === undefined &&
+    species === undefined &&
+    equipment === undefined
+  ) {
+    return res
+      .status(400)
+      .json({ error: "At least one of feats, backgrounds, species, or equipment is required" });
   }
 
   let parsedFeats;
@@ -146,6 +158,24 @@ router.post("/packs/import", (req, res) => {
     }
   }
 
+  let parsedSpecies;
+  if (species !== undefined) {
+    try {
+      parsedSpecies = parseSpeciesImport(species, packId);
+    } catch (err) {
+      return res.status(400).json({ error: `Import rejected: ${err.message}` });
+    }
+  }
+
+  let parsedEquipment;
+  if (equipment !== undefined) {
+    try {
+      parsedEquipment = parseEquipmentImport(equipment, packId);
+    } catch (err) {
+      return res.status(400).json({ error: `Import rejected: ${err.message}` });
+    }
+  }
+
   // Merge with whatever's already stored for this pack_id so importing one
   // field (e.g. backgrounds) doesn't wipe out a previously-imported other
   // field (e.g. feats) — see CLAUDE.md / M2b Phase 2 plan on pack_content
@@ -156,8 +186,12 @@ router.post("/packs/import", (req, res) => {
   const mergedContent = {};
   const finalFeats = parsedFeats !== undefined ? parsedFeats : existingContent.feats;
   const finalBackgrounds = parsedBackgrounds !== undefined ? parsedBackgrounds : existingContent.backgrounds;
+  const finalSpecies = parsedSpecies !== undefined ? parsedSpecies : existingContent.species;
+  const finalEquipment = parsedEquipment !== undefined ? parsedEquipment : existingContent.equipment;
   if (finalFeats !== undefined) mergedContent.feats = finalFeats;
   if (finalBackgrounds !== undefined) mergedContent.backgrounds = finalBackgrounds;
+  if (finalSpecies !== undefined) mergedContent.species = finalSpecies;
+  if (finalEquipment !== undefined) mergedContent.equipment = finalEquipment;
 
   const manifest = JSON.stringify({ id: packId, name: packName, importedAt: new Date().toISOString() });
   const content = JSON.stringify(mergedContent);
@@ -172,6 +206,8 @@ router.post("/packs/import", (req, res) => {
   const response = { ok: true, packId };
   if (parsedFeats !== undefined) response.featCount = parsedFeats.length;
   if (parsedBackgrounds !== undefined) response.backgroundCount = parsedBackgrounds.length;
+  if (parsedSpecies !== undefined) response.speciesCount = parsedSpecies.length;
+  if (parsedEquipment !== undefined) response.equipmentCount = parsedEquipment.length;
 
   return res.status(200).json(response);
 });
