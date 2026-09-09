@@ -143,6 +143,40 @@ export interface EquipmentEntry {
   source: SourceRef
 }
 
+export interface MonsterTrait {
+  name: string
+  description: string
+}
+
+export interface MonsterAction {
+  name: string
+  attackBonus?: string // e.g. "+3" — present only when the action is an attack roll
+  damage?: string // e.g. "1d6 + 1 Slashing" — present only when the action is an attack roll
+  description: string // full action text, as extracted
+}
+
+export interface MonsterEntry {
+  id: string
+  name: string
+  size: string
+  creatureType: string
+  alignment: string
+  ac: number
+  hp: number
+  hitDice: string // e.g. "2d8 + 2"
+  speed: string
+  abilityScores: Record<Ability, number>
+  skills?: string
+  senses?: string
+  languages?: string
+  cr: string // e.g. "1/8"
+  xp: number
+  traits: MonsterTrait[]
+  actions: MonsterAction[]
+  pack: string
+  source: SourceRef
+}
+
 export interface ContentPack {
   manifest: PackManifest
   classes: ClassEntry[]
@@ -151,4 +185,5 @@ export interface ContentPack {
   feats: FeatEntry[]
   spells: SpellEntry[]
   equipment: EquipmentEntry[]
+  monsters: MonsterEntry[]
 }

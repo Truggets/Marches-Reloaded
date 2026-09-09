@@ -1,0 +1,442 @@
+[
+  {
+    "id": "bandit",
+    "name": "Bandit",
+    "size": "Medium or Small",
+    "creatureType": "Humanoid",
+    "alignment": "Neutral",
+    "ac": 12,
+    "hp": 11,
+    "hitDice": "2d8 + 2",
+    "speed": "30 ft.",
+    "abilityScores": {
+      "Strength": 11,
+      "Dexterity": 12,
+      "Constitution": 12,
+      "Intelligence": 10,
+      "Wisdom": 10,
+      "Charisma": 10
+    },
+    "senses": "Passive Perception 10",
+    "languages": "Common, Thieves' Cant",
+    "cr": "1/8",
+    "xp": 25,
+    "traits": [],
+    "actions": [
+      {
+        "name": "Scimitar",
+        "attackBonus": "+3",
+        "damage": "1d6 + 1 Slashing",
+        "description": "_Melee Attack Roll:_ +3, reach 5 ft. _Hit:_ 4 (1d6 + 1) Slashing damage."
+      },
+      {
+        "name": "Light Crossbow",
+        "attackBonus": "+3",
+        "damage": "1d8 + 1 Piercing",
+        "description": "_Ranged Attack Roll:_ +3, range 80/320 ft. _Hit:_ 5 (1d8 + 1) Piercing damage."
+      }
+    ],
+    "pack": "srd-5.2",
+    "source": {
+      "book": "SRD 5.2.1",
+      "section": "Bandit"
+    }
+  },
+  {
+    "id": "bandit-captain",
+    "name": "Bandit Captain",
+    "size": "Medium or Small",
+    "creatureType": "Humanoid",
+    "alignment": "Neutral",
+    "ac": 15,
+    "hp": 52,
+    "hitDice": "8d8 + 16",
+    "speed": "30 ft.",
+    "abilityScores": {
+      "Strength": 15,
+      "Dexterity": 16,
+      "Constitution": 14,
+      "Intelligence": 14,
+      "Wisdom": 11,
+      "Charisma": 14
+    },
+    "skills": "Athletics +4, Deception +4",
+    "senses": "Passive Perception 10",
+    "languages": "Common, Thieves' Cant",
+    "cr": "2",
+    "xp": 450,
+    "traits": [],
+    "actions": [
+      {
+        "name": "Multiattack",
+        "description": "The bandit makes two attacks, using Scimitar and Pistol in any combination."
+      },
+      {
+        "name": "Scimitar",
+        "attackBonus": "+5",
+        "damage": "1d6 + 3 Slashing",
+        "description": "_Melee Attack Roll:_ +5, reach 5 ft. _Hit:_ 6 (1d6 + 3) Slashing damage."
+      },
+      {
+        "name": "Pistol",
+        "attackBonus": "+5",
+        "damage": "1d10 + 3 Piercing",
+        "description": "_Ranged Attack Roll:_ +5, range 30/90 ft. _Hit:_ 8 (1d10 + 3) Piercing damage."
+      }
+    ],
+    "pack": "srd-5.2",
+    "source": {
+      "book": "SRD 5.2.1",
+      "section": "Bandit Captain"
+    }
+  },
+  {
+    "id": "goblin-minion",
+    "name": "Goblin Minion",
+    "size": "Small",
+    "creatureType": "Fey (Goblinoid)",
+    "alignment": "Chaotic Neutral",
+    "ac": 12,
+    "hp": 7,
+    "hitDice": "2d6",
+    "speed": "30 ft.",
+    "abilityScores": {
+      "Strength": 8,
+      "Dexterity": 15,
+      "Constitution": 10,
+      "Intelligence": 10,
+      "Wisdom": 8,
+      "Charisma": 8
+    },
+    "skills": "Stealth +6",
+    "senses": "Darkvision 60 ft.; Passive Perception 9",
+    "languages": "Common, Goblin",
+    "cr": "1/8",
+    "xp": 25,
+    "traits": [],
+    "actions": [
+      {
+        "name": "Dagger",
+        "attackBonus": "+4",
+        "damage": "1d4 + 2 Piercing",
+        "description": "_Melee or Ranged Attack Roll:_ +4, reach 5 ft. or range 20/60 ft. _Hit:_ 4 (1d4 + 2) Piercing damage."
+      }
+    ],
+    "pack": "srd-5.2",
+    "source": {
+      "book": "SRD 5.2.1",
+      "section": "Goblin Minion"
+    }
+  },
+  {
+    "id": "goblin-warrior",
+    "name": "Goblin Warrior",
+    "size": "Small",
+    "creatureType": "Fey (Goblinoid)",
+    "alignment": "Chaotic Neutral",
+    "ac": 15,
+    "hp": 10,
+    "hitDice": "3d6",
+    "speed": "30 ft.",
+    "abilityScores": {
+      "Strength": 8,
+      "Dexterity": 15,
+      "Constitution": 10,
+      "Intelligence": 10,
+      "Wisdom": 8,
+      "Charisma": 8
+    },
+    "skills": "Stealth +6",
+    "senses": "Darkvision 60 ft.; Passive Perception 9",
+    "languages": "Common, Goblin",
+    "cr": "1/4",
+    "xp": 50,
+    "traits": [],
+    "actions": [
+      {
+        "name": "Scimitar",
+        "attackBonus": "+4",
+        "damage": "1d6 + 2 Slashing",
+        "description": "_Melee Attack Roll:_ +4, reach 5 ft. _Hit:_ 5 (1d6 + 2) Slashing damage, plus 2 (1d4) Slashing damage if the attack roll had Advantage."
+      },
+      {
+        "name": "Shortbow",
+        "attackBonus": "+4",
+        "damage": "1d6 + 2 Piercing",
+        "description": "_Ranged Attack Roll:_ +4, range 80/320 ft. _Hit:_ 5 (1d6 + 2) Piercing damage, plus 2 (1d4) Piercing damage if the attack roll had Advantage."
+      }
+    ],
+    "pack": "srd-5.2",
+    "source": {
+      "book": "SRD 5.2.1",
+      "section": "Goblin Warrior"
+    }
+  },
+  {
+    "id": "goblin-boss",
+    "name": "Goblin Boss",
+    "size": "Small",
+    "creatureType": "Fey (Goblinoid)",
+    "alignment": "Chaotic Neutral",
+    "ac": 17,
+    "hp": 21,
+    "hitDice": "6d6",
+    "speed": "30 ft.",
+    "abilityScores": {
+      "Strength": 10,
+      "Dexterity": 15,
+      "Constitution": 10,
+      "Intelligence": 10,
+      "Wisdom": 8,
+      "Charisma": 10
+    },
+    "skills": "Stealth +6",
+    "senses": "Darkvision 60 ft.; Passive Perception 9",
+    "languages": "Common, Goblin",
+    "cr": "1",
+    "xp": 200,
+    "traits": [],
+    "actions": [
+      {
+        "name": "Multiattack",
+        "description": "The goblin makes two attacks, using Scimitar or Shortbow in any combination."
+      },
+      {
+        "name": "Scimitar",
+        "attackBonus": "+4",
+        "damage": "1d6 + 2 Slashing",
+        "description": "_Melee Attack Roll:_ +4, reach 5 ft. _Hit:_ 5 (1d6 + 2) Slashing damage, plus 2 (1d4) Slashing damage if the attack roll had Advantage."
+      },
+      {
+        "name": "Shortbow",
+        "attackBonus": "+4",
+        "damage": "1d6 + 2 Piercing",
+        "description": "_Ranged Attack Roll:_ +4, range 80/320 ft. _Hit:_ 5 (1d6 + 2) Piercing damage, plus 2 (1d4) Piercing damage if the attack roll had Advantage."
+      }
+    ],
+    "pack": "srd-5.2",
+    "source": {
+      "book": "SRD 5.2.1",
+      "section": "Goblin Boss"
+    }
+  },
+  {
+    "id": "skeleton",
+    "name": "Skeleton",
+    "size": "Medium",
+    "creatureType": "Undead",
+    "alignment": "Lawful Evil",
+    "ac": 14,
+    "hp": 13,
+    "hitDice": "2d8 + 4",
+    "speed": "30 ft.",
+    "abilityScores": {
+      "Strength": 10,
+      "Dexterity": 16,
+      "Constitution": 15,
+      "Intelligence": 6,
+      "Wisdom": 8,
+      "Charisma": 5
+    },
+    "senses": "Darkvision 60 ft.; Passive Perception 9",
+    "languages": "Understands Common plus one other language but can't speak",
+    "cr": "1/4",
+    "xp": 50,
+    "traits": [],
+    "actions": [
+      {
+        "name": "Shortsword",
+        "attackBonus": "+5",
+        "damage": "1d6 + 3 Piercing",
+        "description": "_Melee Attack Roll:_ +5, reach 5 ft. _Hit:_ 6 (1d6 + 3) Piercing damage."
+      },
+      {
+        "name": "Shortbow",
+        "attackBonus": "+5",
+        "damage": "1d6 + 3 Piercing",
+        "description": "_Ranged Attack Roll:_ +5, range 80/320 ft. _Hit:_ 6 (1d6 + 3) Piercing damage."
+      }
+    ],
+    "pack": "srd-5.2",
+    "source": {
+      "book": "SRD 5.2.1",
+      "section": "Skeleton"
+    }
+  },
+  {
+    "id": "zombie",
+    "name": "Zombie",
+    "size": "Medium",
+    "creatureType": "Undead",
+    "alignment": "Neutral Evil",
+    "ac": 8,
+    "hp": 15,
+    "hitDice": "2d8 + 6",
+    "speed": "20 ft.",
+    "abilityScores": {
+      "Strength": 13,
+      "Dexterity": 6,
+      "Constitution": 16,
+      "Intelligence": 3,
+      "Wisdom": 6,
+      "Charisma": 5
+    },
+    "senses": "Darkvision 60 ft.; Passive Perception 8",
+    "languages": "Understands Common plus one other language but can't speak",
+    "cr": "1/4",
+    "xp": 50,
+    "traits": [
+      {
+        "name": "Undead Fortitude",
+        "description": "If damage reduces the zombie to 0 Hit Points, it makes a Constitution saving throw (DC 5 plus the damage taken) unless the damage is Radiant or from a Critical Hit. On a successful save, the zombie drops to 1 Hit Point instead."
+      }
+    ],
+    "actions": [
+      {
+        "name": "Slam",
+        "attackBonus": "+3",
+        "damage": "1d8 + 1 Bludgeoning",
+        "description": "_Melee Attack Roll:_ +3, reach 5 ft. _Hit:_ 5 (1d8 + 1) Bludgeoning damage."
+      }
+    ],
+    "pack": "srd-5.2",
+    "source": {
+      "book": "SRD 5.2.1",
+      "section": "Zombie"
+    }
+  },
+  {
+    "id": "brown-bear",
+    "name": "Brown Bear",
+    "size": "Large",
+    "creatureType": "Beast",
+    "alignment": "Unaligned",
+    "ac": 11,
+    "hp": 22,
+    "hitDice": "3d10 + 6",
+    "speed": "40 ft., Climb 30 ft.",
+    "abilityScores": {
+      "Strength": 17,
+      "Dexterity": 12,
+      "Constitution": 15,
+      "Intelligence": 2,
+      "Wisdom": 13,
+      "Charisma": 7
+    },
+    "skills": "Perception +3",
+    "senses": "Darkvision 60 ft.; Passive Perception 13",
+    "languages": "None",
+    "cr": "1",
+    "xp": 200,
+    "traits": [],
+    "actions": [
+      {
+        "name": "Multiattack",
+        "description": "The bear makes one Bite attack and one Claw attack."
+      },
+      {
+        "name": "Bite",
+        "attackBonus": "+5",
+        "damage": "1d8 + 3 Piercing",
+        "description": "_Melee Attack Roll:_ +5, reach 5 ft. _Hit:_ 7 (1d8 + 3) Piercing damage."
+      },
+      {
+        "name": "Claw",
+        "attackBonus": "+5",
+        "damage": "1d4 + 3 Slashing",
+        "description": "_Melee Attack Roll:_ +5, reach 5 ft. _Hit:_ 5 (1d4 + 3) Slashing damage. If the target is a Large or smaller creature, it has the Prone condition."
+      }
+    ],
+    "pack": "srd-5.2",
+    "source": {
+      "book": "SRD 5.2.1",
+      "section": "Brown Bear"
+    }
+  },
+  {
+    "id": "giant-rat",
+    "name": "Giant Rat",
+    "size": "Small",
+    "creatureType": "Beast",
+    "alignment": "Unaligned",
+    "ac": 13,
+    "hp": 7,
+    "hitDice": "2d6",
+    "speed": "30 ft., Climb 30 ft.",
+    "abilityScores": {
+      "Strength": 7,
+      "Dexterity": 16,
+      "Constitution": 11,
+      "Intelligence": 2,
+      "Wisdom": 10,
+      "Charisma": 4
+    },
+    "skills": "Perception +2",
+    "senses": "Darkvision 60 ft.; Passive Perception 12",
+    "languages": "None",
+    "cr": "1/8",
+    "xp": 25,
+    "traits": [
+      {
+        "name": "Pack Tactics",
+        "description": "The rat has Advantage on an attack roll against a creature if at least one of the rat's allies is within 5 feet of the creature and the ally doesn't have the Incapacitated condition."
+      }
+    ],
+    "actions": [
+      {
+        "name": "Bite",
+        "attackBonus": "+5",
+        "damage": "1d4 + 3 Piercing",
+        "description": "_Melee Attack Roll:_ +5, reach 5 feet. _Hit:_ 5 (1d4 + 3) Piercing damage."
+      }
+    ],
+    "pack": "srd-5.2",
+    "source": {
+      "book": "SRD 5.2.1",
+      "section": "Giant Rat"
+    }
+  },
+  {
+    "id": "wolf",
+    "name": "Wolf",
+    "size": "Medium",
+    "creatureType": "Beast",
+    "alignment": "Unaligned",
+    "ac": 12,
+    "hp": 11,
+    "hitDice": "2d8 + 2",
+    "speed": "40 ft.",
+    "abilityScores": {
+      "Strength": 14,
+      "Dexterity": 15,
+      "Constitution": 12,
+      "Intelligence": 3,
+      "Wisdom": 12,
+      "Charisma": 6
+    },
+    "skills": "Perception +5, Stealth +4",
+    "senses": "Darkvision 60 ft.; Passive Perception 15",
+    "languages": "None",
+    "cr": "1/4",
+    "xp": 50,
+    "traits": [
+      {
+        "name": "Pack Tactics",
+        "description": "The wolf has Advantage on attack rolls against a creature if at least one of the wolf's allies is within 5 feet of the creature and the ally doesn't have the Incapacitated condition."
+      }
+    ],
+    "actions": [
+      {
+        "name": "Bite",
+        "attackBonus": "+4",
+        "damage": "1d6 + 2 Piercing",
+        "description": "_Melee Attack Roll:_ +4, reach 5 ft. _Hit:_ 5 (1d6 + 2) Piercing damage. If the target is a Medium or smaller creature, it has the Prone condition."
+      }
+    ],
+    "pack": "srd-5.2",
+    "source": {
+      "book": "SRD 5.2.1",
+      "section": "Wolf"
+    }
+  }
+]

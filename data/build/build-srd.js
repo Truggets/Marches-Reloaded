@@ -13,6 +13,7 @@ const scripts = [
   'parse-feats.js',
   'parse-spells.js',
   'parse-equipment.js',
+  'parse-monsters.js',
 ]
 
 for (const script of scripts) {
