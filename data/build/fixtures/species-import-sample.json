@@ -1,0 +1,56 @@
+{
+  "species": [
+    {
+      "name": "Stonewrought",
+      "source": "Homebrew Compendium",
+      "category": "Constructed Species",
+      "mechanics_first": [
+        "**Creature Type:** You are a **Construct**.",
+        "**Size:** Your size is **Medium** (typically 6 feet tall, built of jointed stone).",
+        "**Speed:** Your walking speed is **25 feet**.",
+        "**Stone Body:** You have **Resistance to Poison damage**, and you don't need to eat, drink, or breathe.",
+        "**Ponderous Step:** You cannot have your walking speed reduced below its normal value, and you are **immune to being knocked Prone**.",
+        "**Granite Fists:** Your unarmed strikes deal **1d4 Bludgeoning damage** instead of the normal amount, and you are considered to be wielding a weapon for the purpose of Feats or other effects."
+      ],
+      "lore_and_flavor": "Stonewrought are animate statues given purpose by a bound elemental spirit, laboring for centuries in service of the mountain temples that carved them."
+    },
+    {
+      "name": "Sunfolk",
+      "source": "Homebrew Compendium",
+      "category": "Fey / Setting Species",
+      "mechanics_first": [
+        "**Creature Type:** You are a **Humanoid**.",
+        "**Size:** Your size is **Small**.",
+        "**Speed:** Your walking speed is **30 feet**.",
+        "**Versatile Traits - Skilled:** You gain **proficiency in one skill of your choice**.",
+        "**Versatile Traits - Origin Feat:** You gain **one Origin Feat of your choice** (such as *Alert*, *Tough*, *Lucky*, etc.)."
+      ],
+      "lore_and_flavor": "Sunfolk are a Human-shaped offshoot bred for adaptability, sharing the same versatile-traits structure as their forebears."
+    },
+    {
+      "name": "Emberkin",
+      "source": "Homebrew Compendium",
+      "category": "Planar Species",
+      "mechanics_first": [
+        "**Creature Type:** You are a **Humanoid (Elemental)**.",
+        "**Size:** Your size is **Medium**.",
+        "**Speed:** Your walking speed is **30 feet**.",
+        "**Cinder Aura:** *Whenever* you take damage, you may spend a Reaction to **deal 1d4 Fire damage** to the attacker, but only if you have not done so since your last _long rest_. This is a **signature trait** of the Emberkin — some scholars believe it is tied to an *ember-spark* passed down since the Sundering, though the true origin remains **hotly debated** among Emberkin elders."
+      ],
+      "lore_and_flavor": "Emberkin carry a smoldering ember at their core, said to be a fragment of the primordial flame that first split the world."
+    },
+    {
+      "name": "Tidesworn",
+      "source": "Homebrew Compendium",
+      "category": "Planar Species",
+      "mechanics_first": [
+        "**Creature Type:** You are a **Humanoid**.",
+        "**Size:** Your size is **Medium** (typically 5 to 6 feet tall, webbed at the fingers).",
+        "**Speed:** Your walking speed is **30 feet**.",
+        "**Tidal Lineage:** Choose one of the following lineages at character creation:\n*   **Deepwater Lineage:** You gain a **swimming speed of 30 feet** and can breathe underwater indefinitely. You learn **the Shape Water cantrip**. At Level 3, you can cast **the Fog Cloud spell**. At Level 5, you can cast **the Water Breathing spell** on others. Your spellcasting modifier is Intelligence, Wisdom, or Charisma (chosen when you select this lineage).\n*   **Stormwave Lineage:** You gain **Resistance to Lightning damage**. You learn **the Shocking Grasp cantrip**. At Level 3, you can cast **the Gust of Wind spell**. At Level 5, you can cast **the Lightning Bolt spell** once per long rest. Your spellcasting modifier is Intelligence, Wisdom, or Charisma (chosen when you select this lineage).\n\nRegardless of lineage, you can hold your breath for twice as long as normal when not using a swimming speed, a benefit that stacks with any other breath-holding trait you might gain from a class or feat.",
+        "**Brine Sense:** You gain **proficiency in the Survival skill** when tracking creatures across water or wet terrain."
+      ],
+      "lore_and_flavor": "Tidesworn trace their ancestry to a pact struck between a coastal fishing clan and a court of elemental water spirits."
+    }
+  ]
+}

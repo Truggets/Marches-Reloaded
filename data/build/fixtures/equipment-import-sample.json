@@ -1,0 +1,95 @@
+{
+  "weapon_mastery_properties": {
+    "Nick": {
+      "mechanics": "Trigger condition: when you make the extra attack granted by the Light property, you can make it as part of the Attack action instead of a Bonus Action.",
+      "lore": "A lightning-fast, economical strike."
+    },
+    "Sap": {
+      "mechanics": "If you hit a creature with this weapon, it has Disadvantage on its next attack roll before the start of your next turn.",
+      "lore": "A staggering blow that saps concentration."
+    }
+  },
+  "weapons": [
+    {
+      "name": "Dagger",
+      "category": "Simple Melee Weapons",
+      "damage": "1d4 Piercing",
+      "properties": "Finesse, Light, Thrown (Range 20/60)",
+      "mastery": "Nick",
+      "weight": "1 lb.",
+      "cost": "2 GP",
+      "lore": "A short double-edged blade."
+    },
+    {
+      "name": "Mace",
+      "category": "Simple Melee Weapons",
+      "damage": "1d6 Bludgeoning",
+      "properties": "None",
+      "mastery": "Sap",
+      "weight": "4 lb.",
+      "cost": "5 GP",
+      "lore": "A heavy metal-headed club."
+    },
+    {
+      "name": "Longsword",
+      "category": "Martial Melee Weapons",
+      "damage": "1d8 Slashing",
+      "properties": "Versatile (1d10)",
+      "mastery": "Sap",
+      "weight": "3 lb.",
+      "cost": "15 GP",
+      "lore": "A well-balanced blade favored by knights."
+    }
+  ],
+  "armor": [
+    {
+      "name": "Padded Armor",
+      "category": "Light Armor",
+      "ac": "11 + Dex modifier",
+      "strength": "—",
+      "stealth": "Disadvantage",
+      "weight": "8 lb.",
+      "cost": "5 GP",
+      "don_doff": "1 Minute to Don or Doff",
+      "lore": "Quilted cloth padding."
+    },
+    {
+      "name": "Leather Armor",
+      "category": "Light Armor",
+      "ac": "11 + Dex modifier",
+      "strength": "—",
+      "stealth": "—",
+      "weight": "10 lb.",
+      "cost": "10 GP",
+      "don_doff": "1 Minute to Don or Doff",
+      "lore": "Boiled and stiffened leather."
+    },
+    {
+      "name": "Chain Mail",
+      "category": "Heavy Armor",
+      "ac": "16",
+      "strength": "Str 13",
+      "stealth": "Disadvantage",
+      "weight": "55 lb.",
+      "cost": "75 GP",
+      "don_doff": "10 Minutes to Don and 5 Minutes to Doff",
+      "lore": "Interlocking metal rings covering the whole body."
+    }
+  ],
+  "adventuring_gear": [
+    {
+      "name": "Rope, Hempen (50 feet)",
+      "cost": "1 GP",
+      "weight": "10 lb.",
+      "use": "Rope has 2 Hit Points and can be burst with a DC 17 Strength check.",
+      "lore": "A sturdy coil of rope."
+    },
+    {
+      "name": "Healer's Kit",
+      "cost": "5 GP",
+      "weight": "3 lb.",
+      "use": "Action (Utilize): expend one use of the kit to stabilize a dying creature at 0 HP. Has 10 uses.",
+      "lore": "Bandages, splints, and salves."
+    }
+  ]
+}
