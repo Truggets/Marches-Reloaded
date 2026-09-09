@@ -58,6 +58,29 @@ function candidatesForToken(raw: string): string[] {
 }
 
 /**
+ * Adds the attack's ability modifier to a bundled weapon damage string
+ * ("1d8 Slashing") as a flat addend, matching the curated monster-damage
+ * format's convention of putting the flat number before the damage type
+ * ("1d6 + 2 Piercing") — SRD 5.2 weapon attacks add the same ability
+ * modifier used for the attack roll to the damage roll, unlike cantrip
+ * damage (spellDamage.ts's curated lookup deliberately excludes it, since
+ * cantrip damage doesn't scale with the casting ability). A modifier of 0 is
+ * left off entirely rather than shown as "+ 0". Every bundled weapon's
+ * `damage` string is exactly "<dice> <type>" with no existing modifier
+ * (verified against all 38 entries), so this always finds a dice/type split
+ * on real data; an unexpected shape (e.g. a malformed imported-pack weapon)
+ * falls back to the untouched string rather than guessing.
+ */
+export function weaponDamageWithAbilityModifier(damage: string, abilityMod: number): string {
+  if (abilityMod === 0) return damage
+  const match = damage.match(/^(\d+d\d+)\s+(.+)$/)
+  if (!match) return damage
+  const [, dice, type] = match
+  const sign = abilityMod > 0 ? '+' : '-'
+  return `${dice} ${sign} ${Math.abs(abilityMod)} ${type}`
+}
+
+/**
  * Parses a class's chosen starting-equipment letter into the weapon
  * EquipmentEntry objects it grants. Returns `[]` (never throws) when the
  * letter doesn't resolve to a known option, or when the resolved option's
@@ -70,6 +93,25 @@ function candidatesForToken(raw: string): string[] {
  * filtered to entries with `damage !== undefined` defensively, since
  * imported-pack weapons aren't guaranteed to have it populated.
  */
+/**
+ * Which ability score a weapon's attack roll uses, derived from its
+ * `properties` string — verified against all 38 bundled SRD weapons with
+ * zero exceptions (docs/planning/m11-phase2-weapon-attack-plan.md finding
+ * 4), so no structured schema field is needed for this:
+ *  - "Finesse" present -> the higher of Strength/Dexterity.
+ *  - "Ammunition" present (and not Finesse, e.g. bows) -> Dexterity.
+ *  - otherwise -> Strength.
+ * Melee vs. ranged is deliberately NOT distinguished here — the sandbox
+ * resolves attacks against a stationary target with no range/reach model,
+ * so only the ability choice matters, not the weapon's melee/ranged status.
+ */
+export function abilityForWeapon(weapon: EquipmentEntry, strengthMod: number, dexterityMod: number): number {
+  const properties = weapon.properties ?? ''
+  if (/Finesse/.test(properties)) return Math.max(strengthMod, dexterityMod)
+  if (/Ammunition/.test(properties)) return dexterityMod
+  return strengthMod
+}
+
 export function parseWeaponsFromEquipmentChoice(classEntry: ClassEntry, letter: string): EquipmentEntry[] {
   const options = parseEquipmentOptions(classEntry.startingEquipment)
   const option = options.find((o) => o.letter.toUpperCase() === letter.toUpperCase())

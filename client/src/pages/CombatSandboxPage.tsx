@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { getClass, getSpell, listMonsters } from '@data'
-import type { MonsterEntry } from '@data/schema'
+import type { EquipmentEntry, MonsterEntry } from '@data/schema'
 import type { CharacterData } from '../character-wizard/types'
 import { spellsForClass } from './CharacterSheetPage'
 import { renderEmphasis } from '../EmphasisText'
@@ -10,9 +10,15 @@ import {
   armorClass,
   finalAbilityScores,
   hitPointsMulticlass,
+  proficiencyBonusMulticlass,
   spellcastingInfo,
 } from '../engine/computeSheet'
-import { resolveMonsterAttack, resolveSpellAttack } from '../engine/sandbox'
+import {
+  abilityForWeapon,
+  parseWeaponsFromEquipmentChoice,
+  weaponDamageWithAbilityModifier,
+} from '../engine/equipmentAttack'
+import { resolveMonsterAttack, resolveSpellAttack, resolveWeaponAttack } from '../engine/sandbox'
 import type { AttackResult } from '../engine/sandbox'
 
 interface CharacterRecord {
@@ -90,6 +96,7 @@ export function CombatSandboxPage() {
   const [battleMonsters, setBattleMonsters] = useState<BattleMonster[]>([])
   const [selectedMonsterKey, setSelectedMonsterKey] = useState<number | null>(null)
   const [selectedSpellId, setSelectedSpellId] = useState<string | null>(null)
+  const [selectedWeaponId, setSelectedWeaponId] = useState<string | null>(null)
   const [playerHp, setPlayerHp] = useState<number | null>(null)
   const [log, setLog] = useState<LogEntry[]>([])
   const nextKeyRef = useRef(0)
@@ -192,11 +199,41 @@ export function CombatSandboxPage() {
   }
   const cantripIds = [...cantripToClass.keys()]
 
-  if (cantripIds.length === 0) {
+  // Weapons come only from data.classes[0] — the ORIGINAL creation class,
+  // never re-ordered by level-up (LevelUpPage.tsx only ever appends new
+  // classes; classes[0]'s identity is stable, the same invariant
+  // spellsForClass() above already relies on). equipmentChoice is a letter
+  // that only means something relative to THAT class's startingEquipment
+  // prose — resolving it against any other class in a multiclass build
+  // would silently produce the wrong (or an empty) weapon list.
+  const creationClass = getClass(data.classes[0].classId)!
+  const weapons = parseWeaponsFromEquipmentChoice(creationClass, data.equipmentChoice)
+  const strengthMod = abilityModifier(scores.Strength)
+  const dexterityMod = abilityModifier(scores.Dexterity)
+  // Proficiency is unconditional here: the picker only ever offers weapons
+  // parsed from the character's OWN starting-equipment choice, so there is
+  // no way to reach this list with a weapon the character isn't proficient
+  // with (see plan doc finding 8 — this constraint is what makes skipping a
+  // real weaponProficiencies parse valid for v0).
+  const weaponProficiencyBonus = proficiencyBonusMulticlass(data.classes)
+  function weaponAttackBonus(weapon: EquipmentEntry): number {
+    return weaponProficiencyBonus + abilityForWeapon(weapon, strengthMod, dexterityMod)
+  }
+  // SRD 5.2: a weapon attack adds the same ability modifier to damage that
+  // it uses for the attack roll (unlike cantrip damage, which doesn't scale
+  // with the casting ability) — resolveWeaponAttack itself just passes
+  // weapon.damage through unmodified, so the modifier is folded in here,
+  // once, before resolution.
+  function weaponDamageString(weapon: EquipmentEntry): string {
+    return weaponDamageWithAbilityModifier(weapon.damage ?? '', abilityForWeapon(weapon, strengthMod, dexterityMod))
+  }
+
+  if (cantripIds.length === 0 && weapons.length === 0) {
     return (
       <div className="flex min-h-screen flex-col items-center justify-center gap-4 px-4">
         <p className="pixel-title text-lg text-center max-w-md">
-          This character has no spells to attack with — the sandbox is caster-only for now.
+          This character has no spells or weapons to attack with — check its equipment choice
+          and spells on the character sheet.
         </p>
         <Link to={`/characters/${id}`} className="pixel-link text-sm">
           &larr; Character Sheet
@@ -207,6 +244,7 @@ export function CombatSandboxPage() {
 
   const effectivePlayerHp = playerHp ?? maxHp ?? 0
   const selectedMonster = battleMonsters.find((m) => m.key === selectedMonsterKey) ?? null
+  const selectedWeapon = selectedWeaponId ? weapons.find((w) => w.id === selectedWeaponId) : undefined
 
   function pushLog(entry: Omit<LogEntry, 'id'>) {
     const id = nextLogIdRef.current++
@@ -220,27 +258,48 @@ export function CombatSandboxPage() {
   }
 
   function handleAttack() {
-    const spellCaster = selectedSpellId ? cantripToClass.get(selectedSpellId) : undefined
-    if (!selectedSpellId || !selectedMonster || !spellCaster) return
-    const result = resolveSpellAttack(selectedSpellId, spellCaster.attackBonus, selectedMonster.monster.ac)
-    const spell = getSpell(selectedSpellId)
-    let fallbackText: string | undefined
-    if (result.hit) {
-      if (result.damage) {
+    if (selectedSpellId) {
+      const spellCaster = cantripToClass.get(selectedSpellId)
+      if (!selectedMonster || !spellCaster) return
+      const result = resolveSpellAttack(selectedSpellId, spellCaster.attackBonus, selectedMonster.monster.ac)
+      const spell = getSpell(selectedSpellId)
+      let fallbackText: string | undefined
+      if (result.hit) {
+        if (result.damage) {
+          const dmg = estimateDamage(result.damage, result.critical)
+          setBattleMonsters((prev) =>
+            prev.map((m) => (m.key === selectedMonster.key ? { ...m, currentHp: Math.max(0, m.currentHp - dmg) } : m)),
+          )
+        } else {
+          fallbackText = spell?.description
+        }
+      }
+      pushLog({
+        side: 'player',
+        label: `${spell?.name ?? selectedSpellId} vs ${selectedMonster.monster.name}`,
+        result,
+        fallbackText,
+      })
+      return
+    }
+
+    if (selectedWeapon && selectedMonster) {
+      const bonus = weaponAttackBonus(selectedWeapon)
+      const weaponForResolve = { ...selectedWeapon, damage: weaponDamageString(selectedWeapon) }
+      const result = resolveWeaponAttack(weaponForResolve, bonus, selectedMonster.monster.ac)
+      if (result.hit && result.damage) {
         const dmg = estimateDamage(result.damage, result.critical)
         setBattleMonsters((prev) =>
           prev.map((m) => (m.key === selectedMonster.key ? { ...m, currentHp: Math.max(0, m.currentHp - dmg) } : m)),
         )
-      } else {
-        fallbackText = spell?.description
       }
+      const masteryNote = selectedWeapon.mastery ? ` (Mastery: ${selectedWeapon.mastery} — not applied)` : ''
+      pushLog({
+        side: 'player',
+        label: `${selectedWeapon.name} vs ${selectedMonster.monster.name}${masteryNote}`,
+        result,
+      })
     }
-    pushLog({
-      side: 'player',
-      label: `${spell?.name ?? selectedSpellId} vs ${selectedMonster.monster.name}`,
-      result,
-      fallbackText,
-    })
   }
 
   function handleMonsterAttack() {
@@ -300,25 +359,68 @@ export function CombatSandboxPage() {
                 </span>
               </p>
             )}
+            {selectedWeapon && (
+              <p className="text-sm">
+                Weapon Attack{' '}
+                <span className="font-bold">
+                  {weaponAttackBonus(selectedWeapon) >= 0 ? '+' : ''}
+                  {weaponAttackBonus(selectedWeapon)}
+                </span>
+              </p>
+            )}
 
-            <p className="pixel-label mt-2">Cantrip</p>
-            <div className="flex flex-wrap gap-2">
-              {cantripIds.map((cid) => {
-                const spell = getSpell(cid)
-                return (
-                  <button
-                    key={cid}
-                    type="button"
-                    className={`pixel-btn ${selectedSpellId === cid ? '' : 'pixel-btn-secondary'}`}
-                    onClick={() => setSelectedSpellId(cid)}
-                  >
-                    {spell?.name ?? cid}
-                  </button>
-                )
-              })}
-            </div>
-            {selectedSpellId && (
-              <p className="text-xs mt-1">{renderEmphasis(getSpell(selectedSpellId)?.description ?? '')}</p>
+            {cantripIds.length > 0 && (
+              <>
+                <p className="pixel-label mt-2">Cantrip</p>
+                <div className="flex flex-wrap gap-2">
+                  {cantripIds.map((cid) => {
+                    const spell = getSpell(cid)
+                    return (
+                      <button
+                        key={cid}
+                        type="button"
+                        className={`pixel-btn ${selectedSpellId === cid ? '' : 'pixel-btn-secondary'}`}
+                        onClick={() => {
+                          setSelectedSpellId(cid)
+                          setSelectedWeaponId(null)
+                        }}
+                      >
+                        {spell?.name ?? cid}
+                      </button>
+                    )
+                  })}
+                </div>
+                {selectedSpellId && (
+                  <p className="text-xs mt-1">{renderEmphasis(getSpell(selectedSpellId)?.description ?? '')}</p>
+                )}
+              </>
+            )}
+
+            {weapons.length > 0 && (
+              <>
+                <p className="pixel-label mt-2">Weapon</p>
+                <div className="flex flex-wrap gap-2">
+                  {weapons.map((w) => (
+                    <button
+                      key={w.id}
+                      type="button"
+                      className={`pixel-btn ${selectedWeaponId === w.id ? '' : 'pixel-btn-secondary'}`}
+                      onClick={() => {
+                        setSelectedWeaponId(w.id)
+                        setSelectedSpellId(null)
+                      }}
+                    >
+                      {w.name}
+                    </button>
+                  ))}
+                </div>
+                {selectedWeapon && (
+                  <p className="text-xs mt-1">
+                    {weaponDamageString(selectedWeapon)}
+                    {selectedWeapon.mastery && ` — Mastery: ${selectedWeapon.mastery} (not applied)`}
+                  </p>
+                )}
+              </>
             )}
           </section>
 
@@ -375,7 +477,7 @@ export function CombatSandboxPage() {
           <button
             type="button"
             className="pixel-btn"
-            disabled={!selectedSpellId || !selectedMonster}
+            disabled={(!selectedSpellId && !selectedWeaponId) || !selectedMonster}
             onClick={handleAttack}
           >
             Attack

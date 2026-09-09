@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
-import { getClass } from '@data'
-import { parseWeaponsFromEquipmentChoice } from './equipmentAttack'
+import { getClass, getEquipment } from '@data'
+import { abilityForWeapon, parseWeaponsFromEquipmentChoice, weaponDamageWithAbilityModifier } from './equipmentAttack'
 
 describe('parseWeaponsFromEquipmentChoice', () => {
   it("resolves Fighter's option A to Greatsword, Flail, and Javelin", () => {
@@ -132,5 +132,41 @@ describe('parseWeaponsFromEquipmentChoice', () => {
     const weapons = parseWeaponsFromEquipmentChoice(wizard, 'A')
     const names = weapons.map((w) => w.name).sort()
     expect(names).toEqual(['Dagger', 'Quarterstaff'].sort())
+  })
+})
+
+describe('abilityForWeapon', () => {
+  it('uses the higher of Strength/Dexterity for a Finesse weapon', () => {
+    const dagger = getEquipment('dagger')!
+    expect(abilityForWeapon(dagger, 1, 4)).toBe(4)
+    expect(abilityForWeapon(dagger, 5, 2)).toBe(5)
+  })
+
+  it('uses Dexterity for a non-Finesse Ammunition weapon (a bow)', () => {
+    const longbow = getEquipment('longbow')!
+    expect(abilityForWeapon(longbow, 5, 2)).toBe(2)
+  })
+
+  it('uses Strength for a non-Finesse, non-Ammunition weapon', () => {
+    const greataxe = getEquipment('greataxe')!
+    expect(abilityForWeapon(greataxe, 5, 2)).toBe(5)
+  })
+})
+
+describe('weaponDamageWithAbilityModifier', () => {
+  it('adds a positive modifier before the damage type', () => {
+    expect(weaponDamageWithAbilityModifier('1d8 Slashing', 3)).toBe('1d8 + 3 Slashing')
+  })
+
+  it('subtracts a negative modifier', () => {
+    expect(weaponDamageWithAbilityModifier('1d4 Piercing', -1)).toBe('1d4 - 1 Piercing')
+  })
+
+  it('leaves the string untouched for a zero modifier', () => {
+    expect(weaponDamageWithAbilityModifier('1d6 Bludgeoning', 0)).toBe('1d6 Bludgeoning')
+  })
+
+  it('falls back to the original string for an unexpected shape', () => {
+    expect(weaponDamageWithAbilityModifier('not a damage string', 3)).toBe('not a damage string')
   })
 })
