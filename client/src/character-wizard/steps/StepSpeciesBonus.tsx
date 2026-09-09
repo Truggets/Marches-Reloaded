@@ -1,7 +1,7 @@
 import { getClass, listFeats } from '@data'
 import { parseFeatSpellAbilities, parseFeatSpellLists, parseSpellcastingAbility } from '../../engine/computeSheet'
 import { renderEmphasis } from '../../EmphasisText'
-import { FeatPicker } from '../../FeatPicker'
+import { ContentPicker } from '../../ContentPicker'
 import { ALL_SKILLS } from '../types'
 
 interface Props {
@@ -112,7 +112,12 @@ export function StepSpeciesBonus({
       {hasVersatileTrait && (
         <div className="flex flex-col gap-2">
           <p className="pixel-label">Versatile: choose 1 Origin feat</p>
-          <FeatPicker feats={originFeats} selectedId={originFeatId} onSelect={onChangeOriginFeat} />
+          <ContentPicker
+            items={originFeats}
+            selectedId={originFeatId}
+            onSelect={onChangeOriginFeat}
+            searchPlaceholder="Search feats by name…"
+          />
           {selectedFeat && <p className="text-sm">{renderEmphasis(selectedFeat.benefit)}</p>}
 
           {spellLists.length > 0 && (

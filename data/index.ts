@@ -35,6 +35,7 @@ export const srdPack: ContentPack = { manifest, classes, species, backgrounds, f
 // synchronous — call sites (listFeats, getFeat, etc.) never had to become
 // async, since the merge happens before any of them are ever called.
 let importedFeats: FeatEntry[] = []
+let importedBackgrounds: BackgroundEntry[] = []
 let importedPackManifests: { id: string; name: string }[] = []
 
 /** Fetches this instance's admin-imported packs and merges their feats in.
@@ -46,8 +47,11 @@ export async function initPacks(): Promise<void> {
   try {
     const res = await fetch('/api/packs', { credentials: 'include' })
     if (!res.ok) return // not authenticated yet, or a transient error — SRD-only is fine
-    const body = (await res.json()) as { packs: { packId: string; manifest: { name: string }; content: { feats?: FeatEntry[] } }[] }
+    const body = (await res.json()) as {
+      packs: { packId: string; manifest: { name: string }; content: { feats?: FeatEntry[]; backgrounds?: BackgroundEntry[] } }[]
+    }
     importedFeats = body.packs.flatMap((p) => p.content.feats ?? [])
+    importedBackgrounds = body.packs.flatMap((p) => p.content.backgrounds ?? [])
     importedPackManifests = body.packs.map((p) => ({ id: p.packId, name: p.manifest.name }))
   } catch {
     // Network failure, malformed response, etc. — degrade to SRD-only.
@@ -82,11 +86,11 @@ export function getSpecies(id: string): SpeciesEntry | undefined {
 }
 
 export function listBackgrounds(): BackgroundEntry[] {
-  return backgrounds
+  return [...backgrounds, ...importedBackgrounds]
 }
 
 export function getBackground(id: string): BackgroundEntry | undefined {
-  return backgrounds.find((b) => b.id === id)
+  return backgrounds.find((b) => b.id === id) ?? importedBackgrounds.find((b) => b.id === id)
 }
 
 export function listFeats(category?: FeatEntry['category'] | FeatEntry['category'][]): FeatEntry[] {

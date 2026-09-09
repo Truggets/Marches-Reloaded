@@ -1,4 +1,4 @@
-# M2b Phase 2 — Backgrounds Import (draft, not yet committed)
+# M2b Phase 2 — Backgrounds Import (shipped 2026-09-09)
 
 Scope: import the vault's 42 PHB-2024 backgrounds. Depends on Phase 1 (feats), which is
 shipped — background-granted Origin feats (e.g. Artisan → Crafter, Entertainer →
@@ -96,15 +96,32 @@ hardened after its first real run. Don't design for one-shot success on the full
    wrapper or direct replacement) and the new background/species picker in
    `StepOrigin.tsx`.
 
-## Not yet done
-- Live-verify §3's fix once implemented (a background from a second imported pack whose
-  feat text names a feat that also exists in a different pack, resolving to the correct
-  pack's copy).
-- **Holding this doc uncommitted** until the 3 parallel review agents (browser-tester,
-  code-reviewer, UI/graphics QA) report back on Phase 1, per Truman's instruction to batch
-  commits at the start of each new cycle. Status: code-reviewer and UI/graphics QA have
-  reported (code-reviewer's 2 critical + 1 important findings — including confirmation of
-  this doc's own §3 bug — already fixed in `CreateCharacterPage.tsx`/`data/index.ts`/
-  `LevelUpPage.tsx`/`server/src/index.js`, build+test clean; UI/graphics QA hit a
-  shared-tab conflict with the still-running browser-tester and stopped before finishing,
-  to be resumed once the tab is free). Browser-tester still running.
+## Implementation notes (2026-09-09)
+- §3's fix (pack-scoped feat resolution) was already landed as a side effect of Phase 1's
+  post-review fixes, before Phase 2 work started — confirmed still correct, no change
+  needed here.
+- Built via 4 parallel workers (parser+fixtures+tests, data/index.ts merge + admin UI,
+  FeatPicker→ContentPicker generalization + StepOrigin wiring, server route), each
+  reviewed as its piece landed (not batched to the end of the cycle) per the updated
+  org-design concurrent-review practice, then committed individually.
+- Ran the real parser against the actual vault file
+  (`backgrounds-complete-v2.json`, 42 entries) during development for validation only —
+  never committed to this repo. All 42 parsed cleanly with the final regex/validation
+  patterns. Note for whoever runs the real admin import: that vault file mixes 16 true
+  PHB-2024 entries with 26 entries from other non-SRD supplement books (Arcana Unleashed,
+  Acquisitions Incorporated, Bigby Presents, Book of Many Things, Lorwyn, Plane Shift,
+  etc.) under one JSON — the parser is source-agnostic (each entry's `source` field passes
+  through as free text) so this doesn't require any code change, but it's worth deciding
+  at import time whether to split them across separate pack ids/names for cleaner
+  attribution grouping rather than importing everything under a single `"phb-2024"` pack.
+- Code review surfaced and fixed two real bugs before commit: (1) `toolProficiency`/
+  `equipment` were carrying raw `**bold**` markdown into fields the UI renders as plain
+  text (`CharacterSheetPage.tsx`) — fixed by stripping bold markers at parse time to match
+  the bundled SRD pack's clean-value convention; (2) `parseSkillProficiencies` had no
+  validation that extracted bolded spans were actually skill names (could have silently
+  captured an incidental bolded phrase like "any other skill of your choice") — fixed by
+  validating against the fixed 18-skill allowlist, matching the sibling feat parser's
+  category-allowlist convention.
+- Not yet done: live end-to-end smoke test of a real admin import through the browser
+  (this phase was verified via unit tests + build/typecheck + hand-run parser against real
+  data, not a browser session) — worth a manual pass before/at first real production use.

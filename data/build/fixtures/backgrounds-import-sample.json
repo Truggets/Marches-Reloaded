@@ -1,0 +1,36 @@
+{
+  "backgrounds": [
+    {
+      "name": "Chronicler",
+      "source": "Player's Handbook (2024)",
+      "category": "Standard",
+      "mechanics": "**Ability Scores:** Increase one score by 2 and a different one by 1, or increase three different scores by 1. These increases are chosen from **Wisdom and Charisma** (to a maximum of 20).\n**Skill Proficiencies:** You gain proficiency in the **Insight** and **History** skills.\n**Tool Proficiency:** You gain proficiency with **Calligrapher's Supplies**.\n**Origin Feat:** You gain the **Magic Initiate (Cleric)** feat, granting you two Cleric cantrips of your choice and one 1st-level Cleric spell of your choice that you can cast once per long rest without expending a spell slot.\n**Starting Equipment:** You start with **Book (blank), Calligrapher's Supplies, Traveler's Clothes, and 15 GP** (or you can choose 50 GP instead).",
+      "flavor_text": "You recorded the history of your order, one page at a time.",
+      "citations": ["[1]"]
+    },
+    {
+      "name": "Wanderer",
+      "source": "Player's Handbook (2024)",
+      "category": "Standard",
+      "mechanics": "**Ability Scores:** Increase one score by 2 and a different one by 1, or increase three different scores by 1. These increases are chosen from **Dexterity, Constitution, and Wisdom** (to a maximum of 20).\n**Skill Proficiencies:** You gain proficiency in the **Survival** and **Perception** skills.\n**Tool Proficiency:** You gain proficiency with **Cartographer's Tools**.\n**Origin Feat:** You gain the **Lucky** feat, granting you a **number of Luck Points equal to your Proficiency Bonus** per long rest.\n**Starting Equipment:** You start with **Cartographer's Tools, Bedroll, Traveler's Clothes, and 13 GP** (or you can choose 50 GP instead).",
+      "flavor_text": "You never stayed in one town long enough to call it home.",
+      "citations": ["[2]"]
+    },
+    {
+      "name": "Woodworker",
+      "source": "Player's Handbook (2024)",
+      "category": "Standard",
+      "mechanics": "**Ability Scores:** Increase one score by 2 and a different one by 1, or increase three different scores by 1. These increases are chosen from **Strength, Dexterity, and Intelligence** (to a maximum of 20).\n**Skill Proficiencies:** You gain proficiency in the **Investigation** and **Nature** skills.\n**Tool Proficiency:** You gain proficiency with **Artisan's Tools (one type of your choice)**.\n**Origin Feat:** You gain the **Crafter** feat, which grants you proficiency with **three additional types of Artisan's Tools**, and lets you buy nonmagical items at a 20% discount.\n**Starting Equipment:** You start with **Artisan's Tools (same type as chosen above), Traveler's Clothes, and 20 GP** (or you can choose 50 GP instead).",
+      "flavor_text": "You learned your trade at your family's bench, shaping raw timber into finished goods.",
+      "citations": ["[3]"]
+    },
+    {
+      "name": "Prodigy",
+      "source": "Player's Handbook (2024)",
+      "category": "Standard",
+      "mechanics": "**Ability Scores:** Increase one score by 2 and a different one by 1, or increase three different scores by 1. These increases are chosen from **Intelligence, Wisdom, and Charisma** (to a maximum of 20).\n**Skill Proficiencies:** You gain proficiency in the **History** and **Persuasion** skills.\n**Tool Proficiency:** You gain proficiency with **Gaming Set (one type of your choice)**.\n**Origin Feat:** You gain the **Skilled** feat, which instantly grants you **proficiency in three skills or tools of your choice**.\n**Starting Equipment:** You start with **Gaming Set (same type as chosen above), Fine Clothes, Traveler's Clothes, and 20 GP** (or you can choose 50 GP instead).",
+      "flavor_text": "You were recognized early as unusually gifted, and mentors lined up to sponsor your education.",
+      "citations": ["[4]"]
+    }
+  ]
+}

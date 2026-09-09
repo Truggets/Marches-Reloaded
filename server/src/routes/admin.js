@@ -7,6 +7,7 @@ import argon2 from "argon2";
 import db from "../db/index.js";
 import { requireAuth, requireRole } from "../middleware/auth.js";
 import { parseFeatsImport } from "../../../data/build/parse-feats-import.js";
+import { parseBackgroundsImport } from "../../../data/build/parse-backgrounds-import.js";
 
 const router = express.Router();
 
@@ -100,18 +101,22 @@ router.get("/characters", (req, res) => {
   return res.status(200).json({ characters });
 });
 
-// M2b: import an additional content pack (currently: feats only, Phase 1).
-// The pack is stored in pack_content (shared/data/marches.sqlite), never in
-// the shipped data/ directory — see CLAUDE.md's SRD-only bundling rule and
-// docs/planning/m2b-execution-plan.md. Body shape: { packId, packName,
-// feats: <vault-shaped feats JSON's top-level object, i.e. {feats: [...]}> }.
-// Runs the entries through the exact same parser/validator used by the
-// build-time CLI (parse-feats-import.js) — reject the whole pack, name the
-// offending entry, per the plan's "validation moves to the import boundary"
-// decision. Not wrapped in a DB transaction here: a single INSERT/REPLACE
-// is already atomic in SQLite.
+// M2b: import an additional content pack (feats and/or backgrounds; at
+// least one required). The pack is stored in pack_content (shared/data/
+// marches.sqlite), never in the shipped data/ directory — see CLAUDE.md's
+// SRD-only bundling rule and docs/planning/m2b-execution-plan.md /
+// m2b-phase2-backgrounds-plan.md. Body shape: { packId, packName, feats?,
+// backgrounds? } (each the vault-shaped top-level object for that content
+// type, e.g. {feats: [...]} / {backgrounds: [...]}). Runs each provided
+// field through the same parser/validator used by its build-time CLI
+// (parse-feats-import.js / parse-backgrounds-import.js) — reject the whole
+// pack, name the offending entry, per the plan's "validation moves to the
+// import boundary" decision. Not wrapped in an explicit DB transaction: the
+// SELECT-then-INSERT below isn't atomic across statements in general, but
+// better-sqlite3 is synchronous and this is a single-process deployment, so
+// no other request can interleave in that window (see M2b Phase 2 review).
 router.post("/packs/import", (req, res) => {
-  const { packId, packName, feats } = req.body || {};
+  const { packId, packName, feats, backgrounds } = req.body || {};
 
   if (typeof packId !== "string" || !packId.trim()) {
     return res.status(400).json({ error: "packId is required" });
@@ -119,16 +124,43 @@ router.post("/packs/import", (req, res) => {
   if (typeof packName !== "string" || !packName.trim()) {
     return res.status(400).json({ error: "packName is required" });
   }
-
-  let parsedFeats;
-  try {
-    parsedFeats = parseFeatsImport(feats, packId);
-  } catch (err) {
-    return res.status(400).json({ error: `Import rejected: ${err.message}` });
+  if (feats === undefined && backgrounds === undefined) {
+    return res.status(400).json({ error: "At least one of feats or backgrounds is required" });
   }
 
+  let parsedFeats;
+  if (feats !== undefined) {
+    try {
+      parsedFeats = parseFeatsImport(feats, packId);
+    } catch (err) {
+      return res.status(400).json({ error: `Import rejected: ${err.message}` });
+    }
+  }
+
+  let parsedBackgrounds;
+  if (backgrounds !== undefined) {
+    try {
+      parsedBackgrounds = parseBackgroundsImport(backgrounds, packId);
+    } catch (err) {
+      return res.status(400).json({ error: `Import rejected: ${err.message}` });
+    }
+  }
+
+  // Merge with whatever's already stored for this pack_id so importing one
+  // field (e.g. backgrounds) doesn't wipe out a previously-imported other
+  // field (e.g. feats) — see CLAUDE.md / M2b Phase 2 plan on pack_content
+  // being a single JSON blob per pack_id.
+  const existingRow = db.prepare("SELECT content FROM pack_content WHERE pack_id = ?").get(packId);
+  const existingContent = existingRow ? JSON.parse(existingRow.content) : {};
+
+  const mergedContent = {};
+  const finalFeats = parsedFeats !== undefined ? parsedFeats : existingContent.feats;
+  const finalBackgrounds = parsedBackgrounds !== undefined ? parsedBackgrounds : existingContent.backgrounds;
+  if (finalFeats !== undefined) mergedContent.feats = finalFeats;
+  if (finalBackgrounds !== undefined) mergedContent.backgrounds = finalBackgrounds;
+
   const manifest = JSON.stringify({ id: packId, name: packName, importedAt: new Date().toISOString() });
-  const content = JSON.stringify({ feats: parsedFeats });
+  const content = JSON.stringify(mergedContent);
 
   db.prepare(
     `INSERT INTO pack_content (pack_id, manifest, content, imported_by_user_id, created_at)
@@ -137,7 +169,11 @@ router.post("/packs/import", (req, res) => {
        imported_by_user_id = excluded.imported_by_user_id, created_at = excluded.created_at`
   ).run(packId, manifest, content, req.session.userId, new Date().toISOString());
 
-  return res.status(200).json({ ok: true, packId, featCount: parsedFeats.length });
+  const response = { ok: true, packId };
+  if (parsedFeats !== undefined) response.featCount = parsedFeats.length;
+  if (parsedBackgrounds !== undefined) response.backgroundCount = parsedBackgrounds.length;
+
+  return res.status(200).json(response);
 });
 
 export default router;
