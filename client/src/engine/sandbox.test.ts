@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
-import { resolveMonsterAttack, resolveSpellAttack } from './sandbox'
-import type { MonsterEntry } from '@data/schema'
+import { resolveMonsterAttack, resolveSpellAttack, resolveWeaponAttack } from './sandbox'
+import type { EquipmentEntry, MonsterEntry } from '@data/schema'
 
 describe('resolveSpellAttack', () => {
   it('resolves a forced hit with curated damage for a spell in the lookup', () => {
@@ -119,5 +119,52 @@ describe('resolveMonsterAttack', () => {
     })
     const result = resolveMonsterAttack(monster, 12, 15)
     expect(result).toBeUndefined()
+  })
+})
+
+function makeWeapon(overrides: Partial<EquipmentEntry> = {}): EquipmentEntry {
+  return {
+    id: 'test-sword',
+    name: 'Test Sword',
+    category: 'weapon',
+    damage: '1d8 Slashing',
+    pack: 'srd-5.2',
+    source: { book: 'SRD 5.2.1' },
+    ...overrides,
+  }
+}
+
+describe('resolveWeaponAttack', () => {
+  it('resolves a forced hit with the weapon\'s damage string', () => {
+    const weapon = makeWeapon()
+    const result = resolveWeaponAttack(weapon, 5, 12, 15)
+    expect(result.hit).toBe(true)
+    expect(result.critical).toBe(false)
+    expect(result.damage).toBe('1d8 Slashing')
+  })
+
+  it('resolves a forced miss with damage undefined', () => {
+    const weapon = makeWeapon()
+    const result = resolveWeaponAttack(weapon, 5, 20, 2)
+    expect(result.hit).toBe(false)
+    expect(result.damage).toBeUndefined()
+  })
+
+  it('a natural 20 always hits, even against an AC the attack bonus can\'t reach', () => {
+    const weapon = makeWeapon()
+    const result = resolveWeaponAttack(weapon, -5, 30, 20)
+    expect(result.roll).toBe(20)
+    expect(result.hit).toBe(true)
+    expect(result.critical).toBe(true)
+    expect(result.damage).toBe('1d8 Slashing')
+  })
+
+  it('a natural 1 always misses, even against an AC the attack bonus trivially beats', () => {
+    const weapon = makeWeapon()
+    const result = resolveWeaponAttack(weapon, 20, 5, 1)
+    expect(result.roll).toBe(1)
+    expect(result.hit).toBe(false)
+    expect(result.critical).toBe(false)
+    expect(result.damage).toBeUndefined()
   })
 })

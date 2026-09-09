@@ -6,7 +6,7 @@
 // `getMonster()` are used by the sandbox page itself, not by this module)
 // and because it's sandbox-specific turn resolution, not general
 // character-sheet rules math like the rest of computeSheet.ts.
-import type { MonsterEntry } from '@data/schema'
+import type { EquipmentEntry, MonsterEntry } from '@data/schema'
 import { spellDamageFor } from './spellDamage'
 
 /** Common shape for "one attack roll resolved": how the d20 landed, whether
@@ -31,8 +31,8 @@ export interface AttackResult {
  * on live randomness), adds `attackBonus`, and compares to `targetAc`.
  * SRD 5.2 rule: a natural 20 always hits (and is a critical hit) regardless
  * of the resulting total vs. AC; a natural 1 always misses regardless of
- * bonus. Shared by both `resolveSpellAttack` and `resolveMonsterAttack` so
- * the hit/crit/miss logic exists in exactly one place.
+ * bonus. Shared by `resolveSpellAttack`, `resolveMonsterAttack`, and
+ * `resolveWeaponAttack` so the hit/crit/miss logic exists in exactly one place.
  */
 function resolveAttackRoll(attackBonus: number, targetAc: number, rollOverride?: number): { roll: number; hit: boolean; critical: boolean } {
   const roll = rollOverride ?? Math.floor(Math.random() * 20) + 1
@@ -93,4 +93,25 @@ export function resolveMonsterAttack(
 
   const { roll, hit, critical } = resolveAttackRoll(attackBonus, playerAc, rollOverride)
   return { roll, hit, critical, actionName: action.name, damage: hit ? action.damage : undefined }
+}
+
+/**
+ * Resolves one player weapon attack against a target's AC. Damage on a hit
+ * comes straight from `weapon.damage` (e.g. "1d8 Piercing") — unlike
+ * `resolveSpellAttack`'s curated lookup, this never has to fall back to
+ * `undefined` in practice, since the caller (the sandbox's weapon picker) is
+ * expected to have already filtered to weapons with `damage !== undefined`
+ * (docs/planning/m11-phase2-weapon-attack-plan.md). The type stays honest
+ * about it anyway since `AttackResult.damage` is optional. As with the other
+ * two resolvers, a crit is never pre-doubled here.
+ */
+export function resolveWeaponAttack(
+  weapon: EquipmentEntry,
+  attackBonus: number,
+  targetAc: number,
+  rollOverride?: number,
+): AttackResult {
+  const { roll, hit, critical } = resolveAttackRoll(attackBonus, targetAc, rollOverride)
+  if (!hit) return { roll, hit, critical, damage: undefined }
+  return { roll, hit, critical, damage: weapon.damage }
 }
