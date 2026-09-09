@@ -40,3 +40,6 @@ shared/
 # samples and stay tracked; only parser *output* written under this dir is
 # ignored.
 data/build/fixtures/*-output.json
+
+# Per-worktree local Claude Code settings (model pin, etc.) — not shared content
+.claude/settings.local.json
