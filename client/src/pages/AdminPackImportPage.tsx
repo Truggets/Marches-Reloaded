@@ -29,16 +29,23 @@ export function AdminPackImportPage() {
   const [packName, setPackName] = useState("Player's Handbook (2024)")
   const [featsText, setFeatsText] = useState('')
   const [backgroundsText, setBackgroundsText] = useState('')
+  const [speciesText, setSpeciesText] = useState('')
+  const [equipmentText, setEquipmentText] = useState('')
   const [importing, setImporting] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const [result, setResult] = useState<{ featCount?: number; backgroundCount?: number } | null>(null)
+  const [result, setResult] = useState<{
+    featCount?: number
+    backgroundCount?: number
+    speciesCount?: number
+    equipmentCount?: number
+  } | null>(null)
 
   async function handleImport() {
     setError(null)
     setResult(null)
 
-    if (!featsText.trim() && !backgroundsText.trim()) {
-      setError('Paste at least one of Feats JSON or Backgrounds JSON before importing.')
+    if (!featsText.trim() && !backgroundsText.trim() && !speciesText.trim() && !equipmentText.trim()) {
+      setError('Paste at least one of Feats, Backgrounds, Species, or Equipment JSON before importing.')
       return
     }
 
@@ -62,18 +69,48 @@ export function AdminPackImportPage() {
       }
     }
 
+    let species: unknown
+    if (speciesText.trim()) {
+      try {
+        species = JSON.parse(speciesText)
+      } catch {
+        setError('Species JSON is not valid — fix the syntax error and try again.')
+        return
+      }
+    }
+
+    let equipment: unknown
+    if (equipmentText.trim()) {
+      try {
+        equipment = JSON.parse(equipmentText)
+      } catch {
+        setError('Equipment JSON is not valid — fix the syntax error and try again.')
+        return
+      }
+    }
+
     setImporting(true)
     try {
       const res = await fetch('/api/admin/packs/import', {
         method: 'POST',
         credentials: 'include',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ packId, packName, feats, backgrounds }),
+        body: JSON.stringify({ packId, packName, feats, backgrounds, species, equipment }),
       })
       if (!res.ok) throw new Error(await extractErrorMessage(res))
-      const body = (await res.json()) as { featCount?: number; backgroundCount?: number }
+      const body = (await res.json()) as {
+        featCount?: number
+        backgroundCount?: number
+        speciesCount?: number
+        equipmentCount?: number
+      }
       await initPacks() // so the admin's own freshly-imported pack shows up without a manual refresh
-      setResult({ featCount: body.featCount, backgroundCount: body.backgroundCount })
+      setResult({
+        featCount: body.featCount,
+        backgroundCount: body.backgroundCount,
+        speciesCount: body.speciesCount,
+        equipmentCount: body.equipmentCount,
+      })
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to import pack')
     } finally {
@@ -98,10 +135,13 @@ export function AdminPackImportPage() {
           Admin-only. Content imported here is stored on this instance only — never
           shipped or bundled with the app. Paste the vault-shaped feats JSON (the
           {' {feats: [...]} '}
-          document, not an individual feat) and/or the vault-shaped backgrounds JSON
+          document, not an individual feat), the vault-shaped backgrounds JSON
           (the {' {backgrounds: [...]} '}
-          document) below — both are optional and can be pasted independently, but at
-          least one is required.
+          document), the vault-shaped species JSON (the {' {species: [...]} '}
+          document), and/or the vault-shaped equipment JSON (the
+          {' {weapons: [...], armor: [...], adventuring_gear: [...]} '}
+          document) below — each is independently optional, but at least one is
+          required.
         </p>
 
         <label className="flex flex-col gap-1">
@@ -143,6 +183,28 @@ export function AdminPackImportPage() {
           />
         </label>
 
+        <label className="flex flex-col gap-1">
+          <span className="pixel-label text-xs">Species JSON</span>
+          <textarea
+            value={speciesText}
+            onChange={(e) => setSpeciesText(e.target.value)}
+            spellCheck={false}
+            placeholder='{"species": [...]}'
+            className="pixel-input h-[24rem] w-full font-mono text-xs"
+          />
+        </label>
+
+        <label className="flex flex-col gap-1">
+          <span className="pixel-label text-xs">Equipment JSON</span>
+          <textarea
+            value={equipmentText}
+            onChange={(e) => setEquipmentText(e.target.value)}
+            spellCheck={false}
+            placeholder='{"weapons": [...], "armor": [...], "adventuring_gear": [...]}'
+            className="pixel-input h-[24rem] w-full font-mono text-xs"
+          />
+        </label>
+
         {error && <p className="text-sm text-[var(--color-danger)]">{error}</p>}
         {result && (
           <p className="text-sm text-[var(--color-success,green)]">
@@ -150,9 +212,11 @@ export function AdminPackImportPage() {
             {[
               result.featCount !== undefined ? `${result.featCount} feats` : null,
               result.backgroundCount !== undefined ? `${result.backgroundCount} backgrounds` : null,
+              result.speciesCount !== undefined ? `${result.speciesCount} species` : null,
+              result.equipmentCount !== undefined ? `${result.equipmentCount} equipment` : null,
             ]
               .filter(Boolean)
-              .join(' and ')}{' '}
+              .join(', ')}{' '}
             into pack "{packId}".
           </p>
         )}
@@ -161,7 +225,10 @@ export function AdminPackImportPage() {
           <button
             type="button"
             onClick={() => void handleImport()}
-            disabled={importing || (!featsText.trim() && !backgroundsText.trim())}
+            disabled={
+              importing ||
+              (!featsText.trim() && !backgroundsText.trim() && !speciesText.trim() && !equipmentText.trim())
+            }
             className="pixel-btn"
           >
             {importing ? 'Importing…' : 'Import'}

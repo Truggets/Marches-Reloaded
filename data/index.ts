@@ -36,6 +36,8 @@ export const srdPack: ContentPack = { manifest, classes, species, backgrounds, f
 // async, since the merge happens before any of them are ever called.
 let importedFeats: FeatEntry[] = []
 let importedBackgrounds: BackgroundEntry[] = []
+let importedSpecies: SpeciesEntry[] = []
+let importedEquipment: EquipmentEntry[] = []
 let importedPackManifests: { id: string; name: string }[] = []
 
 /** Fetches this instance's admin-imported packs and merges their feats in.
@@ -48,10 +50,21 @@ export async function initPacks(): Promise<void> {
     const res = await fetch('/api/packs', { credentials: 'include' })
     if (!res.ok) return // not authenticated yet, or a transient error — SRD-only is fine
     const body = (await res.json()) as {
-      packs: { packId: string; manifest: { name: string }; content: { feats?: FeatEntry[]; backgrounds?: BackgroundEntry[] } }[]
+      packs: {
+        packId: string
+        manifest: { name: string }
+        content: {
+          feats?: FeatEntry[]
+          backgrounds?: BackgroundEntry[]
+          species?: SpeciesEntry[]
+          equipment?: EquipmentEntry[]
+        }
+      }[]
     }
     importedFeats = body.packs.flatMap((p) => p.content.feats ?? [])
     importedBackgrounds = body.packs.flatMap((p) => p.content.backgrounds ?? [])
+    importedSpecies = body.packs.flatMap((p) => p.content.species ?? [])
+    importedEquipment = body.packs.flatMap((p) => p.content.equipment ?? [])
     importedPackManifests = body.packs.map((p) => ({ id: p.packId, name: p.manifest.name }))
   } catch {
     // Network failure, malformed response, etc. — degrade to SRD-only.
@@ -78,11 +91,11 @@ export function getClass(id: string): ClassEntry | undefined {
 }
 
 export function listSpecies(): SpeciesEntry[] {
-  return species
+  return [...species, ...importedSpecies]
 }
 
 export function getSpecies(id: string): SpeciesEntry | undefined {
-  return species.find((s) => s.id === id)
+  return species.find((s) => s.id === id) ?? importedSpecies.find((s) => s.id === id)
 }
 
 export function listBackgrounds(): BackgroundEntry[] {
@@ -117,9 +130,10 @@ export function getSpellsByClass(className: string): SpellEntry[] {
 }
 
 export function listEquipment(category?: EquipmentEntry['category']): EquipmentEntry[] {
-  return category ? equipment.filter((e) => e.category === category) : equipment
+  const all = [...equipment, ...importedEquipment]
+  return category ? all.filter((e) => e.category === category) : all
 }
 
 export function getEquipment(id: string): EquipmentEntry | undefined {
-  return equipment.find((e) => e.id === id)
+  return equipment.find((e) => e.id === id) ?? importedEquipment.find((e) => e.id === id)
 }

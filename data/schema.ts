@@ -132,6 +132,13 @@ export interface EquipmentEntry {
   weight?: string
   properties?: string
   description?: string
+  damage?: string // weapons only, e.g. "1d4 Piercing"
+  mastery?: string // weapons only, e.g. "Nick" — the mastery property name; the
+  // property's own rules text lives in weapon_mastery_properties reference
+  // data, not duplicated onto every weapon entry
+  ac?: string // armor only, e.g. "11 + Dex modifier"
+  strength?: string // armor only, e.g. a Strength score requirement
+  stealth?: string // armor only, e.g. "Disadvantage"
   pack: string
   source: SourceRef
 }

@@ -158,6 +158,8 @@ function parseWeapons(sectionText, id) {
       weight: clean(rec['Weight']),
       properties,
       description: descParts.join('. ') || undefined,
+      damage,
+      mastery,
       pack: PACK,
       source: { book: BOOK, section: 'Weapons' },
     }
@@ -188,6 +190,9 @@ function parseArmor(sectionText, id) {
       weight: clean(rec['Weight']),
       properties: propParts.join('; ') || undefined,
       description: category || undefined,
+      ac,
+      strength: str,
+      stealth,
       pack: PACK,
       source: { book: BOOK, section: 'Armor' },
     }
@@ -375,7 +380,10 @@ function parseAdventuringGear(sectionText, id) {
 }
 
 function main() {
-  const text = fs.readFileSync(SOURCE_PATH, 'utf8')
+  // Normalize CRLF -> LF: on Windows checkouts (core.autocrlf) the source
+  // file's line endings can come back as \r\n, which breaks the \n-anchored
+  // section/heading regexes below. Reading/writing tools stay text-mode.
+  const text = fs.readFileSync(SOURCE_PATH, 'utf8').replace(/\r\n/g, '\n')
   const id = makeIdAllocator()
 
   const weaponsSection = sliceSection(text, /\n## Weapons\n/, /\n## /g)
