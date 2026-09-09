@@ -1,4 +1,4 @@
-# M2b Phase 3 (species) + Phase 4 (equipment) — Execution Plan
+# M2b Phase 3 (species) + Phase 4 (equipment) — Execution Plan (shipped 2026-09-09)
 
 ## Goal
 Per `docs/planning/m2b-execution-plan.md` §2-3 (confirmed scope, unchanged): extend the
