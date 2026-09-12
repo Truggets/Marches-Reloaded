@@ -366,14 +366,32 @@ export function spellcastingInfo(
   }
 }
 
+/** The earliest level at which any of a class's subclasses grants a feature —
+ * derived from data, not hardcoded, though every bundled SRD subclass grants
+ * its first feature at level 3 (2024 rules unified subclass choice to level
+ * 3 across every class). Throws if the class has no subclasses at all, so a
+ * data gap fails loud instead of silently never offering the choice. */
+export function subclassUnlockLevel(classId: string): number {
+  const classEntry = getClass(classId)
+  if (!classEntry) throw new Error(`Unknown class: ${classId}`)
+  if (classEntry.subclasses.length === 0) throw new Error(`Class has no subclasses: ${classId}`)
+  return Math.min(...classEntry.subclasses.flatMap((s) => s.features.map((f) => f.level)))
+}
+
 /** Feature names granted exactly at the given level (that level's
- * featureTable row's feature list). Returns [] if the class has no row for
- * that level. */
-export function featuresForLevel(classId: string, level: number): string[] {
+ * featureTable row's feature list, plus the chosen subclass's own features at
+ * this level, if a subclassId is given). Returns [] if the class has no row
+ * for that level and the subclass grants nothing here either. */
+export function featuresForLevel(classId: string, level: number, subclassId?: string): string[] {
   const classEntry = getClass(classId)
   if (!classEntry) throw new Error(`Unknown class: ${classId}`)
   const row = classEntry.featureTable.find((r) => r.level === level)
-  return row ? row.features : []
+  const classFeatures = row ? row.features : []
+  if (!subclassId) return classFeatures
+  const subclass = classEntry.subclasses.find((s) => s.id === subclassId)
+  if (!subclass) throw new Error(`Unknown subclass: ${subclassId} for class ${classId}`)
+  const subclassFeatures = subclass.features.filter((f) => f.level === level).map((f) => f.name)
+  return [...classFeatures, ...subclassFeatures]
 }
 
 /** True if the class gains "Ability Score Improvement" at the given level. */

@@ -13,6 +13,7 @@ import {
   hitPointsMulticlass,
   isAsiLevel,
   spellSlots,
+  subclassUnlockLevel,
   totalCharacterLevel,
 } from '../engine/computeSheet'
 
@@ -76,6 +77,13 @@ export function LevelUpPage() {
   const [grapplerAbility, setGrapplerAbility] = useState<Ability | ''>('')
   const [cantripPicks, setCantripPicks] = useState<string[]>([])
   const [preparedPicks, setPreparedPicks] = useState<string[]>([])
+  // In-progress pick for the current level's subclass-choice section, if any
+  // — reset every level like the other per-level choices.
+  const [chosenSubclassId, setChosenSubclassId] = useState<string | null>(null)
+  // The subclass finalized this session (set once, in confirmLevel, at the
+  // unlock level — survives resetLevelChoices so it carries through to the
+  // Phase 3 save even though later levels reset chosenSubclassId).
+  const [committedSubclassId, setCommittedSubclassId] = useState<string | null>(null)
 
   const load = useCallback(async () => {
     setError(null)
@@ -103,6 +111,7 @@ export function LevelUpPage() {
     setGrapplerAbility('')
     setCantripPicks([])
     setPreparedPicks([])
+    setChosenSubclassId(null)
   }
 
   if (error) {
@@ -255,7 +264,9 @@ export function LevelUpPage() {
 
   // ---- Phase 3: stepper finished, show confirm screen ----
   if (targetLevel !== null && currentLevel > targetLevel) {
-    const finalClasses = withClassLevel(data.classes, classId, targetLevel)
+    const finalClasses = withClassLevel(data.classes, classId, targetLevel).map((c) =>
+      c.classId === classId && committedSubclassId ? { ...c, subclassId: committedSubclassId } : c,
+    )
     const finalHp = hitPointsMulticlass(finalClasses, conModSoFar, data.speciesId)
     return (
       <PageShell id={id}>
@@ -317,7 +328,11 @@ export function LevelUpPage() {
 
   // ---- Phase 2: stepping through a level ----
   const level = currentLevel
-  const features = featuresForLevel(classId, level)
+  const classHasSubclasses = classEntry.subclasses.length > 0
+  const needsSubclassChoice =
+    classHasSubclasses && !existingEntry?.subclassId && level === subclassUnlockLevel(classId)
+  const activeSubclassId = chosenSubclassId ?? existingEntry?.subclassId ?? committedSubclassId ?? undefined
+  const features = featuresForLevel(classId, level, activeSubclassId)
   const asiLevel = isAsiLevel(classId, level)
   const selectedFeat = selectedFeatId ? listFeats(['General', 'General / Racial']).find((f) => f.id === selectedFeatId) : undefined
   const isAsiFeatSelected = selectedFeatId === 'ability-score-improvement'
@@ -393,7 +408,8 @@ export function LevelUpPage() {
   const spellStepDone =
     (cantripDelta <= 0 || cantripPicks.length === cantripDelta) &&
     (preparedDelta <= 0 || preparedPicks.length === preparedDelta)
-  const canContinue = featStepDone && spellStepDone
+  const subclassStepDone = !needsSubclassChoice || chosenSubclassId !== null
+  const canContinue = featStepDone && spellStepDone && subclassStepDone
 
   function toggleCantripPick(spellId: string) {
     if (cantripPicks.includes(spellId)) {
@@ -412,6 +428,9 @@ export function LevelUpPage() {
   }
 
   function confirmLevel() {
+    if (needsSubclassChoice && chosenSubclassId) {
+      setCommittedSubclassId(chosenSubclassId)
+    }
     // "Before this level" snapshot: for a brand-new class's very first level,
     // that's simply the character's classes as they stand today (no entry
     // for this class yet) — the HP formula treats that correctly since
@@ -476,6 +495,34 @@ export function LevelUpPage() {
           <p className="text-sm italic">No new named features at this level.</p>
         )}
       </section>
+
+      {needsSubclassChoice && (
+        <section className="flex flex-col gap-3">
+          <h2 className="pixel-title text-base">Choose a Subclass</h2>
+          <div className="flex flex-col gap-2">
+            {classEntry.subclasses.map((sc) => {
+              const selected = chosenSubclassId === sc.id
+              const unlockFeatures = sc.features.filter((f) => f.level === level)
+              return (
+                <button
+                  key={sc.id}
+                  type="button"
+                  className={`pixel-panel !p-3 text-left ${selected ? 'ring-2 ring-[var(--color-arcane)]' : ''}`}
+                  onClick={() => setChosenSubclassId(sc.id)}
+                >
+                  <p className="pixel-label">{sc.name}</p>
+                  {sc.flavorLine && <p className="text-sm italic">{sc.flavorLine}</p>}
+                  {unlockFeatures.map((f) => (
+                    <p key={f.name} className="text-sm mt-1">
+                      <span className="font-bold">{f.name}.</span> {renderEmphasis(f.description)}
+                    </p>
+                  ))}
+                </button>
+              )
+            })}
+          </div>
+        </section>
+      )}
 
       {asiLevel && (
         <section className="flex flex-col gap-3">

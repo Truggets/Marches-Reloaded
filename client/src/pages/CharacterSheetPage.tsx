@@ -19,6 +19,7 @@ import {
   skillBonus,
   spellcastingInfo,
   spellSlots,
+  subclassUnlockLevel,
   totalCharacterLevel,
   warlockPactMagic,
 } from '../engine/computeSheet'
@@ -73,10 +74,10 @@ export function spellsForClass(data: CharacterData, classId: string): { cantrips
  * current level — featuresForLevel only returns a single level's row, and
  * nothing before this persisted them anywhere on the saved sheet (they were
  * only ever shown transiently during the level-up stepper). */
-function allFeaturesForClass(classId: string, level: number): string[] {
+function allFeaturesForClass(classId: string, level: number, subclassId?: string): string[] {
   const features: string[] = []
   for (let lvl = 1; lvl <= level; lvl++) {
-    features.push(...featuresForLevel(classId, lvl))
+    features.push(...featuresForLevel(classId, lvl, subclassId))
   }
   return features
 }
@@ -189,7 +190,13 @@ export function CharacterSheetPage() {
   const chosenEquipment = equipmentOptions.find((o) => o.letter === data.equipmentChoice)
 
   const classLine = data.classes
-    .map((entry) => `${getClass(entry.classId)?.name ?? entry.classId} ${entry.level}`)
+    .map((entry) => {
+      const className = getClass(entry.classId)?.name ?? entry.classId
+      const subclassName = entry.subclassId
+        ? getClass(entry.classId)?.subclasses.find((s) => s.id === entry.subclassId)?.name
+        : undefined
+      return `${className} ${entry.level}${subclassName ? ` (${subclassName})` : ''}`
+    })
     .join(' / ')
   const headerLine = [speciesEntry?.name ?? data.speciesId, backgroundEntry?.name ?? data.backgroundId, classLine].join(
     ' ',
@@ -320,16 +327,49 @@ export function CharacterSheetPage() {
           <h2 className="pixel-title text-base mb-2">Class Features</h2>
           <div className="flex flex-col gap-3">
             {data.classes.map((c) => {
-              const features = allFeaturesForClass(c.classId, c.level)
-              if (features.length === 0) return null
+              // Guard against an orphaned/invalid subclassId (e.g. hand-edited
+              // via the admin JSON editor, or a future pack re-import renaming
+              // ids) — the engine deliberately throws on an unknown id
+              // (data-gap contract), so the sheet must never pass one through
+              // unvalidated or a single bad id would white-screen the whole
+              // page via the root ErrorBoundary.
+              const hasKnownSubclass = !!c.subclassId && getClass(c.classId)?.subclasses.some((s) => s.id === c.subclassId)
+              const validSubclassId = hasKnownSubclass ? c.subclassId : undefined
+              const classHasSubclasses = (getClass(c.classId)?.subclasses.length ?? 0) > 0
+              const features = allFeaturesForClass(c.classId, c.level, validSubclassId)
+              // Choosing a subclass mutates this character — only the owner
+              // sees the link, same as Level Up.
+              const needsSubclassChoice =
+                classHasSubclasses &&
+                !validSubclassId &&
+                c.level >= subclassUnlockLevel(c.classId) &&
+                user?.id === character.ownerId
+              if (features.length === 0 && !needsSubclassChoice) return null
               return (
                 <div key={c.classId}>
-                  <p className="pixel-label">{getClass(c.classId)?.name ?? c.classId}</p>
-                  <ul className="text-sm list-disc list-inside">
-                    {features.map((f, i) => (
-                      <li key={`${f}-${i}`}>{f}</li>
-                    ))}
-                  </ul>
+                  <div className="flex items-center justify-between">
+                    <p className="pixel-label">{getClass(c.classId)?.name ?? c.classId}</p>
+                    {needsSubclassChoice && (
+                      <Link
+                        to={`/characters/${id}/choose-subclass/${c.classId}`}
+                        className="pixel-btn pixel-btn-secondary !py-1 !px-2 text-xs"
+                      >
+                        Choose Subclass
+                      </Link>
+                    )}
+                  </div>
+                  {c.subclassId && !hasKnownSubclass && (
+                    <p className="text-sm italic text-[var(--color-danger)]">
+                      Unknown subclass ({c.subclassId}) — content pack may have changed.
+                    </p>
+                  )}
+                  {features.length > 0 && (
+                    <ul className="text-sm list-disc list-inside">
+                      {features.map((f, i) => (
+                        <li key={`${f}-${i}`}>{f}</li>
+                      ))}
+                    </ul>
+                  )}
                 </div>
               )
             })}
