@@ -79,6 +79,24 @@ export interface CharacterClassEntry {
   // level (see engine/computeSheet.ts's subclassUnlockLevel) and never changes
   // after. Old saves simply lack this field — treat as "not yet chosen."
   subclassId?: string
+  // #3: a Fighting Style feat (category "Fighting Style" in feats.json),
+  // chosen at this class's fightingStyleUnlockLevel (see
+  // engine/computeSheet.ts's fightingStyleUnlockLevel — Fighter: level 1;
+  // Paladin/Ranger: level 2). Absent for a class with no Fighting Style
+  // feature at all (Barbarian, Rogue), and absent until chosen even for a
+  // class that has it. Mutually exclusive with fightingStyleAlternateCantrips
+  // below — a character has one or the other, never both.
+  fightingStyleFeatId?: string
+  // Paladin's Blessed Warrior / Ranger's Druidic Warrior: two cantrips from
+  // the class's own spell list (see fightingStyleAlternateCantripClass),
+  // chosen INSTEAD OF a Fighting Style feat. Absent for a class with no such
+  // alternate (Fighter, and any class with no Fighting Style at all).
+  fightingStyleAlternateCantrips?: string[]
+  // #3: weapon ids whose mastery property this class can currently use,
+  // capped at weaponMasteryCount(classId, level) — grows at certain levels
+  // for Fighter/Barbarian (see engine/computeSheet.ts). Absent for a class
+  // with no Weapon Mastery feature at all, and absent until chosen.
+  weaponMasteryIds?: string[]
 }
 
 export interface CharacterData {
@@ -127,6 +145,7 @@ export const WIZARD_STEPS = [
   'abilities',
   'skills',
   'speciesBonus',
+  'martial',
   'equipment',
   'spells',
   'name',

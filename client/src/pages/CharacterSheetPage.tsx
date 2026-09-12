@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
-import { getBackground, getClass, getFeat, getSpecies, getSpell } from '@data'
+import { getBackground, getClass, getEquipment, getFeat, getSpecies, getSpell } from '@data'
 import type { Ability } from '../character-wizard/types'
 import { ABILITIES, ALL_SKILLS } from '../character-wizard/types'
 import { parseEquipmentOptions } from '../character-wizard/parsing'
@@ -413,6 +413,30 @@ export function CharacterSheetPage() {
                         <li key={`${f}-${i}`}>{f}</li>
                       ))}
                     </ul>
+                  )}
+                  {/* #3: Fighting Style + Weapon Mastery choices, if any. */}
+                  {c.fightingStyleFeatId && (
+                    <p className="text-sm">
+                      <span className="font-bold">Fighting Style:</span>{' '}
+                      {getFeat(c.fightingStyleFeatId)?.name ?? c.fightingStyleFeatId}
+                    </p>
+                  )}
+                  {c.fightingStyleAlternateCantrips && c.fightingStyleAlternateCantrips.length > 0 && (
+                    <p className="text-sm">
+                      <span className="font-bold">Fighting Style (cantrips):</span>{' '}
+                      {c.fightingStyleAlternateCantrips.map((id) => getSpell(id)?.name ?? id).join(', ')}
+                    </p>
+                  )}
+                  {c.weaponMasteryIds && c.weaponMasteryIds.length > 0 && (
+                    <p className="text-sm">
+                      <span className="font-bold">Weapon Mastery:</span>{' '}
+                      {c.weaponMasteryIds
+                        .map((id) => {
+                          const weapon = getEquipment(id)
+                          return weapon ? `${weapon.name} (${weapon.mastery})` : id
+                        })
+                        .join(', ')}
+                    </p>
                   )}
                 </div>
               )

@@ -5,6 +5,7 @@ import { getClass, getSpecies, listEquipment } from '@data'
 import { parseEquipmentOptions } from '../character-wizard/parsing'
 import { ABILITIES } from '../character-wizard/types'
 import type { Ability, CharacterClassEntry, CharacterData } from '../character-wizard/types'
+import type { EquipmentEntry } from '@data/schema'
 
 /** floor((score - 10) / 2). Must use Math.floor (not truncation) so odd
  * scores below 10 round further down, e.g. 7 -> -1.5 -> -2. */
@@ -752,4 +753,105 @@ export function diffQuickStats(before: QuickStats, after: QuickStats): string[] 
     }
   }
   return lines
+}
+
+// ---- #3: Fighting Style & Weapon Mastery ----
+
+/** The level at which a class grants its Fighting Style choice (Fighter: 1;
+ * Paladin/Ranger: 2), or undefined if the class has no Fighting Style
+ * feature at all (Barbarian, Rogue). Mirrors `subclassUnlockLevel`'s shape:
+ * derived from the class's own featureTable row, not hardcoded per class. */
+export function fightingStyleUnlockLevel(classId: string): number | undefined {
+  const classEntry = getClass(classId)
+  if (!classEntry) throw new Error(`Unknown class: ${classId}`)
+  if (!classEntry.features.some((f) => f.name === 'Fighting Style')) return undefined
+  const row = classEntry.featureTable.find((r) => r.features.includes('Fighting Style'))
+  if (!row) throw new Error(`Class ${classId} has a Fighting Style feature but no featureTable row grants it`)
+  return row.level
+}
+
+/** If a class's Fighting Style can be replaced by a non-feat cantrip option
+ * (Paladin's Blessed Warrior, Ranger's Druidic Warrior — "instead of choosing
+ * one of those feats, you can choose the option below"), the spell-list class
+ * name those cantrips are learned from ("Cleric", "Druid"), lowercased to
+ * match `getClass`'s id convention. Undefined for a class with no such
+ * alternate (Fighter has none; Barbarian/Rogue have no Fighting Style at
+ * all). */
+export function fightingStyleAlternateCantripClass(classId: string): string | undefined {
+  const classEntry = getClass(classId)
+  if (!classEntry) throw new Error(`Unknown class: ${classId}`)
+  const feature = classEntry.features.find((f) => f.name === 'Fighting Style')
+  if (!feature) return undefined
+  const match = feature.description.match(/learn two (\w+) cantrips/i)
+  return match ? match[1].toLowerCase() : undefined
+}
+
+const WEAPON_MASTERY_COUNT_WORDS: Record<string, number> = { one: 1, two: 2, three: 3, four: 4, five: 5 }
+
+/** How many kinds of weapons' mastery properties a class can use at the
+ * given level, or undefined if the class has no Weapon Mastery feature at
+ * all (every other bundled class). Fighter/Barbarian scale with level and
+ * carry it as a "Weapon Mastery" featureTable column; Paladin/Ranger/Rogue
+ * are a flat count stated only in the feature's own prose ("two kinds of
+ * weapons") with no table column — both are real, data-driven shapes, not a
+ * data gap (verified against each class's own feature text). Throws if the
+ * class has the feature but neither shape parses, so a differently-worded
+ * pack feature fails loud instead of silently granting zero masteries. */
+export function weaponMasteryCount(classId: string, level: number): number | undefined {
+  const classEntry = getClass(classId)
+  if (!classEntry) throw new Error(`Unknown class: ${classId}`)
+  const feature = classEntry.features.find((f) => f.name === 'Weapon Mastery')
+  if (!feature) return undefined
+
+  const row = classEntry.featureTable.find((r) => r.level === level)
+  const column = row?.extraColumns?.['Weapon Mastery']
+  if (column !== undefined) {
+    const n = parseInt(column, 10)
+    if (Number.isNaN(n)) {
+      throw new Error(`Unparseable Weapon Mastery column value for class ${classId}: "${column}"`)
+    }
+    return n
+  }
+
+  const match = feature.description.match(/mastery properties of (\w+) kinds/i)
+  if (!match) throw new Error(`Unparseable Weapon Mastery count for class: ${classId}`)
+  const n = WEAPON_MASTERY_COUNT_WORDS[match[1].toLowerCase()]
+  if (n === undefined) {
+    throw new Error(`Unrecognized Weapon Mastery count word for class ${classId}: "${match[1]}"`)
+  }
+  return n
+}
+
+/** Which weapons a class can choose for its Weapon Mastery picks — the
+ * class's own `weaponProficiencies` text, further narrowed to Melee-only
+ * when the Weapon Mastery feature's own prose says so (Barbarian: "...Melee
+ * weapons of your choice..."; Fighter's otherwise near-identical prose omits
+ * "Melee", so it isn't narrowed). Throws for an unrecognized
+ * `weaponProficiencies` shape rather than silently returning an empty or
+ * wrong list — a future homebrew class needing a new pattern should fail
+ * loud here, not offer a subtly incomplete picker. */
+export function weaponMasteryPool(classId: string): EquipmentEntry[] {
+  const classEntry = getClass(classId)
+  if (!classEntry) throw new Error(`Unknown class: ${classId}`)
+  const weapons = listEquipment('weapon')
+  const isSimple = (w: EquipmentEntry) => /^Simple /.test(w.description ?? '')
+  const isMelee = (w: EquipmentEntry) => /Melee Weapons/.test(w.description ?? '')
+
+  const prof = classEntry.weaponProficiencies.trim()
+  let pool: EquipmentEntry[]
+  if (/^Simple and Martial weapons$/i.test(prof)) {
+    pool = weapons
+  } else {
+    const match = prof.match(/Martial weapons that have the ([\w, ]+?) property/i)
+    if (!match) throw new Error(`Unparseable weaponProficiencies for class ${classId}: "${prof}"`)
+    const allowedProps = match[1].split(/,?\s+or\s+/i).map((s) => s.trim())
+    pool = weapons.filter((w) => isSimple(w) || allowedProps.some((p) => (w.properties ?? '').includes(p)))
+  }
+
+  const masteryFeature = classEntry.features.find((f) => f.name === 'Weapon Mastery')
+  if (masteryFeature && /Melee weapons/i.test(masteryFeature.description)) {
+    pool = pool.filter(isMelee)
+  }
+
+  return pool
 }

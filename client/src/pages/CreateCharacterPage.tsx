@@ -6,6 +6,7 @@ import { StepOrigin } from '../character-wizard/steps/StepOrigin'
 import { StepAbilities } from '../character-wizard/steps/StepAbilities'
 import { StepSkills } from '../character-wizard/steps/StepSkills'
 import { StepSpeciesBonus } from '../character-wizard/steps/StepSpeciesBonus'
+import { StepMartial } from '../character-wizard/steps/StepMartial'
 import { StepEquipment } from '../character-wizard/steps/StepEquipment'
 import { StepSpells } from '../character-wizard/steps/StepSpells'
 import { StepName } from '../character-wizard/steps/StepName'
@@ -13,10 +14,12 @@ import { getCasterCounts } from '../character-wizard/parsing'
 import {
   diffQuickStats,
   featAbilityDerivedFromChosenClass,
+  fightingStyleUnlockLevel,
   parseFeatSpellAbilities,
   parseFeatSpellLists,
   parseSpellcastingAbility,
   quickStats,
+  weaponMasteryCount,
 } from '../engine/computeSheet'
 import type { Ability, AbilityScoresData, CharacterData } from '../character-wizard/types'
 import { WilburCompanion } from '../WilburCompanion'
@@ -149,6 +152,10 @@ function wilburTipFor(
           ? 'Pick a skill you don\'t already have for the broadest coverage.'
           : 'Skilled is a solid all-purpose Origin feat pick if you\'re unsure — it grants proficiency in any 3 skills or tools.'
     }
+    case 'martial':
+      return classEntry
+        ? `${classEntry.name}'s Weapon Mastery lets you use special properties on your chosen weapons — pick ones that match your starting equipment.`
+        : 'Weapon Mastery lets you use a special combat property on a limited number of weapon types.'
     case 'equipment':
       return 'Option A gets you fighting-ready gear immediately; Option B trades that for gold to buy exactly what you want later.'
     case 'spells': {
@@ -285,6 +292,8 @@ export function CreateCharacterPage() {
   const [originFeatSpellAbility, setOriginFeatSpellAbility] = useState<string | null>(null)
   const [versatileSpellCantrips, setVersatileSpellCantrips] = useState<string[]>([])
   const [versatileSpellPrepared, setVersatileSpellPrepared] = useState<string[]>([])
+  const [fightingStyleFeatId, setFightingStyleFeatId] = useState<string | null>(null)
+  const [weaponMasteryIds, setWeaponMasteryIds] = useState<string[]>([])
   const [lastSpellId, setLastSpellId] = useState<string | null>(null)
   const [name, setName] = useState('')
   const [saving, setSaving] = useState(false)
@@ -324,15 +333,24 @@ export function CreateCharacterPage() {
     }
   }
   const grantsVersatileSpells = versatileSpellLists.length > 0
+  // #3: shown whenever the class has a Weapon Mastery feature at level 1 —
+  // every bundled martial class does, and Fighting Style (Fighter only, at
+  // creation; Paladin/Ranger get it later via level-up) is gated separately
+  // inside StepMartial itself, so this single check covers the step's
+  // presence for all five martial classes.
+  const hasMartialStep = !!classId && weaponMasteryCount(classId, 1) !== undefined
 
   const steps = useMemo(
     () =>
-      (['class', 'origin', 'abilities', 'skills', 'speciesBonus', 'equipment', 'spells', 'name'] as const).filter(
+      (
+        ['class', 'origin', 'abilities', 'skills', 'speciesBonus', 'martial', 'equipment', 'spells', 'name'] as const
+      ).filter(
         (s) =>
           (s !== 'spells' || isCaster || hasFeatSpells || grantsVersatileSpells) &&
-          (s !== 'speciesBonus' || hasSpeciesBonusStep),
+          (s !== 'speciesBonus' || hasSpeciesBonusStep) &&
+          (s !== 'martial' || hasMartialStep),
       ),
-    [isCaster, hasFeatSpells, grantsVersatileSpells, hasSpeciesBonusStep],
+    [isCaster, hasFeatSpells, grantsVersatileSpells, hasSpeciesBonusStep, hasMartialStep],
   )
   const [stepIndex, setStepIndex] = useState(0)
   const step = steps[stepIndex]
@@ -378,6 +396,14 @@ export function CreateCharacterPage() {
           (!hasVersatileTrait || !!originFeatId) &&
           (!grantsVersatileSpells || (!!originFeatSpellList && !!originFeatSpellAbility))
         )
+      case 'martial': {
+        if (!classId) return false
+        const count = weaponMasteryCount(classId, 1)
+        const masteryDone = count === undefined || weaponMasteryIds.length === count
+        const unlocksAt = fightingStyleUnlockLevel(classId)
+        const fightingStyleDone = unlocksAt === undefined || unlocksAt > 1 || !!fightingStyleFeatId
+        return masteryDone && fightingStyleDone
+      }
       case 'equipment':
         return !!equipmentChoice
       case 'spells': {
@@ -408,6 +434,18 @@ export function CreateCharacterPage() {
     setVersatileSpellPrepared([])
   }
 
+  // #3: switching class invalidates any Fighting Style feat / Weapon Mastery
+  // picks made under the PREVIOUS class — a different class's Weapon Mastery
+  // pool can exclude a previously-chosen weapon (e.g. Fighter -> Barbarian
+  // drops ranged weapons) or the new class might not have these features at
+  // all (e.g. -> Wizard). Clearing here, rather than only hiding the step,
+  // stops a stale/rules-illegal pick from silently surviving into handleSave.
+  function handleChangeClass(newClassId: string) {
+    setClassId(newClassId)
+    setFightingStyleFeatId(null)
+    setWeaponMasteryIds([])
+  }
+
   function goNext() {
     if (stepIndex < steps.length - 1) {
       setStepIndex(stepIndex + 1)
@@ -432,7 +470,14 @@ export function CreateCharacterPage() {
     const data: CharacterData = {
       speciesId,
       backgroundId,
-      classes: [{ classId, level: 1 }],
+      classes: [
+        {
+          classId,
+          level: 1,
+          ...(fightingStyleFeatId ? { fightingStyleFeatId } : {}),
+          ...(weaponMasteryIds.length > 0 ? { weaponMasteryIds } : {}),
+        },
+      ],
       abilityScores,
       skillProficiencies: Array.from(
         new Set([...skillsChosen, ...(backgroundEntry?.skillProficiencies ?? []), ...(bonusSkill ? [bonusSkill] : [])]),
@@ -494,7 +539,7 @@ export function CreateCharacterPage() {
       </div>
 
       <div className="pixel-panel flex w-full max-w-2xl flex-col gap-6">
-        {step === 'class' && <StepClass classId={classId} onSelect={setClassId} />}
+        {step === 'class' && <StepClass classId={classId} onSelect={handleChangeClass} />}
 
         {step === 'origin' && (
           <StepOrigin
@@ -540,6 +585,17 @@ export function CreateCharacterPage() {
             }}
             originFeatSpellAbility={originFeatSpellAbility}
             onChangeOriginFeatSpellAbility={setOriginFeatSpellAbility}
+          />
+        )}
+
+        {step === 'martial' && classId && (
+          <StepMartial
+            classId={classId}
+            level={1}
+            fightingStyleFeatId={fightingStyleFeatId}
+            onChangeFightingStyleFeatId={setFightingStyleFeatId}
+            weaponMasteryIds={weaponMasteryIds}
+            onChangeWeaponMasteryIds={setWeaponMasteryIds}
           />
         )}
 
