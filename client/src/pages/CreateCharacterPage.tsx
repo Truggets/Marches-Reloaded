@@ -18,10 +18,15 @@ import type { ClassEntry, BackgroundEntry, SpeciesEntry } from '@data/schema'
 
 /** Background.feat is a display string like "Magic Initiate (Wizard)" — the
  * parenthetical is a player sub-choice, not part of the feat's own name in
- * feats.json — so strip it before matching against the feat data. */
-function findFeatByBackgroundFeatText(featText: string) {
+ * feats.json — so strip it before matching against the feat data. Resolves
+ * within the background's own pack first (imported packs are namespaced, so
+ * a bare-name match across all packs could otherwise silently resolve to a
+ * same-named feat from a different pack), falling back to any pack only if
+ * that misses. */
+function findFeatByBackgroundFeatText(featText: string, backgroundPack: string | undefined) {
   const bareName = featText.replace(/\s*\(.*\)\s*$/, '').trim()
-  return listFeats().find((f) => f.name === bareName)
+  const candidates = listFeats().filter((f) => f.name === bareName)
+  return candidates.find((f) => f.pack === backgroundPack) ?? candidates[0]
 }
 
 /** If the background's fixed feat is Magic Initiate, returns the spell list
@@ -29,10 +34,12 @@ function findFeatByBackgroundFeatText(featText: string) {
  * Magic Initiate is currently the only Origin feat in the pack that grants
  * spells — this is a targeted check, not a generic "does this feat grant
  * spells" data field (that would need a data-pack schema change; not
- * warranted for one feat). See docs/planning/issue-2-plan.md. */
-function backgroundFeatSpellList(featText: string | undefined): string | undefined {
+ * warranted for one feat). Checks the feat's name rather than a hardcoded
+ * bundled id so this still works for an imported pack's own Magic Initiate.
+ * See docs/planning/issue-2-plan.md. */
+function backgroundFeatSpellList(featText: string | undefined, backgroundPack: string | undefined): string | undefined {
   if (!featText) return undefined
-  if (findFeatByBackgroundFeatText(featText)?.id !== 'magic-initiate') return undefined
+  if (findFeatByBackgroundFeatText(featText, backgroundPack)?.name !== 'Magic Initiate') return undefined
   return featText.match(/\(([^)]+)\)/)?.[1]
 }
 
@@ -67,7 +74,9 @@ function wilburTipFor(
         const skillText = (backgroundEntry.skillProficiencies ?? []).join(' and ')
         const featText = backgroundEntry.feat ? `, plus the ${backgroundEntry.feat} feat` : ''
         parts.push(`${backgroundEntry.name} grants proficiency in ${skillText}${featText}.`)
-        const feat = backgroundEntry.feat ? findFeatByBackgroundFeatText(backgroundEntry.feat) : undefined
+        const feat = backgroundEntry.feat
+          ? findFeatByBackgroundFeatText(backgroundEntry.feat, backgroundEntry.pack)
+          : undefined
         if (feat) parts.push(feat.benefit)
       }
       return parts.length > 0
@@ -143,13 +152,27 @@ export function CreateCharacterPage() {
   const backgroundEntry = backgroundId ? getBackground(backgroundId) : undefined
   const casterCounts = classEntry ? getCasterCounts(classEntry) : null
   const isCaster = casterCounts !== null
-  const featSpellList = backgroundFeatSpellList(backgroundEntry?.feat)
+  const featSpellList = backgroundFeatSpellList(backgroundEntry?.feat, backgroundEntry?.pack)
   const hasFeatSpells = !!featSpellList
   const hasSkillfulTrait = !!speciesEntry?.traits.some((t) => t.name === 'Skillful')
   const hasVersatileTrait = !!speciesEntry?.traits.some((t) => t.name === 'Versatile')
   const hasSpeciesBonusStep = hasSkillfulTrait || hasVersatileTrait
   const originFeat = originFeatId ? getFeat(originFeatId) : undefined
-  const grantsVersatileSpells = originFeat ? parseFeatSpellLists(originFeat).length > 0 : false
+  // Mirrors StepSpeciesBonus's own guarded parseFeatSpellLists call: an
+  // admin-imported feat's prose is only identity-checked at import time for
+  // feats literally named "Magic Initiate" (see SPELL_GRANTING_FEATS in
+  // parse-feats-import.js), not for every feat that merely looks
+  // spell-granting — an unguarded call here would crash the whole wizard
+  // (not just the speciesBonus step) as soon as such a feat is picked.
+  let versatileSpellLists: string[] = []
+  if (originFeat) {
+    try {
+      versatileSpellLists = parseFeatSpellLists(originFeat).filter((l) => l !== featSpellList)
+    } catch (err) {
+      console.warn(`Feat "${originFeat.name}" (${originFeat.id}): couldn't parse its spell list`, err)
+    }
+  }
+  const grantsVersatileSpells = versatileSpellLists.length > 0
 
   const steps = useMemo(
     () =>

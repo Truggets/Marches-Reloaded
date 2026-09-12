@@ -7,6 +7,8 @@
     "weight": "2 lb.",
     "properties": "Light",
     "description": "Simple Melee Weapons. Damage: 1d4 Bludgeoning. Mastery: Slow",
+    "damage": "1d4 Bludgeoning",
+    "mastery": "Slow",
     "pack": "srd-5.2",
     "source": {
       "book": "SRD 5.2.1",
@@ -21,6 +23,8 @@
     "weight": "1 lb.",
     "properties": "Finesse, Light, Thrown (Range 20/60)",
     "description": "Simple Melee Weapons. Damage: 1d4 Piercing. Mastery: Nick",
+    "damage": "1d4 Piercing",
+    "mastery": "Nick",
     "pack": "srd-5.2",
     "source": {
       "book": "SRD 5.2.1",
@@ -35,6 +39,8 @@
     "weight": "10 lb.",
     "properties": "Two-Handed",
     "description": "Simple Melee Weapons. Damage: 1d8 Bludgeoning. Mastery: Push",
+    "damage": "1d8 Bludgeoning",
+    "mastery": "Push",
     "pack": "srd-5.2",
     "source": {
       "book": "SRD 5.2.1",
@@ -49,6 +55,8 @@
     "weight": "2 lb.",
     "properties": "Light, Thrown (Range 20/60)",
     "description": "Simple Melee Weapons. Damage: 1d6 Slashing. Mastery: Vex",
+    "damage": "1d6 Slashing",
+    "mastery": "Vex",
     "pack": "srd-5.2",
     "source": {
       "book": "SRD 5.2.1",
@@ -63,6 +71,8 @@
     "weight": "2 lb.",
     "properties": "Thrown (Range 30/120)",
     "description": "Simple Melee Weapons. Damage: 1d6 Piercing. Mastery: Slow",
+    "damage": "1d6 Piercing",
+    "mastery": "Slow",
     "pack": "srd-5.2",
     "source": {
       "book": "SRD 5.2.1",
@@ -77,6 +87,8 @@
     "weight": "2 lb.",
     "properties": "Light, Thrown (Range 20/60)",
     "description": "Simple Melee Weapons. Damage: 1d4 Bludgeoning. Mastery: Nick",
+    "damage": "1d4 Bludgeoning",
+    "mastery": "Nick",
     "pack": "srd-5.2",
     "source": {
       "book": "SRD 5.2.1",
@@ -90,6 +102,8 @@
     "cost": "5 GP",
     "weight": "4 lb.",
     "description": "Simple Melee Weapons. Damage: 1d6 Bludgeoning. Mastery: Sap",
+    "damage": "1d6 Bludgeoning",
+    "mastery": "Sap",
     "pack": "srd-5.2",
     "source": {
       "book": "SRD 5.2.1",
@@ -104,6 +118,8 @@
     "weight": "4 lb.",
     "properties": "Versatile (1d8)",
     "description": "Simple Melee Weapons. Damage: 1d6 Bludgeoning. Mastery: Topple",
+    "damage": "1d6 Bludgeoning",
+    "mastery": "Topple",
     "pack": "srd-5.2",
     "source": {
       "book": "SRD 5.2.1",
@@ -118,6 +134,8 @@
     "weight": "2 lb.",
     "properties": "Light",
     "description": "Simple Melee Weapons. Damage: 1d4 Slashing. Mastery: Nick",
+    "damage": "1d4 Slashing",
+    "mastery": "Nick",
     "pack": "srd-5.2",
     "source": {
       "book": "SRD 5.2.1",
@@ -132,6 +150,8 @@
     "weight": "3 lb.",
     "properties": "Thrown (Range 20/60), Versatile (1d8)",
     "description": "Simple Melee Weapons. Damage: 1d6 Piercing. Mastery: Sap",
+    "damage": "1d6 Piercing",
+    "mastery": "Sap",
     "pack": "srd-5.2",
     "source": {
       "book": "SRD 5.2.1",
@@ -146,6 +166,8 @@
     "weight": "1/4 lb.",
     "properties": "Finesse, Thrown (Range 20/60)",
     "description": "Simple Ranged Weapons. Damage: 1d4 Piercing. Mastery: Vex",
+    "damage": "1d4 Piercing",
+    "mastery": "Vex",
     "pack": "srd-5.2",
     "source": {
       "book": "SRD 5.2.1",
@@ -160,6 +182,8 @@
     "weight": "5 lb.",
     "properties": "Ammunition (Range 80/320; Bolt), Loading, Two-Handed",
     "description": "Simple Ranged Weapons. Damage: 1d8 Piercing. Mastery: Slow",
+    "damage": "1d8 Piercing",
+    "mastery": "Slow",
     "pack": "srd-5.2",
     "source": {
       "book": "SRD 5.2.1",
@@ -174,6 +198,8 @@
     "weight": "2 lb.",
     "properties": "Ammunition (Range 80/320; Arrow), Two-Handed",
     "description": "Simple Ranged Weapons. Damage: 1d6 Piercing. Mastery: Vex",
+    "damage": "1d6 Piercing",
+    "mastery": "Vex",
     "pack": "srd-5.2",
     "source": {
       "book": "SRD 5.2.1",
@@ -187,6 +213,8 @@
     "cost": "1 SP",
     "properties": "Ammunition (Range 30/120; Bullet)",
     "description": "Simple Ranged Weapons. Damage: 1d4 Bludgeoning. Mastery: Slow",
+    "damage": "1d4 Bludgeoning",
+    "mastery": "Slow",
     "pack": "srd-5.2",
     "source": {
       "book": "SRD 5.2.1",
@@ -201,6 +229,8 @@
     "weight": "4 lb.",
     "properties": "Versatile (1d10)",
     "description": "Martial Melee Weapons. Damage: 1d8 Slashing. Mastery: Topple",
+    "damage": "1d8 Slashing",
+    "mastery": "Topple",
     "pack": "srd-5.2",
     "source": {
       "book": "SRD 5.2.1",
@@ -214,6 +244,8 @@
     "cost": "10 GP",
     "weight": "2 lb.",
     "description": "Martial Melee Weapons. Damage: 1d8 Bludgeoning. Mastery: Sap",
+    "damage": "1d8 Bludgeoning",
+    "mastery": "Sap",
     "pack": "srd-5.2",
     "source": {
       "book": "SRD 5.2.1",
@@ -228,6 +260,8 @@
     "weight": "6 lb.",
     "properties": "Heavy, Reach, Two-Handed",
     "description": "Martial Melee Weapons. Damage: 1d10 Slashing. Mastery: Graze",
+    "damage": "1d10 Slashing",
+    "mastery": "Graze",
     "pack": "srd-5.2",
     "source": {
       "book": "SRD 5.2.1",
@@ -242,6 +276,8 @@
     "weight": "7 lb.",
     "properties": "Heavy, Two-Handed",
     "description": "Martial Melee Weapons. Damage: 1d12 Slashing. Mastery: Cleave",
+    "damage": "1d12 Slashing",
+    "mastery": "Cleave",
     "pack": "srd-5.2",
     "source": {
       "book": "SRD 5.2.1",
@@ -256,6 +292,8 @@
     "weight": "6 lb.",
     "properties": "Heavy, Two-Handed",
     "description": "Martial Melee Weapons. Damage: 2d6 Slashing. Mastery: Graze",
+    "damage": "2d6 Slashing",
+    "mastery": "Graze",
     "pack": "srd-5.2",
     "source": {
       "book": "SRD 5.2.1",
@@ -270,6 +308,8 @@
     "weight": "6 lb.",
     "properties": "Heavy, Reach, Two-Handed",
     "description": "Martial Melee Weapons. Damage: 1d10 Slashing. Mastery: Cleave",
+    "damage": "1d10 Slashing",
+    "mastery": "Cleave",
     "pack": "srd-5.2",
     "source": {
       "book": "SRD 5.2.1",
@@ -284,6 +324,8 @@
     "weight": "6 lb.",
     "properties": "Heavy, Reach, Two-Handed (unless mounted)",
     "description": "Martial Melee Weapons. Damage: 1d10 Piercing. Mastery: Topple",
+    "damage": "1d10 Piercing",
+    "mastery": "Topple",
     "pack": "srd-5.2",
     "source": {
       "book": "SRD 5.2.1",
@@ -298,6 +340,8 @@
     "weight": "3 lb.",
     "properties": "Versatile (1d10)",
     "description": "Martial Melee Weapons. Damage: 1d8 Slashing. Mastery: Sap",
+    "damage": "1d8 Slashing",
+    "mastery": "Sap",
     "pack": "srd-5.2",
     "source": {
       "book": "SRD 5.2.1",
@@ -312,6 +356,8 @@
     "weight": "10 lb.",
     "properties": "Heavy, Two-Handed",
     "description": "Martial Melee Weapons. Damage: 2d6 Bludgeoning. Mastery: Topple",
+    "damage": "2d6 Bludgeoning",
+    "mastery": "Topple",
     "pack": "srd-5.2",
     "source": {
       "book": "SRD 5.2.1",
@@ -325,6 +371,8 @@
     "cost": "15 GP",
     "weight": "4 lb.",
     "description": "Martial Melee Weapons. Damage: 1d8 Piercing. Mastery: Sap",
+    "damage": "1d8 Piercing",
+    "mastery": "Sap",
     "pack": "srd-5.2",
     "source": {
       "book": "SRD 5.2.1",
@@ -339,6 +387,8 @@
     "weight": "18 lb.",
     "properties": "Heavy, Reach, Two-Handed",
     "description": "Martial Melee Weapons. Damage: 1d10 Piercing. Mastery: Push",
+    "damage": "1d10 Piercing",
+    "mastery": "Push",
     "pack": "srd-5.2",
     "source": {
       "book": "SRD 5.2.1",
@@ -353,6 +403,8 @@
     "weight": "2 lb.",
     "properties": "Finesse",
     "description": "Martial Melee Weapons. Damage: 1d8 Piercing. Mastery: Vex",
+    "damage": "1d8 Piercing",
+    "mastery": "Vex",
     "pack": "srd-5.2",
     "source": {
       "book": "SRD 5.2.1",
@@ -367,6 +419,8 @@
     "weight": "3 lb.",
     "properties": "Finesse, Light",
     "description": "Martial Melee Weapons. Damage: 1d6 Slashing. Mastery: Nick",
+    "damage": "1d6 Slashing",
+    "mastery": "Nick",
     "pack": "srd-5.2",
     "source": {
       "book": "SRD 5.2.1",
@@ -381,6 +435,8 @@
     "weight": "2 lb.",
     "properties": "Finesse, Light",
     "description": "Martial Melee Weapons. Damage: 1d6 Piercing. Mastery: Vex",
+    "damage": "1d6 Piercing",
+    "mastery": "Vex",
     "pack": "srd-5.2",
     "source": {
       "book": "SRD 5.2.1",
@@ -395,6 +451,8 @@
     "weight": "4 lb.",
     "properties": "Thrown (Range 20/60), Versatile (1d10)",
     "description": "Martial Melee Weapons. Damage: 1d8 Piercing. Mastery: Topple",
+    "damage": "1d8 Piercing",
+    "mastery": "Topple",
     "pack": "srd-5.2",
     "source": {
       "book": "SRD 5.2.1",
@@ -409,6 +467,8 @@
     "weight": "5 lb.",
     "properties": "Versatile (1d10)",
     "description": "Martial Melee Weapons. Damage: 1d8 Bludgeoning. Mastery: Push",
+    "damage": "1d8 Bludgeoning",
+    "mastery": "Push",
     "pack": "srd-5.2",
     "source": {
       "book": "SRD 5.2.1",
@@ -423,6 +483,8 @@
     "weight": "2 lb.",
     "properties": "Versatile (1d10)",
     "description": "Martial Melee Weapons. Damage: 1d8 Piercing. Mastery: Sap",
+    "damage": "1d8 Piercing",
+    "mastery": "Sap",
     "pack": "srd-5.2",
     "source": {
       "book": "SRD 5.2.1",
@@ -437,6 +499,8 @@
     "weight": "3 lb.",
     "properties": "Finesse, Reach",
     "description": "Martial Melee Weapons. Damage: 1d4 Slashing. Mastery: Slow",
+    "damage": "1d4 Slashing",
+    "mastery": "Slow",
     "pack": "srd-5.2",
     "source": {
       "book": "SRD 5.2.1",
@@ -451,6 +515,8 @@
     "weight": "1 lb.",
     "properties": "Ammunition (Range 25/100; Needle), Loading",
     "description": "Martial Ranged Weapons. Damage: 1 Piercing. Mastery: Vex",
+    "damage": "1 Piercing",
+    "mastery": "Vex",
     "pack": "srd-5.2",
     "source": {
       "book": "SRD 5.2.1",
@@ -465,6 +531,8 @@
     "weight": "3 lb.",
     "properties": "Ammunition (Range 30/120; Bolt), Light, Loading",
     "description": "Martial Ranged Weapons. Damage: 1d6 Piercing. Mastery: Vex",
+    "damage": "1d6 Piercing",
+    "mastery": "Vex",
     "pack": "srd-5.2",
     "source": {
       "book": "SRD 5.2.1",
@@ -479,6 +547,8 @@
     "weight": "18 lb.",
     "properties": "Ammunition (Range 100/400; Bolt), Heavy, Loading, Two-Handed",
     "description": "Martial Ranged Weapons. Damage: 1d10 Piercing. Mastery: Push",
+    "damage": "1d10 Piercing",
+    "mastery": "Push",
     "pack": "srd-5.2",
     "source": {
       "book": "SRD 5.2.1",
@@ -493,6 +563,8 @@
     "weight": "2 lb.",
     "properties": "Ammunition (Range 150/600; Arrow), Heavy, Two-Handed",
     "description": "Martial Ranged Weapons. Damage: 1d8 Piercing. Mastery: Slow",
+    "damage": "1d8 Piercing",
+    "mastery": "Slow",
     "pack": "srd-5.2",
     "source": {
       "book": "SRD 5.2.1",
@@ -507,6 +579,8 @@
     "weight": "10 lb.",
     "properties": "Ammunition (Range 40/120; Bullet), Loading, Two-Handed",
     "description": "Martial Ranged Weapons. Damage: 1d12 Piercing. Mastery: Slow",
+    "damage": "1d12 Piercing",
+    "mastery": "Slow",
     "pack": "srd-5.2",
     "source": {
       "book": "SRD 5.2.1",
@@ -521,6 +595,8 @@
     "weight": "3 lb.",
     "properties": "Ammunition (Range 30/90; Bullet), Loading",
     "description": "Martial Ranged Weapons. Damage: 1d10 Piercing. Mastery: Vex",
+    "damage": "1d10 Piercing",
+    "mastery": "Vex",
     "pack": "srd-5.2",
     "source": {
       "book": "SRD 5.2.1",
@@ -535,6 +611,8 @@
     "weight": "8 lb.",
     "properties": "AC: 11 + Dex modifier; Stealth: Disadvantage",
     "description": "Light Armor (1 Minute to Don or Doff)",
+    "ac": "11 + Dex modifier",
+    "stealth": "Disadvantage",
     "pack": "srd-5.2",
     "source": {
       "book": "SRD 5.2.1",
@@ -549,6 +627,7 @@
     "weight": "10 lb.",
     "properties": "AC: 11 + Dex modifier",
     "description": "Light Armor (1 Minute to Don or Doff)",
+    "ac": "11 + Dex modifier",
     "pack": "srd-5.2",
     "source": {
       "book": "SRD 5.2.1",
@@ -563,6 +642,7 @@
     "weight": "13 lb.",
     "properties": "AC: 12 + Dex modifier",
     "description": "Light Armor (1 Minute to Don or Doff)",
+    "ac": "12 + Dex modifier",
     "pack": "srd-5.2",
     "source": {
       "book": "SRD 5.2.1",
@@ -577,6 +657,7 @@
     "weight": "12 lb.",
     "properties": "AC: 12 + Dex modifier (max 2)",
     "description": "Medium Armor (5 Minutes to Don and 1 Minute to Doff)",
+    "ac": "12 + Dex modifier (max 2)",
     "pack": "srd-5.2",
     "source": {
       "book": "SRD 5.2.1",
@@ -591,6 +672,7 @@
     "weight": "20 lb.",
     "properties": "AC: 13 + Dex modifier (max 2)",
     "description": "Medium Armor (5 Minutes to Don and 1 Minute to Doff)",
+    "ac": "13 + Dex modifier (max 2)",
     "pack": "srd-5.2",
     "source": {
       "book": "SRD 5.2.1",
@@ -605,6 +687,8 @@
     "weight": "45 lb.",
     "properties": "AC: 14 + Dex modifier (max 2); Stealth: Disadvantage",
     "description": "Medium Armor (5 Minutes to Don and 1 Minute to Doff)",
+    "ac": "14 + Dex modifier (max 2)",
+    "stealth": "Disadvantage",
     "pack": "srd-5.2",
     "source": {
       "book": "SRD 5.2.1",
@@ -619,6 +703,7 @@
     "weight": "20 lb.",
     "properties": "AC: 14 + Dex modifier (max 2)",
     "description": "Medium Armor (5 Minutes to Don and 1 Minute to Doff)",
+    "ac": "14 + Dex modifier (max 2)",
     "pack": "srd-5.2",
     "source": {
       "book": "SRD 5.2.1",
@@ -633,6 +718,8 @@
     "weight": "40 lb.",
     "properties": "AC: 15 + Dex modifier (max 2); Stealth: Disadvantage",
     "description": "Medium Armor (5 Minutes to Don and 1 Minute to Doff)",
+    "ac": "15 + Dex modifier (max 2)",
+    "stealth": "Disadvantage",
     "pack": "srd-5.2",
     "source": {
       "book": "SRD 5.2.1",
@@ -647,6 +734,8 @@
     "weight": "40 lb.",
     "properties": "AC: 14; Stealth: Disadvantage",
     "description": "Heavy Armor (10 Minutes to Don and 5 Minutes to Doff)",
+    "ac": "14",
+    "stealth": "Disadvantage",
     "pack": "srd-5.2",
     "source": {
       "book": "SRD 5.2.1",
@@ -661,6 +750,9 @@
     "weight": "55 lb.",
     "properties": "AC: 16; Strength: Str 13; Stealth: Disadvantage",
     "description": "Heavy Armor (10 Minutes to Don and 5 Minutes to Doff)",
+    "ac": "16",
+    "strength": "Str 13",
+    "stealth": "Disadvantage",
     "pack": "srd-5.2",
     "source": {
       "book": "SRD 5.2.1",
@@ -675,6 +767,9 @@
     "weight": "60 lb.",
     "properties": "AC: 17; Strength: Str 15; Stealth: Disadvantage",
     "description": "Heavy Armor (10 Minutes to Don and 5 Minutes to Doff)",
+    "ac": "17",
+    "strength": "Str 15",
+    "stealth": "Disadvantage",
     "pack": "srd-5.2",
     "source": {
       "book": "SRD 5.2.1",
@@ -689,6 +784,9 @@
     "weight": "65 lb.",
     "properties": "AC: 18; Strength: Str 15; Stealth: Disadvantage",
     "description": "Heavy Armor (10 Minutes to Don and 5 Minutes to Doff)",
+    "ac": "18",
+    "strength": "Str 15",
+    "stealth": "Disadvantage",
     "pack": "srd-5.2",
     "source": {
       "book": "SRD 5.2.1",
@@ -703,6 +801,7 @@
     "weight": "6 lb.",
     "properties": "AC: +2",
     "description": "Shield (Utilize Action to Don or Doff)",
+    "ac": "+2",
     "pack": "srd-5.2",
     "source": {
       "book": "SRD 5.2.1",

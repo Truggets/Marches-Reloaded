@@ -1,0 +1,17 @@
+{
+  "species": [
+    {
+      "name": "Sunfolk",
+      "source": "Homebrew Compendium",
+      "category": "Fey / Setting Species",
+      "mechanics_first": [
+        "**Creature Type:** You are a **Humanoid**.",
+        "**Size:** Your size is **Small**.",
+        "**Speed:** Your walking speed is **30 feet**.",
+        "**Versatile Traits - Skilled:** You gain **proficiency in one skill of your choice**.",
+        "**Versatile Traits - Bonus Language:** You gain **proficiency in one additional language of your choice**."
+      ],
+      "lore_and_flavor": "Sunfolk are a Human-shaped offshoot, but this vault entry has a third Versatile Traits variant the importer has never seen before."
+    }
+  ]
+}

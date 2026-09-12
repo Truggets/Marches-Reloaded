@@ -1,0 +1,12 @@
+{
+  "backgrounds": [
+    {
+      "name": "Incomplete Background",
+      "source": "Player's Handbook (2024)",
+      "category": "Standard",
+      "mechanics": "**Ability Scores:** Increase one score by 2 and a different one by 1, or increase three different scores by 1. These increases are chosen from **Wisdom, Intelligence, and Charisma** (to a maximum of 20).\n**Skill Proficiencies:** You gain proficiency in the **Insight** and **Religion** skills.\n**Origin Feat:** You gain the **Magic Initiate (Cleric)** feat, granting you two Cleric cantrips of your choice and one 1st-level Cleric spell of your choice that you can cast once per long rest without expending a spell slot.\n**Starting Equipment:** You start with **Book (Prayers), Traveler's Clothes, and 15 GP** (or you can choose 50 GP instead).",
+      "flavor_text": "This entry is missing its Tool Proficiency section entirely, to exercise the parser's error path.",
+      "citations": ["[1]"]
+    }
+  ]
+}

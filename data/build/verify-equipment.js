@@ -49,6 +49,8 @@ console.log('Mastery Sap, Weight 3 lb., Cost 15 GP, under "Martial Melee Weapons
     checkContains('description mentions category', e.description, 'Martial Melee Weapons')
     checkContains('description mentions damage', e.description, '1d8 Slashing')
     checkContains('description mentions mastery', e.description, 'Sap')
+    check('damage (structured field)', e.damage, '1d8 Slashing')
+    check('mastery (structured field)', e.mastery, 'Sap')
   }
 }
 
@@ -65,6 +67,24 @@ console.log('Weight 55 lb., Cost 75 GP, under "Heavy Armor (10 Minutes to Don an
     checkContains('properties mentions Strength', e.properties, 'Str 13')
     checkContains('properties mentions Stealth', e.properties, 'Disadvantage')
     check('description (sub-category)', e.description, 'Heavy Armor (10 Minutes to Don and 5 Minutes to Doff)')
+    check('ac (structured field)', e.ac, '16')
+    check('strength (structured field)', e.strength, 'Str 13')
+    check('stealth (structured field)', e.stealth, 'Disadvantage')
+  }
+}
+
+console.log('\n=== Spot-check: Leather Armor (armor, no Strength/Stealth requirement) ===')
+console.log('Source (equipment.md Armor table): AC "11 + Dex modifier", Strength "—", Stealth "—",')
+console.log('Weight 10 lb., Cost 10 GP, under "Light Armor". The "—" placeholder must clean() to')
+console.log('undefined on the new structured fields, same as it already does for the properties string.')
+{
+  const e = findOne('Leather Armor', 'armor')
+  check('exists', !!e, true)
+  if (e) {
+    check('ac (structured field)', e.ac, '11 + Dex modifier')
+    check('strength is undefined (source "—")', e.strength, undefined)
+    check('stealth is undefined (source "—")', e.stealth, undefined)
+    check('properties has no stray Strength/Stealth text', /Strength|Stealth/.test(e.properties || ''), false)
   }
 }
 
