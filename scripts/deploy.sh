@@ -14,6 +14,18 @@ if [ ! -d "$REPO_DIR/.git" ]; then
   exit 1
 fi
 
+# #25: every deploy runs the DB migration and restarts the service against
+# the live database, with no safety net before this fix (backup.sh's own bug
+# meant nothing had ever actually been backed up). Required, not best-effort
+# — a deploy that can't even confirm a backup exists shouldn't proceed to
+# touch the live DB; set -e above aborts here if backup.sh fails.
+if [ ! -x "$APP_ROOT/scripts/backup.sh" ]; then
+  echo "$APP_ROOT/scripts/backup.sh not found or not executable — refusing to deploy without a pre-deploy backup." >&2
+  exit 1
+fi
+echo "Taking pre-deploy backup..."
+"$APP_ROOT/scripts/backup.sh"
+
 cd "$REPO_DIR"
 git fetch --all --quiet
 git checkout "$REF" --quiet
