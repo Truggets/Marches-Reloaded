@@ -1,5 +1,10 @@
 import { getClass, listFeats } from '@data'
-import { parseFeatSpellAbilities, parseFeatSpellLists, parseSpellcastingAbility } from '../../engine/computeSheet'
+import {
+  featAbilityDerivedFromChosenClass,
+  parseFeatSpellAbilities,
+  parseFeatSpellLists,
+  parseSpellcastingAbility,
+} from '../../engine/computeSheet'
 import { renderEmphasis } from '../../EmphasisText'
 import { ContentPicker } from '../../ContentPicker'
 import { ALL_SKILLS } from '../types'
@@ -66,10 +71,19 @@ export function StepSpeciesBonus({
   }
   // PHB-2024-style Magic Initiate has no free ability choice — its
   // spellcasting ability is whichever the chosen class already uses (see
-  // parseSpellcastingAbility's docs). Distinguishing "this feat has no
-  // spells" from "this feat's ability is derived, not chosen" by whether
-  // spellLists is non-empty while spellAbilities is empty.
-  const abilityIsDerivedFromClass = spellLists.length > 0 && spellAbilities.length === 0
+  // parseSpellcastingAbility's docs). Detected via a *positive* text match
+  // (featAbilityDerivedFromChosenClass), not by inferring it from
+  // spellAbilities being empty — that inference would misclassify any
+  // spell-granting feat whose free-choice sentence is phrased differently as
+  // "derived" instead. If the named class can't actually be resolved (e.g.
+  // one only an unimported pack would provide), fall back to a standard
+  // three-ability free-choice picker rather than silently leaving both the
+  // derived note and the picker hidden with the step uncompletable.
+  const isDerivedFeat = !!selectedFeat && featAbilityDerivedFromChosenClass(selectedFeat)
+  const abilityIsDerivedFromClass = isDerivedFeat && spellLists.length > 0
+  if (spellLists.length > 0 && spellAbilities.length === 0 && !isDerivedFeat) {
+    spellAbilities = ['Intelligence', 'Wisdom', 'Charisma']
+  }
 
   function handleChooseSpellList(list: string) {
     onChangeOriginFeatSpellList(list)

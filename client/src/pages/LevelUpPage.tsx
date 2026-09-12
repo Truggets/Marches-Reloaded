@@ -12,6 +12,7 @@ import {
   finalAbilityScores,
   hitPointsMulticlass,
   isAsiLevel,
+  parseFeatAbilityIncrease,
   spellSlots,
   subclassUnlockLevel,
   totalCharacterLevel,
@@ -41,6 +42,14 @@ async function extractErrorMessage(res: Response): Promise<string> {
  * level" snapshots for the multiclass HP formula, without disturbing which
  * entry is `classes[0]` (the original level-1 class, load-bearing for the
  * "max die only once" rule). */
+/** "A or B" for 2 items, "A, B, or C" for 3+ — plain `.join(' or ')` reads as
+ * "Strength or Constitution or Charisma" once a fixed-list feat (#24) has 3
+ * or 4 allowed abilities, which most of the PHB-2024 pack's half-feats do. */
+function formatAbilityList(abilities: string[]): string {
+  if (abilities.length <= 2) return abilities.join(' or ')
+  return `${abilities.slice(0, -1).join(', ')}, or ${abilities.at(-1)}`
+}
+
 function withClassLevel(classes: CharacterClassEntry[], classId: string, level: number): CharacterClassEntry[] {
   const idx = classes.findIndex((c) => c.classId === classId)
   if (idx === -1) return [...classes, { classId, level }]
@@ -74,7 +83,7 @@ export function LevelUpPage() {
   const [asiMode, setAsiMode] = useState<AsiMode>('one-plus-two')
   const [asiAbilityOne, setAsiAbilityOne] = useState<Ability | ''>('')
   const [asiAbilityTwo, setAsiAbilityTwo] = useState<Ability | ''>('')
-  const [grapplerAbility, setGrapplerAbility] = useState<Ability | ''>('')
+  const [fixedListAbility, setFixedListAbility] = useState<Ability | ''>('')
   const [cantripPicks, setCantripPicks] = useState<string[]>([])
   const [preparedPicks, setPreparedPicks] = useState<string[]>([])
   // In-progress pick for the current level's subclass-choice section, if any
@@ -108,7 +117,7 @@ export function LevelUpPage() {
     setAsiMode('one-plus-two')
     setAsiAbilityOne('')
     setAsiAbilityTwo('')
-    setGrapplerAbility('')
+    setFixedListAbility('')
     setCantripPicks([])
     setPreparedPicks([])
     setChosenSubclassId(null)
@@ -335,8 +344,24 @@ export function LevelUpPage() {
   const features = featuresForLevel(classId, level, activeSubclassId)
   const asiLevel = isAsiLevel(classId, level)
   const selectedFeat = selectedFeatId ? listFeats(['General', 'General / Racial']).find((f) => f.id === selectedFeatId) : undefined
-  const isAsiFeatSelected = selectedFeatId === 'ability-score-improvement'
-  const isGrapplerFeatSelected = selectedFeatId === 'grappler'
+  // #24: derived from the selected feat's own prose (any pack), not two
+  // hardcoded bundled ids — otherwise every General feat offered by an
+  // imported pack silently drops its own ability increase. Guarded: an
+  // admin-imported feat's benefit text is only identity-checked at import
+  // time for feats literally matching known shapes, not exhaustively for
+  // every possible malformed sentence — one bad feat must degrade to "no
+  // ability increase for this pick" here, not crash the whole stepper.
+  let abilityIncreaseSpec: ReturnType<typeof parseFeatAbilityIncrease> | undefined
+  if (selectedFeat) {
+    try {
+      abilityIncreaseSpec = parseFeatAbilityIncrease(selectedFeat)
+    } catch (err) {
+      console.warn(`Feat "${selectedFeat.name}" (${selectedFeat.id}): couldn't parse its ability increase`, err)
+    }
+  }
+  const isAsiFeatSelected = abilityIncreaseSpec?.mode === 'free-choice'
+  const isFixedListFeatSelected = abilityIncreaseSpec?.mode === 'fixed-list'
+  const fixedListAbilities = abilityIncreaseSpec?.mode === 'fixed-list' ? abilityIncreaseSpec.abilities : []
 
   const prevSlots = spellSlots(classId, level - 1)
   const currSlots = spellSlots(classId, level)
@@ -398,13 +423,16 @@ export function LevelUpPage() {
         scoresSoFar[asiAbilityOne as Ability] + 1 <= 20 &&
         scoresSoFar[asiAbilityTwo as Ability] + 1 <= 20
 
-  const grapplerValid = grapplerAbility !== '' && scoresSoFar[grapplerAbility as Ability] + 1 <= 20
+  const fixedListValid =
+    fixedListAbility !== '' &&
+    fixedListAbilities.includes(fixedListAbility as Ability) &&
+    scoresSoFar[fixedListAbility as Ability] + 1 <= 20
 
   const featStepDone =
     !asiLevel ||
     (selectedFeatId !== null &&
       (!isAsiFeatSelected || asiValid) &&
-      (!isGrapplerFeatSelected || grapplerValid))
+      (!isFixedListFeatSelected || fixedListValid))
   const spellStepDone =
     (cantripDelta <= 0 || cantripPicks.length === cantripDelta) &&
     (preparedDelta <= 0 || preparedPicks.length === preparedDelta)
@@ -448,8 +476,8 @@ export function LevelUpPage() {
         asiMode === 'one-plus-two'
           ? [asiAbilityOne as Ability, asiAbilityOne as Ability]
           : [asiAbilityOne as Ability, asiAbilityTwo as Ability]
-    } else if (isGrapplerFeatSelected) {
-      abilityIncreases = [grapplerAbility as Ability]
+    } else if (isFixedListFeatSelected) {
+      abilityIncreases = [fixedListAbility as Ability]
     }
 
     const entry: LevelUpEntry = {
@@ -530,7 +558,16 @@ export function LevelUpPage() {
           <ContentPicker
             items={listFeats(['General', 'General / Racial'])}
             selectedId={selectedFeatId}
-            onSelect={setSelectedFeatId}
+            onSelect={(id) => {
+              setSelectedFeatId(id)
+              // A fixed-list feat's allowed abilities are feat-specific
+              // (#24) — switching from e.g. Chef (Con/Wis) to Great Weapon
+              // Master (Strength only) must not let a stale, now-illegal
+              // pick from the previous feat silently survive and validate.
+              setFixedListAbility('')
+              setAsiAbilityOne('')
+              setAsiAbilityTwo('')
+            }}
             searchPlaceholder="Search feats by name…"
           />
           {selectedFeat && <p className="text-sm">{renderEmphasis(selectedFeat.benefit)}</p>}
@@ -598,16 +635,16 @@ export function LevelUpPage() {
             </div>
           )}
 
-          {isGrapplerFeatSelected && (
+          {isFixedListFeatSelected && (
             <div className="pixel-panel !p-3 flex flex-col gap-2">
-              <p className="pixel-label">Ability Score Increase (Strength or Dexterity)</p>
+              <p className="pixel-label">Ability Score Increase ({formatAbilityList(fixedListAbilities)})</p>
               <select
                 className="pixel-input"
-                value={grapplerAbility}
-                onChange={(e) => setGrapplerAbility(e.target.value as Ability)}
+                value={fixedListAbility}
+                onChange={(e) => setFixedListAbility(e.target.value as Ability)}
               >
                 <option value="">Choose ability</option>
-                {(['Strength', 'Dexterity'] as Ability[]).map((a) => {
+                {fixedListAbilities.map((a) => {
                   const disabled = scoresSoFar[a] + 1 > 20
                   return (
                     <option key={a} value={a} disabled={disabled}>
@@ -616,7 +653,7 @@ export function LevelUpPage() {
                   )
                 })}
               </select>
-              {!grapplerValid && <p className="text-sm text-[var(--color-danger)]">Choose a valid ability score (max 20).</p>}
+              {!fixedListValid && <p className="text-sm text-[var(--color-danger)]">Choose a valid ability score (max 20).</p>}
             </div>
           )}
         </section>

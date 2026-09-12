@@ -10,8 +10,13 @@ import { StepEquipment } from '../character-wizard/steps/StepEquipment'
 import { StepSpells } from '../character-wizard/steps/StepSpells'
 import { StepName } from '../character-wizard/steps/StepName'
 import { getCasterCounts } from '../character-wizard/parsing'
-import { parseFeatSpellLists } from '../engine/computeSheet'
-import type { AbilityScoresData, CharacterData } from '../character-wizard/types'
+import {
+  featAbilityDerivedFromChosenClass,
+  parseFeatSpellAbilities,
+  parseFeatSpellLists,
+  parseSpellcastingAbility,
+} from '../engine/computeSheet'
+import type { Ability, AbilityScoresData, CharacterData } from '../character-wizard/types'
 import { WilburCompanion } from '../WilburCompanion'
 import { WilburTip } from '../WilburTip'
 import type { ClassEntry, BackgroundEntry, SpeciesEntry } from '@data/schema'
@@ -41,6 +46,50 @@ function backgroundFeatSpellList(featText: string | undefined, backgroundPack: s
   if (!featText) return undefined
   if (findFeatByBackgroundFeatText(featText, backgroundPack)?.name !== 'Magic Initiate') return undefined
   return featText.match(/\(([^)]+)\)/)?.[1]
+}
+
+/** #17: what spellcasting ability (if any) a background-granted Magic
+ * Initiate uses — either freely chosen (SRD's Int/Wis/Cha) or auto-derived
+ * from the fixed class named in the background's own feat text (PHB-2024's
+ * "ability matches the chosen class" variant, detected via
+ * `featAbilityDerivedFromChosenClass`'s positive text match — not inferred
+ * from `parseFeatSpellAbilities` returning [], which could misclassify a
+ * differently-phrased free-choice feat as derived). If derivation is
+ * signaled but the named class isn't one `getClass` can resolve (e.g. a
+ * class only an unimported pack would provide), falls back to the standard
+ * three-ability free-choice picker rather than silently blocking the wizard
+ * with no ability picker and no explanation. Takes the already-resolved
+ * feat (rather than re-resolving it via `listFeats()` internally) so it's
+ * testable with a literal fixture, independent of whether any content pack
+ * happens to be merged in at runtime. */
+export function resolveBackgroundFeatSpellAbility(
+  featSpellList: string | undefined,
+  backgroundFeat: { id: string; benefit: string } | undefined,
+): {
+  backgroundSpellAbilities: Ability[]
+  backgroundAbilityIsDerived: boolean
+  derivedBackgroundFeatSpellAbility: Ability | undefined
+} {
+  if (!featSpellList || !backgroundFeat) {
+    return { backgroundSpellAbilities: [], backgroundAbilityIsDerived: false, derivedBackgroundFeatSpellAbility: undefined }
+  }
+  if (featAbilityDerivedFromChosenClass(backgroundFeat)) {
+    const derived = parseSpellcastingAbility(getClass(featSpellList.toLowerCase()))
+    if (derived) {
+      return { backgroundSpellAbilities: [], backgroundAbilityIsDerived: true, derivedBackgroundFeatSpellAbility: derived }
+    }
+    console.warn(`Feat "${backgroundFeat.id}": derived-ability class "${featSpellList}" not found; falling back to free choice`)
+  }
+  let backgroundSpellAbilities: Ability[] = []
+  try {
+    backgroundSpellAbilities = parseFeatSpellAbilities(backgroundFeat)
+  } catch (err) {
+    console.warn(`Feat "${backgroundFeat.id}": couldn't parse its spellcasting ability`, err)
+  }
+  if (backgroundSpellAbilities.length === 0) {
+    backgroundSpellAbilities = ['Intelligence', 'Wisdom', 'Charisma']
+  }
+  return { backgroundSpellAbilities, backgroundAbilityIsDerived: false, derivedBackgroundFeatSpellAbility: undefined }
 }
 
 /** Basic building advice per wizard step, computed from whatever's already
@@ -138,6 +187,7 @@ export function CreateCharacterPage() {
   const [spellPrepared, setSpellPrepared] = useState<string[]>([])
   const [featSpellCantrips, setFeatSpellCantrips] = useState<string[]>([])
   const [featSpellPrepared, setFeatSpellPrepared] = useState<string[]>([])
+  const [backgroundFeatSpellAbility, setBackgroundFeatSpellAbility] = useState<string | null>(null)
   const [originFeatSpellList, setOriginFeatSpellList] = useState<string | null>(null)
   const [originFeatSpellAbility, setOriginFeatSpellAbility] = useState<string | null>(null)
   const [versatileSpellCantrips, setVersatileSpellCantrips] = useState<string[]>([])
@@ -154,6 +204,14 @@ export function CreateCharacterPage() {
   const isCaster = casterCounts !== null
   const featSpellList = backgroundFeatSpellList(backgroundEntry?.feat, backgroundEntry?.pack)
   const hasFeatSpells = !!featSpellList
+  const resolvedBackgroundFeat = backgroundEntry?.feat
+    ? findFeatByBackgroundFeatText(backgroundEntry.feat, backgroundEntry.pack)
+    : undefined
+  const { backgroundSpellAbilities, backgroundAbilityIsDerived, derivedBackgroundFeatSpellAbility } =
+    resolveBackgroundFeatSpellAbility(featSpellList, resolvedBackgroundFeat)
+  const resolvedBackgroundFeatSpellAbility = backgroundAbilityIsDerived
+    ? derivedBackgroundFeatSpellAbility
+    : backgroundFeatSpellAbility
   const hasSkillfulTrait = !!speciesEntry?.traits.some((t) => t.name === 'Skillful')
   const hasVersatileTrait = !!speciesEntry?.traits.some((t) => t.name === 'Versatile')
   const hasSpeciesBonusStep = hasSkillfulTrait || hasVersatileTrait
@@ -216,7 +274,9 @@ export function CreateCharacterPage() {
         return !!equipmentChoice
       case 'spells': {
         const casterDone = !casterCounts || (spellCantrips.length === casterCounts.cantrips && spellPrepared.length === casterCounts.preparedOrKnown)
-        const featDone = !hasFeatSpells || (featSpellCantrips.length === 2 && featSpellPrepared.length === 1)
+        const featDone =
+          !hasFeatSpells ||
+          (featSpellCantrips.length === 2 && featSpellPrepared.length === 1 && !!resolvedBackgroundFeatSpellAbility)
         const versatileDone = !grantsVersatileSpells || (versatileSpellCantrips.length === 2 && versatileSpellPrepared.length === 1)
         return casterDone && featDone && versatileDone
       }
@@ -273,6 +333,9 @@ export function CreateCharacterPage() {
       ...(isCaster ? { spells: { cantrips: spellCantrips, prepared: spellPrepared } } : {}),
       ...(originFeatId ? { originFeatId } : {}),
       ...(hasFeatSpells ? { originFeatSpells: { cantrips: featSpellCantrips, prepared: featSpellPrepared } } : {}),
+      ...(hasFeatSpells && resolvedBackgroundFeatSpellAbility
+        ? { backgroundFeatSpellAbility: resolvedBackgroundFeatSpellAbility }
+        : {}),
       ...(grantsVersatileSpells && originFeatSpellList ? { originFeatSpellList } : {}),
       ...(grantsVersatileSpells && originFeatSpellAbility ? { originFeatSpellAbility } : {}),
       ...(grantsVersatileSpells
@@ -422,6 +485,29 @@ export function CreateCharacterPage() {
                   setFeatSpellPrepared(ids)
                 }}
               />
+            )}
+            {featSpellList && backgroundAbilityIsDerived && derivedBackgroundFeatSpellAbility && (
+              <p className="text-sm">
+                Spellcasting ability: <span className="font-bold">{derivedBackgroundFeatSpellAbility}</span> (matches{' '}
+                {featSpellList}'s own spellcasting ability)
+              </p>
+            )}
+            {featSpellList && !backgroundAbilityIsDerived && backgroundSpellAbilities.length > 0 && (
+              <div className="flex flex-col gap-2">
+                <p className="pixel-label">Choose a spellcasting ability</p>
+                <div className="flex flex-wrap gap-2">
+                  {backgroundSpellAbilities.map((ability) => (
+                    <button
+                      key={ability}
+                      type="button"
+                      onClick={() => setBackgroundFeatSpellAbility(ability)}
+                      className={`pixel-btn ${backgroundFeatSpellAbility === ability ? '' : 'pixel-btn-secondary'}`}
+                    >
+                      {ability}
+                    </button>
+                  ))}
+                </div>
+              </div>
             )}
             {grantsVersatileSpells && originFeatSpellList && (
               <StepSpells

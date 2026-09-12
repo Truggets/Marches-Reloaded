@@ -571,6 +571,7 @@ export function CharacterSheetPage() {
           {backgroundEntry?.feat && (
             <p className="text-sm">
               <span className="font-bold">Feat:</span> {backgroundEntry.feat}
+              {data.backgroundFeatSpellAbility && ` — ${data.backgroundFeatSpellAbility}`}
             </p>
           )}
           {backgroundEntry?.toolProficiency && (

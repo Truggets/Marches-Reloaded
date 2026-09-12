@@ -7,6 +7,7 @@ import {
   finalAbilityScores,
   hitPoints,
   isAsiLevel,
+  parseFeatAbilityIncrease,
   parseFeatSpellAbilities,
   parseFeatSpellLists,
   proficiencyBonus,
@@ -379,5 +380,101 @@ describe('Fighter (Dwarf, Soldier background)', () => {
     }
     const scores = finalAbilityScores(leveledData)
     expect(scores.Strength).toBe(20)
+  })
+})
+
+describe('parseFeatAbilityIncrease (#24: imported General feats silently dropped their own ability increase)', () => {
+  it('recognizes the bundled SRD Ability Score Improvement free-choice shape', () => {
+    const feat = getFeat('ability-score-improvement')
+    expect(feat).toBeDefined()
+    expect(parseFeatAbilityIncrease(feat!)).toEqual({ mode: 'free-choice' })
+  })
+
+  it('recognizes the PHB-2024 Ability Score Improvement free-choice shape (different prose, same mechanic)', () => {
+    const phbAsi = {
+      id: 'phb-2024:ability-score-improvement',
+      benefit:
+        '**Stat Boost:** You can **increase one ability score of your choice by 2, or increase two different scores by 1** (to a maximum of 20).',
+    }
+    expect(parseFeatAbilityIncrease(phbAsi)).toEqual({ mode: 'free-choice' })
+  })
+
+  it('recognizes the bundled SRD Grappler fixed-list shape', () => {
+    const feat = getFeat('grappler')
+    expect(feat).toBeDefined()
+    expect(parseFeatAbilityIncrease(feat!)).toEqual({ mode: 'fixed-list', abilities: ['Strength', 'Dexterity'] })
+  })
+
+  it('recognizes a PHB-2024 half-feat with a 2-ability fixed list (Chef)', () => {
+    const chef = {
+      id: 'phb-2024:chef',
+      benefit:
+        "**Stat Boost:** Increase your **Constitution or Wisdom score by 1** (maximum of 20). **Tool Proficiency:** You gain proficiency with Cook's Utensils.",
+    }
+    expect(parseFeatAbilityIncrease(chef)).toEqual({ mode: 'fixed-list', abilities: ['Constitution', 'Wisdom'] })
+  })
+
+  it('recognizes a PHB-2024 half-feat with a 4-ability fixed list (Elven Accuracy)', () => {
+    const elvenAccuracy = {
+      id: 'phb-2024:elven-accuracy',
+      benefit:
+        '**Stat Boost:** Increase your **Dexterity, Intelligence, Wisdom, or Charisma score by 1** (maximum of 20). **Super Advantage:** Whenever you have Advantage on an attack roll using Dexterity, Intelligence, Wisdom, or Charisma, you can reroll one of the dice once.',
+    }
+    expect(parseFeatAbilityIncrease(elvenAccuracy)).toEqual({
+      mode: 'fixed-list',
+      abilities: ['Dexterity', 'Intelligence', 'Wisdom', 'Charisma'],
+    })
+  })
+
+  it('recognizes a PHB-2024 half-feat with a single fixed ability (Great Weapon Master)', () => {
+    const gwm = {
+      id: 'phb-2024:great-weapon-master',
+      benefit:
+        '**Stat Boost:** Increase your **Strength score by 1** (maximum of 20). **Cleave Bonus Attack:** On your turn, when you score a Critical Hit with a melee weapon...',
+    }
+    expect(parseFeatAbilityIncrease(gwm)).toEqual({ mode: 'fixed-list', abilities: ['Strength'] })
+  })
+
+  it('returns undefined for a feat with no ability-increase clause at all (Strike of the Giants)', () => {
+    const strikeOfTheGiants = {
+      id: 'phb-2024:strike-of-the-giants',
+      benefit:
+        '**Elemental Strike:** Choose one giant type: Fire, Frost, Hill, Stone, Storm, or Cloud. Once per turn when you hit with a weapon attack, you can deal extra damage.',
+    }
+    expect(parseFeatAbilityIncrease(strikeOfTheGiants)).toBeUndefined()
+  })
+
+  it('returns undefined for a non-ability-granting feat (Skilled)', () => {
+    const feat = getFeat('skilled')
+    expect(feat).toBeDefined()
+    expect(parseFeatAbilityIncrease(feat!)).toBeUndefined()
+  })
+
+  it('throws for a matched-but-malformed ability list (not real ability names)', () => {
+    const malformed = {
+      id: 'phb-2024:malformed',
+      benefit: '**Stat Boost:** Increase your **Speed and Luck score by 1** (maximum of 20).',
+    }
+    expect(() => parseFeatAbilityIncrease(malformed)).toThrow()
+  })
+
+  it('does not match "by 10" as "by 1" (word-boundary check)', () => {
+    const byTen = {
+      id: 'phb-2024:by-ten',
+      benefit: '**Stat Boost:** Increase your **Strength score by 10** (maximum of 20).',
+    }
+    expect(parseFeatAbilityIncrease(byTen)).toBeUndefined()
+  })
+
+  it('matches the first Stat Boost sentence even when a later, unrelated sentence also contains "by 1" (real Keenness of the Stone Giant shape)', () => {
+    const keenness = {
+      id: 'phb-2024:keenness-of-the-stone-giant',
+      benefit:
+        '**Stat Boost:** Increase your **Strength, Constitution, or Wisdom score by 1** (maximum of 20). **Darkvision Expansion:** You gain Darkvision out to 60 feet, or increase your existing Darkvision by 30 feet.',
+    }
+    expect(parseFeatAbilityIncrease(keenness)).toEqual({
+      mode: 'fixed-list',
+      abilities: ['Strength', 'Constitution', 'Wisdom'],
+    })
   })
 })

@@ -322,16 +322,68 @@ export function parseFeatSpellLists(feat: { id: string; benefit: string }): stri
 export function parseFeatSpellAbilities(feat: { id: string; benefit: string }): Ability[] {
   const match = feat.benefit.match(/([\w, ]+?) is your spellcasting ability for this feat/i)
   if (!match) return []
-  const words = match[1]
+  return parseAbilityList(match[1], `feat spellcasting ability for ${feat.id}`)
+}
+
+/**
+ * True if a feat's own prose says its spellcasting ability is tied to
+ * whichever class was chosen, rather than freely picked (PHB-2024's Magic
+ * Initiate: "the one associated with the chosen class", vs SRD's free
+ * Int/Wis/Cha choice). A *positive* text match, not "parseFeatSpellAbilities
+ * returned []" — inferring this mechanic from the absence of the free-choice
+ * sentence would misclassify any spell-granting feat whose prose simply
+ * phrases the free choice differently (e.g. "Your spellcasting ability for
+ * this feat's spells is Wisdom" doesn't match parseFeatSpellAbilities'
+ * regex either, but isn't derived-from-class) as silently, confidently
+ * derived instead of degrading to a safe fallback.
+ */
+export function featAbilityDerivedFromChosenClass(feat: { benefit: string }): boolean {
+  return /associated with the chosen class/i.test(feat.benefit)
+}
+
+/** Splits an "X, Y, or Z" (or bare "X") ability list into real Ability
+ * values, throwing if any captured word isn't a real ability — shared by
+ * every feat-prose parser that captures this shape (see
+ * parseFeatSpellAbilities above and parseFeatAbilityIncrease below). */
+function parseAbilityList(raw: string, context: string): Ability[] {
+  const words = raw
     .replace(/,? or /i, ', ')
     .split(',')
     .map((s) => s.trim())
     .filter(Boolean)
   const abilities = words.map((w) => ABILITIES.find((a) => a.toLowerCase() === w.toLowerCase()))
   if (abilities.length === 0 || abilities.some((a) => !a)) {
-    throw new Error(`Unparseable feat spellcasting ability for feat: ${feat.id} ("${match[1]}")`)
+    throw new Error(`Unparseable ability list in ${context} ("${raw}")`)
   }
   return abilities as Ability[]
+}
+
+export type FeatAbilityIncrease =
+  | { mode: 'free-choice' } // "+2 to one ability, or +1 to two abilities" — any of the 6 (ASI's own shape)
+  | { mode: 'fixed-list'; abilities: Ability[] } // "+1 to one of these N abilities" (Grappler, and every PHB-2024 half-feat)
+
+/** What ability increase (if any) a General/Origin feat's own prose grants,
+ * independent of its id — #24: `LevelUpPage.tsx` used to special-case exactly
+ * two hardcoded ids (`ability-score-improvement`, `grappler`), which silently
+ * dropped the ability increase for every other General feat once a content
+ * pack was imported (M2b) and offered them at level-up too. Matches both the
+ * SRD's and PHB-2024's phrasings for the free-choice ASI shape, and the
+ * "Increase your A[, B[, or C]] score by 1" half-feat shape most PHB-2024
+ * General feats use (markdown emphasis markers stripped first, since PHB's
+ * source wraps the whole clause in `**…**` while SRD uses `_…_`). Returns
+ * undefined for a feat with no ability-increase clause at all (most General
+ * feats also grant something else instead/in addition — that's #24's
+ * remaining, explicitly out-of-scope-for-tonight gap, not this function's
+ * job). Throws only on a matched-but-malformed ability list, same "data gap
+ * fails loud" contract as every other feat-prose parser in this file. */
+export function parseFeatAbilityIncrease(feat: { id: string; benefit: string }): FeatAbilityIncrease | undefined {
+  const stripped = feat.benefit.replace(/[*_]/g, '')
+  if (/increase one ability score[^.]*?by 2,?\s*or increase two[^.]*?by 1/i.test(stripped)) {
+    return { mode: 'free-choice' }
+  }
+  const match = stripped.match(/increase your ([\w, ]+?) score by 1\b/i)
+  if (!match) return undefined
+  return { mode: 'fixed-list', abilities: parseAbilityList(match[1], `feat ability increase for ${feat.id}`) }
 }
 
 export interface SpellcastingInfo {
