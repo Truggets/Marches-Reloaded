@@ -6,9 +6,22 @@
 set -euo pipefail
 
 APP_ROOT="/opt/marches-reload"
-DB_PATH="$APP_ROOT/shared/data/marches.sqlite3"
+# #25: this used to say "marches.sqlite3" (trailing "3") — the live DB file
+# is actually named "marches.sqlite" (see server/src/config.js's dbPath).
+# sqlite3 auto-creates a missing source file rather than failing, so this
+# would have silently backed up an empty database, not errored — the
+# existence check below guards against that same class of bug recurring.
+# In practice nothing ever called this script (no cron, deploy.sh didn't
+# invoke it), which is why shared/backups was empty, not because it ran
+# and failed.
+DB_PATH="$APP_ROOT/shared/data/marches.sqlite"
 BACKUP_DIR="$APP_ROOT/shared/backups"
 ENV_FILE="$APP_ROOT/shared/.env"
+
+if [ ! -f "$DB_PATH" ]; then
+  echo "No database at $DB_PATH — refusing to write an empty backup." >&2
+  exit 1
+fi
 
 PUBLIC_KEY=$(grep '^BACKUP_AGE_PUBLIC_KEY=' "$ENV_FILE" | cut -d'=' -f2-)
 if [ -z "$PUBLIC_KEY" ]; then
@@ -20,9 +33,9 @@ TIMESTAMP=$(date -u +%Y%m%dT%H%M%SZ)
 WORK_DIR=$(mktemp -d)
 trap 'rm -rf "$WORK_DIR"' EXIT
 
-sqlite3 "$DB_PATH" ".backup '$WORK_DIR/marches.sqlite3'"
+sqlite3 "$DB_PATH" ".backup '$WORK_DIR/marches.sqlite'"
 cp "$ENV_FILE" "$WORK_DIR/.env"
-tar -C "$WORK_DIR" -czf "$WORK_DIR/backup.tar.gz" marches.sqlite3 .env
+tar -C "$WORK_DIR" -czf "$WORK_DIR/backup.tar.gz" marches.sqlite .env
 
 OUT_FILE="$BACKUP_DIR/marches-backup-$TIMESTAMP.tar.gz.age"
 age -r "$PUBLIC_KEY" -o "$OUT_FILE" "$WORK_DIR/backup.tar.gz"

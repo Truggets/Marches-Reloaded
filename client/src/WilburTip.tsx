@@ -3,6 +3,11 @@ import { renderEmphasis } from './EmphasisText'
 
 interface Props {
   tip: string
+  // #19: "AC 12 → 16"-style mechanical deltas for the choice just made.
+  // Rendered as their own line, outside `tip`'s truncation budget — folding
+  // these into `tip` would let them push real advice text behind "Show
+  // more" (or past it entirely) once both together cross PREVIEW_LENGTH.
+  stats?: string[]
 }
 
 // Long benefit/description text (e.g. Magic Initiate's full feat text) would
@@ -15,7 +20,7 @@ const PREVIEW_LENGTH = 120
  * hidden below 640px (it was overlapping real content), but this tip is real
  * content, so it renders in normal document flow and stays visible at every
  * width. */
-export function WilburTip({ tip }: Props) {
+export function WilburTip({ tip, stats }: Props) {
   const [expanded, setExpanded] = useState(false)
   const isLong = tip.length > PREVIEW_LENGTH
   const displayText = expanded || !isLong ? tip : `${tip.slice(0, PREVIEW_LENGTH).trimEnd()}…`
@@ -30,6 +35,9 @@ export function WilburTip({ tip }: Props) {
         style={{ imageRendering: 'pixelated' }}
       />
       <div className="flex-1">
+        {stats && stats.length > 0 && (
+          <p className="text-sm font-bold">{stats.join(' · ')}</p>
+        )}
         <p className="text-sm">
           <span className="pixel-label">Wilbur says:</span> {renderEmphasis(displayText)}
         </p>

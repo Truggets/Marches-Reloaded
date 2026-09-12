@@ -11,10 +11,12 @@ import { StepSpells } from '../character-wizard/steps/StepSpells'
 import { StepName } from '../character-wizard/steps/StepName'
 import { getCasterCounts } from '../character-wizard/parsing'
 import {
+  diffQuickStats,
   featAbilityDerivedFromChosenClass,
   parseFeatSpellAbilities,
   parseFeatSpellLists,
   parseSpellcastingAbility,
+  quickStats,
 } from '../engine/computeSheet'
 import type { Ability, AbilityScoresData, CharacterData } from '../character-wizard/types'
 import { WilburCompanion } from '../WilburCompanion'
@@ -163,6 +165,97 @@ function wilburTipFor(
   }
 }
 
+const FLAT_ABILITY_SCORES: AbilityScoresData = {
+  rolls: [10, 10, 10, 10, 10, 10],
+  assignment: { Strength: 10, Dexterity: 10, Constitution: 10, Intelligence: 10, Wisdom: 10, Charisma: 10 },
+  backgroundIncrease: {},
+}
+
+/** Minimal provisional `CharacterData` for #19's stat-delta preview —
+ * `classId`/`speciesId`/`backgroundId` are always real by the time the
+ * Abilities/Skills/Equipment steps render (Class and Origin come first in
+ * `steps`), so this only needs to fill defaults for the *current* step's
+ * own not-yet-made choice. Not a general partial-CharacterData builder;
+ * `handleSave`'s own assembly (spells, origin feats, etc.) stays separate
+ * since none of that affects the three stats `quickStats` computes. */
+export function provisionalCharacterData(overrides: {
+  classId: string
+  speciesId: string
+  backgroundId: string
+  abilityScores: AbilityScoresData
+  skillProficiencies?: string[]
+  equipmentChoice?: string
+}): CharacterData {
+  return {
+    speciesId: overrides.speciesId,
+    backgroundId: overrides.backgroundId,
+    classes: [{ classId: overrides.classId, level: 1 }],
+    abilityScores: overrides.abilityScores,
+    skillProficiencies: overrides.skillProficiencies ?? [],
+    equipmentChoice: overrides.equipmentChoice ?? '',
+  }
+}
+
+/** #19: "Option A: AC 10 → 16"-style delta for whatever the current step's
+ * choice actually affects, comparing a flat-10/no-pick baseline against the
+ * player's current in-progress selection. Only Abilities/Skills/Equipment
+ * make a real before/after comparison — Class and Origin precede any
+ * ability-score input (so AC/HP aren't resolvable yet), and Species Bonus/
+ * Spells/Name don't affect these three stats at all. */
+export function statsDeltaFor(
+  step: string,
+  classId: string | null,
+  speciesId: string | null,
+  backgroundId: string | null,
+  abilityScores: AbilityScoresData | null,
+  skillsChosen: string[],
+  backgroundSkills: string[],
+  equipmentChoice: string | null,
+): string[] {
+  if (!classId || !speciesId || !backgroundId || !abilityScores) return []
+  const base = { classId, speciesId, backgroundId }
+
+  switch (step) {
+    case 'abilities': {
+      // Both snapshots carry the real (already-made) equipment choice, not
+      // the empty default — otherwise going Back from Equipment to Abilities
+      // after picking armor would show an unarmored AC that contradicts the
+      // character's actual sheet.
+      const before = quickStats(
+        provisionalCharacterData({ ...base, abilityScores: FLAT_ABILITY_SCORES, equipmentChoice: equipmentChoice ?? undefined }),
+      )
+      const after = quickStats(
+        provisionalCharacterData({ ...base, abilityScores, equipmentChoice: equipmentChoice ?? undefined }),
+      )
+      return diffQuickStats(before, after)
+    }
+    case 'skills': {
+      // Both snapshots report bonuses for the SAME skill set (the union) so
+      // a just-picked skill (proficient only in "after") still shows a
+      // delta — quickStats() only reports a bonus for a skill it's told to,
+      // and diffQuickStats() only compares skills present in both.
+      const allSkills = Array.from(new Set([...skillsChosen, ...backgroundSkills]))
+      const before = quickStats(
+        provisionalCharacterData({ ...base, abilityScores, skillProficiencies: backgroundSkills }),
+        allSkills,
+      )
+      const after = quickStats(
+        provisionalCharacterData({ ...base, abilityScores, skillProficiencies: allSkills }),
+        allSkills,
+      )
+      return diffQuickStats(before, after)
+    }
+    case 'equipment': {
+      if (!equipmentChoice) return []
+      const before = quickStats(provisionalCharacterData({ ...base, abilityScores }))
+      const after = quickStats(provisionalCharacterData({ ...base, abilityScores, equipmentChoice }))
+      return diffQuickStats(before, after)
+    }
+    default:
+      return []
+  }
+}
+
 async function extractErrorMessage(res: Response): Promise<string> {
   try {
     const body = (await res.json()) as { message?: string; error?: string }
@@ -243,6 +336,21 @@ export function CreateCharacterPage() {
   )
   const [stepIndex, setStepIndex] = useState(0)
   const step = steps[stepIndex]
+
+  const statsDelta = useMemo(
+    () =>
+      statsDeltaFor(
+        step,
+        classId,
+        speciesId,
+        backgroundId,
+        abilityScores,
+        skillsChosen,
+        backgroundEntry?.skillProficiencies ?? [],
+        equipmentChoice,
+      ),
+    [step, classId, speciesId, backgroundId, abilityScores, skillsChosen, backgroundEntry, equipmentChoice],
+  )
 
   function canAdvance(): boolean {
     switch (step) {
@@ -370,6 +478,7 @@ export function CreateCharacterPage() {
 
       <div className="w-full max-w-2xl">
         <WilburTip
+          stats={statsDelta}
           tip={wilburTipFor(
             step,
             classEntry,
