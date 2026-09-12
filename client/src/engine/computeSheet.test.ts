@@ -3,6 +3,7 @@ import { getBackground, getClass, getFeat, listClasses } from '@data'
 import {
   abilityModifier,
   armorClass,
+  diffQuickStats,
   featuresForLevel,
   finalAbilityScores,
   hitPoints,
@@ -11,6 +12,7 @@ import {
   parseFeatSpellAbilities,
   parseFeatSpellLists,
   proficiencyBonus,
+  quickStats,
   skillBonus,
   spellcastingInfo,
   spellSlots,
@@ -476,5 +478,124 @@ describe('parseFeatAbilityIncrease (#24: imported General feats silently dropped
       mode: 'fixed-list',
       abilities: ['Strength', 'Constitution', 'Wisdom'],
     })
+  })
+})
+
+describe('quickStats / diffQuickStats (#19)', () => {
+  const FLAT: CharacterData['abilityScores'] = {
+    rolls: [10, 10, 10, 10, 10, 10],
+    assignment: { Strength: 10, Dexterity: 10, Constitution: 10, Intelligence: 10, Wisdom: 10, Charisma: 10 },
+    backgroundIncrease: {},
+  }
+
+  const fighterDex14: CharacterData['abilityScores'] = {
+    rolls: [10, 10, 10, 10, 10, 10],
+    assignment: { Strength: 15, Dexterity: 14, Constitution: 13, Intelligence: 10, Wisdom: 10, Charisma: 8 },
+    backgroundIncrease: {},
+  }
+
+  it('reports AC and HP for a fighter, unarmored', () => {
+    const data: CharacterData = {
+      speciesId: 'human',
+      backgroundId: 'soldier',
+      classes: [{ classId: 'fighter', level: 1 }],
+      abilityScores: fighterDex14,
+      skillProficiencies: [],
+      equipmentChoice: '',
+    }
+    const stats = quickStats(data)
+    expect(stats.ac).toBe(12) // 10 + Dex mod (+2), no armor
+    expect(stats.hp).toBe(11) // d10 (10) + Con mod (+1)
+    expect(stats.saveDc).toBeUndefined() // Fighter isn't a caster
+  })
+
+  it('reports AC 16 for the same fighter in Chain Mail (option A), matching the issue\'s own "AC 10 → 16" example', () => {
+    const unarmored: CharacterData = {
+      speciesId: 'human',
+      backgroundId: 'soldier',
+      classes: [{ classId: 'fighter', level: 1 }],
+      abilityScores: fighterDex14,
+      skillProficiencies: [],
+      equipmentChoice: '',
+    }
+    const armored: CharacterData = { ...unarmored, equipmentChoice: 'A' }
+    expect(quickStats(armored).ac).toBe(16) // Chain Mail: flat AC 16, no Dex
+    expect(diffQuickStats(quickStats(unarmored), quickStats(armored))).toEqual(['AC 12 → 16'])
+  })
+
+  it('reports a save DC for a caster class', () => {
+    const data: CharacterData = {
+      speciesId: 'human',
+      backgroundId: 'sage',
+      classes: [{ classId: 'wizard', level: 1 }],
+      abilityScores: { ...fighterDex14, assignment: { ...fighterDex14.assignment, Intelligence: 16 } },
+      skillProficiencies: [],
+      equipmentChoice: '',
+    }
+    // Wizard: prof bonus +2 at level 1, Int mod +3 -> DC 8+2+3
+    expect(quickStats(data).saveDc).toBe(13)
+  })
+
+  it('reports skill bonuses only for proficient skills, and omits an unrecognized skill name rather than throwing', () => {
+    const data: CharacterData = {
+      speciesId: 'human',
+      backgroundId: 'soldier',
+      classes: [{ classId: 'fighter', level: 1 }],
+      abilityScores: fighterDex14,
+      skillProficiencies: ['Athletics', 'Not A Real Skill'],
+      equipmentChoice: '',
+    }
+    expect(quickStats(data).skillBonuses).toEqual({ Athletics: 4 }) // Str mod +2, prof bonus +2
+  })
+
+  it('diffQuickStats returns no lines when nothing differs (flat baseline vs itself)', () => {
+    const data: CharacterData = {
+      speciesId: 'human',
+      backgroundId: 'soldier',
+      classes: [{ classId: 'fighter', level: 1 }],
+      abilityScores: FLAT,
+      skillProficiencies: [],
+      equipmentChoice: '',
+    }
+    expect(diffQuickStats(quickStats(data), quickStats(data))).toEqual([])
+  })
+
+  it('diffQuickStats formats a skill-bonus delta with an explicit sign, for a skill only proficient in "after"', () => {
+    const before = quickStats(
+      {
+        speciesId: 'human',
+        backgroundId: 'soldier',
+        classes: [{ classId: 'fighter', level: 1 }],
+        abilityScores: FLAT,
+        skillProficiencies: [],
+        equipmentChoice: '',
+      },
+      ['Athletics'],
+    )
+    const after = quickStats(
+      {
+        speciesId: 'human',
+        backgroundId: 'soldier',
+        classes: [{ classId: 'fighter', level: 1 }],
+        abilityScores: FLAT,
+        skillProficiencies: ['Athletics'],
+        equipmentChoice: '',
+      },
+      ['Athletics'],
+    )
+    expect(diffQuickStats(before, after)).toEqual(['Athletics +0 → +2'])
+  })
+
+  it('quickStats never throws on an unknown classId, and simply omits every stat', () => {
+    const data: CharacterData = {
+      speciesId: 'human',
+      backgroundId: 'soldier',
+      classes: [{ classId: 'not-a-real-class', level: 1 }],
+      abilityScores: FLAT,
+      skillProficiencies: ['Athletics'],
+      equipmentChoice: '',
+    }
+    expect(() => quickStats(data)).not.toThrow()
+    expect(quickStats(data)).toEqual({})
   })
 })

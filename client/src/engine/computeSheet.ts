@@ -653,3 +653,103 @@ export function canMulticlassInto(
       : abilities.every((a) => abilityScores[a] >= 13)
   })
 }
+
+// ---- #19: mid-wizard stat-delta preview ----
+
+export interface QuickStats {
+  ac?: number
+  hp?: number
+  saveDc?: number
+  skillBonuses?: Record<string, number>
+}
+
+/**
+ * Best-effort snapshot of a few player-visible derived stats for a
+ * provisional (mid-wizard) `CharacterData`, so `CreateCharacterPage` can show
+ * a before/after delta as the player makes each choice (#19). Each stat is
+ * computed independently and simply omitted (never thrown) if its inputs
+ * aren't resolvable yet — e.g. `armorClass` on an equipment letter that
+ * doesn't match any of the class's real options, or `hitPoints`/
+ * `spellcastingInfo` on a not-yet-real classId. This is intentionally
+ * narrower than a general "diff any two characters" API: level is always 1
+ * (the wizard only ever builds a level-1 character) and only the first
+ * class entry is used (the wizard has no multiclass step).
+ */
+export function quickStats(data: CharacterData, skillsOfInterest?: string[]): QuickStats {
+  const scores = finalAbilityScores(data)
+  const classId = data.classes[0]?.classId
+  if (!classId) return {}
+  const stats: QuickStats = {}
+
+  try {
+    stats.ac = armorClass(data.classes, data.equipmentChoice, scores)
+  } catch {
+    // equipment choice doesn't resolve against this class's real options yet
+  }
+
+  try {
+    stats.hp = hitPoints(classId, 1, abilityModifier(scores.Constitution), data.speciesId)
+  } catch {
+    // unknown class/species this early in the wizard
+  }
+
+  try {
+    const info = spellcastingInfo(classId, data.classes, scores)
+    if (info) stats.saveDc = info.saveDC
+  } catch {
+    // unknown class, or not a caster (spellcastingInfo already returns
+    // undefined for that case rather than throwing)
+  }
+
+  // Which skills to report a bonus for — defaults to the character's real
+  // proficiencies, but a caller diffing "before this pick" vs "after" needs
+  // both snapshots to report the SAME skill (e.g. one just-chosen skill the
+  // "before" data doesn't have proficiency in yet), so it can pass that
+  // skill explicitly rather than relying on `data.skillProficiencies`.
+  const skillsToReport = skillsOfInterest ?? data.skillProficiencies
+  if (skillsToReport.length > 0) {
+    try {
+      const profBonus = proficiencyBonusMulticlass(data.classes)
+      const skillBonuses: Record<string, number> = {}
+      for (const skill of skillsToReport) {
+        try {
+          skillBonuses[skill] = skillBonus(skill, scores, data.skillProficiencies, profBonus)
+        } catch {
+          // unrecognized skill name
+        }
+      }
+      stats.skillBonuses = skillBonuses
+    } catch {
+      // unknown class
+    }
+  }
+
+  return stats
+}
+
+/** Renders only the stats present (and different) in both snapshots as
+ * "Label X → Y" lines, e.g. "AC 12 → 16". Skill bonuses are formatted with
+ * an explicit sign since a negative bonus reads ambiguously without one. */
+export function diffQuickStats(before: QuickStats, after: QuickStats): string[] {
+  const lines: string[] = []
+  const signed = (n: number) => (n >= 0 ? `+${n}` : `${n}`)
+
+  if (before.ac !== undefined && after.ac !== undefined && before.ac !== after.ac) {
+    lines.push(`AC ${before.ac} → ${after.ac}`)
+  }
+  if (before.hp !== undefined && after.hp !== undefined && before.hp !== after.hp) {
+    lines.push(`HP ${before.hp} → ${after.hp}`)
+  }
+  if (before.saveDc !== undefined && after.saveDc !== undefined && before.saveDc !== after.saveDc) {
+    lines.push(`Save DC ${before.saveDc} → ${after.saveDc}`)
+  }
+  if (before.skillBonuses && after.skillBonuses) {
+    for (const [skill, afterBonus] of Object.entries(after.skillBonuses)) {
+      const beforeBonus = before.skillBonuses[skill]
+      if (beforeBonus !== undefined && beforeBonus !== afterBonus) {
+        lines.push(`${skill} ${signed(beforeBonus)} → ${signed(afterBonus)}`)
+      }
+    }
+  }
+  return lines
+}
