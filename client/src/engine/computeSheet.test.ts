@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { getBackground, getClass, getFeat } from '@data'
+import { getBackground, getClass, getFeat, listClasses } from '@data'
 import {
   abilityModifier,
   armorClass,
@@ -13,6 +13,7 @@ import {
   skillBonus,
   spellcastingInfo,
   spellSlots,
+  subclassUnlockLevel,
   unarmoredDefenseVoidedByShield,
 } from './computeSheet'
 import type { CharacterData } from '../character-wizard/types'
@@ -129,6 +130,45 @@ describe('featuresForLevel / isAsiLevel', () => {
 
   it('featuresForLevel returns the real featureTable feature list for that level', () => {
     expect(featuresForLevel('fighter', 4)).toEqual(['Ability Score Improvement'])
+  })
+})
+
+describe('M12: subclass selection', () => {
+  it('subclassUnlockLevel is 3 for every bundled SRD class (2024 rules unified subclass choice to level 3)', () => {
+    for (const c of listClasses()) {
+      expect(subclassUnlockLevel(c.id)).toBe(3)
+    }
+  })
+
+  it('subclassUnlockLevel throws for an unknown class id (same "data gap fails loud" contract as the rest of the engine)', () => {
+    expect(() => subclassUnlockLevel('not-a-real-class')).toThrow()
+  })
+
+  it('featuresForLevel with no subclassId is unaffected (existing behavior preserved)', () => {
+    expect(featuresForLevel('fighter', 3)).not.toContain('Improved Critical')
+  })
+
+  it('featuresForLevel puts class features before subclass features (sheet displays them in this order)', () => {
+    const result = featuresForLevel('fighter', 3, 'fighter-champion')
+    const classFeatureIdx = result.indexOf('Fighter Subclass')
+    const subclassFeatureIdx = result.indexOf('Improved Critical')
+    expect(classFeatureIdx).toBeGreaterThanOrEqual(0)
+    expect(subclassFeatureIdx).toBeGreaterThan(classFeatureIdx)
+  })
+
+  it('featuresForLevel with a subclassId merges in that subclass\'s features at this level, and nothing below the unlock level', () => {
+    const champion = getClass('fighter')?.subclasses.find((s) => s.id === 'fighter-champion')
+    expect(champion).toBeDefined()
+    expect(featuresForLevel('fighter', 3, 'fighter-champion')).toEqual(
+      expect.arrayContaining(['Improved Critical', 'Remarkable Athlete']),
+    )
+    expect(featuresForLevel('fighter', 2, 'fighter-champion')).not.toEqual(
+      expect.arrayContaining(['Improved Critical', 'Remarkable Athlete']),
+    )
+  })
+
+  it('featuresForLevel throws for an unknown subclassId', () => {
+    expect(() => featuresForLevel('fighter', 3, 'not-a-real-subclass')).toThrow()
   })
 })
 

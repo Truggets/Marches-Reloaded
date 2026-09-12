@@ -75,6 +75,10 @@ export interface LevelUpEntry {
 export interface CharacterClassEntry {
   classId: string
   level: number
+  // M12: absent until chosen; chosen once at/after the class's subclass-unlock
+  // level (see engine/computeSheet.ts's subclassUnlockLevel) and never changes
+  // after. Old saves simply lack this field — treat as "not yet chosen."
+  subclassId?: string
 }
 
 export interface CharacterData {

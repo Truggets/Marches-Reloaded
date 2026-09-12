@@ -13,6 +13,7 @@ import { CharacterListPage } from './pages/CharacterListPage'
 import { CreateCharacterPage } from './pages/CreateCharacterPage'
 import { CharacterSheetPage } from './pages/CharacterSheetPage'
 import { LevelUpPage } from './pages/LevelUpPage'
+import { SubclassChoicePage } from './pages/SubclassChoicePage'
 import { CombatSandboxPage } from './pages/CombatSandboxPage'
 import { PartyViewPage } from './pages/PartyViewPage'
 import { AdminEditJsonPage } from './pages/AdminEditJsonPage'
@@ -70,6 +71,14 @@ void initPacks().then(() => {
               element={
                 <RequireAuth>
                   <LevelUpPage />
+                </RequireAuth>
+              }
+            />
+            <Route
+              path="/characters/:id/choose-subclass/:classId"
+              element={
+                <RequireAuth>
+                  <SubclassChoicePage />
                 </RequireAuth>
               }
             />
