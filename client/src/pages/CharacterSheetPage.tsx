@@ -48,6 +48,17 @@ function formatModifier(mod: number): string {
   return mod >= 0 ? `+${mod}` : `${mod}`
 }
 
+/** `featChoice.abilityIncreases` shapes (LevelUpPage.tsx): a 2-element array
+ * of the SAME ability means "+2 to one ability"; 2 distinct abilities means
+ * "+1 to each" (the ASI feat's two modes); a 1-element array (Grappler) means
+ * "+1 to that ability". */
+export function formatAbilityIncreases(abilities: Ability[]): string {
+  if (abilities.length === 2 && abilities[0] === abilities[1]) {
+    return `+2 ${abilities[0]}`
+  }
+  return abilities.map((a) => `+1 ${a}`).join(', ')
+}
+
 /** Spells known/prepared belong to a single class (SRD: determined per class
  * individually). The wizard's top-level `data.spells` is always the
  * original level-1 class's picks; every other class's spells arrive via
@@ -68,6 +79,38 @@ export function spellsForClass(data: CharacterData, classId: string): { cantrips
       ...ownLevelUps.flatMap((lu) => lu.spellsAdded?.prepared ?? []),
     ],
   }
+}
+
+/** Every feat chosen at a level-up ASI opportunity (#20) — `levelUps[].featChoice`
+ * is correctly persisted today but nothing renders it, so a chosen feat (or
+ * the ability increases picked instead of one) silently vanished from the
+ * saved sheet. Absent-safe like every other `levelUps` reader; resolves the
+ * feat by id through the merged bundled+imported array (`getFeat`), falling
+ * back to the raw id if a pack was later removed or hand-edited. */
+export interface LevelUpFeat {
+  classId: string
+  level: number
+  featId: string
+  featName: string
+  benefit?: string
+  abilityIncreases?: Ability[]
+}
+
+export function levelUpFeats(data: CharacterData): LevelUpFeat[] {
+  return (data.levelUps ?? [])
+    .filter((lu) => lu.featChoice)
+    .map((lu) => {
+      const featId = lu.featChoice!.featId
+      const feat = getFeat(featId)
+      return {
+        classId: lu.classId ?? data.classes[0]?.classId ?? '',
+        level: lu.level,
+        featId,
+        featName: feat?.name ?? featId,
+        benefit: feat?.benefit,
+        abilityIncreases: lu.featChoice!.abilityIncreases,
+      }
+    })
 }
 
 /** Every named feature a class grants from level 1 up to (and including) its
@@ -181,6 +224,7 @@ export function CharacterSheetPage() {
   // separate pool — never folded together (see engine/computeSheet.ts).
   const combinedSlots = combinedSpellSlots(data.classes)
   const pactSlots = warlockPactMagic(data.classes)
+  const levelUpFeatChoices = levelUpFeats(data)
   const totalCantripsKnown = data.classes.reduce(
     (sum, c) => sum + (spellSlots(c.classId, c.level)?.cantrips ?? 0),
     0,
@@ -375,6 +419,28 @@ export function CharacterSheetPage() {
             })}
           </div>
         </section>
+
+        {/* Level-Up Feats & Ability Increases (#20) — levelUps[].featChoice was
+            already correctly persisted, just never rendered anywhere. */}
+        {levelUpFeatChoices.length > 0 && (
+          <section>
+            <h2 className="pixel-title text-base mb-2">Feats &amp; Ability Increases</h2>
+            <div className="flex flex-col gap-2">
+              {levelUpFeatChoices.map((lu) => (
+                <div key={`${lu.classId}-${lu.level}`} className="text-sm">
+                  <span className="font-bold">
+                    {getClass(lu.classId)?.name ?? lu.classId} {lu.level}:
+                  </span>{' '}
+                  {lu.featName}
+                  {lu.abilityIncreases && lu.abilityIncreases.length > 0 && (
+                    <> ({formatAbilityIncreases(lu.abilityIncreases)})</>
+                  )}
+                  {lu.benefit && <span className="block italic">{renderEmphasis(lu.benefit)}</span>}
+                </div>
+              ))}
+            </div>
+          </section>
+        )}
 
         {/* Spellcasting */}
         {(combinedSlots || pactSlots) && (
