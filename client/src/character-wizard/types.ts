@@ -102,6 +102,13 @@ export interface CharacterData {
   // Separate from class spellcasting `spells` above — populated only when
   // the background grants such a feat. See docs/planning/issue-2-plan.md.
   originFeatSpells?: { cantrips: string[]; prepared: string[] }
+  // Spellcasting ability for a background-granted Magic Initiate (#17) —
+  // either freely chosen (SRD's Int/Wis/Cha choice) or auto-derived from the
+  // fixed class in the background's feat text (PHB-2024's "ability matches
+  // the chosen class" variant). Optional/absent-safe: absent on every
+  // character saved before this was implemented, and on any character whose
+  // background doesn't grant a spell-casting Origin feat at all.
+  backgroundFeatSpellAbility?: string
   // Spell list and spellcasting ability chosen for a Versatile-species-granted
   // spell-casting Origin feat (e.g. Magic Initiate), plus the spells picked
   // from that list. Independent of originFeatSpells above (which is
