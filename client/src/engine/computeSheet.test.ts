@@ -5,6 +5,8 @@ import {
   armorClass,
   diffQuickStats,
   featuresForLevel,
+  fightingStyleAlternateCantripClass,
+  fightingStyleUnlockLevel,
   finalAbilityScores,
   hitPoints,
   isAsiLevel,
@@ -18,6 +20,8 @@ import {
   spellSlots,
   subclassUnlockLevel,
   unarmoredDefenseVoidedByShield,
+  weaponMasteryCount,
+  weaponMasteryPool,
 } from './computeSheet'
 import type { CharacterData } from '../character-wizard/types'
 
@@ -597,5 +601,100 @@ describe('quickStats / diffQuickStats (#19)', () => {
     }
     expect(() => quickStats(data)).not.toThrow()
     expect(quickStats(data)).toEqual({})
+  })
+})
+
+describe('Fighting Style & Weapon Mastery (#3)', () => {
+  describe('fightingStyleUnlockLevel', () => {
+    it('Fighter unlocks at level 1', () => {
+      expect(fightingStyleUnlockLevel('fighter')).toBe(1)
+    })
+
+    it('Paladin and Ranger unlock at level 2', () => {
+      expect(fightingStyleUnlockLevel('paladin')).toBe(2)
+      expect(fightingStyleUnlockLevel('ranger')).toBe(2)
+    })
+
+    it('Barbarian and Rogue have no Fighting Style at all', () => {
+      expect(fightingStyleUnlockLevel('barbarian')).toBeUndefined()
+      expect(fightingStyleUnlockLevel('rogue')).toBeUndefined()
+    })
+
+    it('throws for an unknown class id', () => {
+      expect(() => fightingStyleUnlockLevel('not-a-real-class')).toThrow()
+    })
+  })
+
+  describe('fightingStyleAlternateCantripClass', () => {
+    it('Paladin\'s Blessed Warrior alternate learns Cleric cantrips', () => {
+      expect(fightingStyleAlternateCantripClass('paladin')).toBe('cleric')
+    })
+
+    it('Ranger\'s Druidic Warrior alternate learns Druid cantrips', () => {
+      expect(fightingStyleAlternateCantripClass('ranger')).toBe('druid')
+    })
+
+    it('Fighter has no alternate (a real Fighting Style feat only)', () => {
+      expect(fightingStyleAlternateCantripClass('fighter')).toBeUndefined()
+    })
+
+    it('a class with no Fighting Style at all has no alternate either', () => {
+      expect(fightingStyleAlternateCantripClass('barbarian')).toBeUndefined()
+    })
+  })
+
+  describe('weaponMasteryCount', () => {
+    it('Fighter scales via the featureTable column: 3 at level 1, 4 at level 4, 5 at level 10', () => {
+      expect(weaponMasteryCount('fighter', 1)).toBe(3)
+      expect(weaponMasteryCount('fighter', 4)).toBe(4)
+      expect(weaponMasteryCount('fighter', 10)).toBe(5)
+    })
+
+    it('Barbarian scales via the featureTable column: 2 at level 1, 3 at level 4, 4 at level 10', () => {
+      expect(weaponMasteryCount('barbarian', 1)).toBe(2)
+      expect(weaponMasteryCount('barbarian', 4)).toBe(3)
+      expect(weaponMasteryCount('barbarian', 10)).toBe(4)
+    })
+
+    it('Paladin/Ranger/Rogue are a flat 2 parsed from prose, not a table column, at every level', () => {
+      expect(weaponMasteryCount('paladin', 1)).toBe(2)
+      expect(weaponMasteryCount('paladin', 10)).toBe(2)
+      expect(weaponMasteryCount('ranger', 1)).toBe(2)
+      expect(weaponMasteryCount('rogue', 1)).toBe(2)
+    })
+
+    it('a class with no Weapon Mastery feature at all returns undefined', () => {
+      expect(weaponMasteryCount('wizard', 1)).toBeUndefined()
+    })
+
+    it('throws for an unknown class id', () => {
+      expect(() => weaponMasteryCount('not-a-real-class', 1)).toThrow()
+    })
+  })
+
+  describe('weaponMasteryPool', () => {
+    it('Fighter (Simple and Martial weapons, no Melee restriction) gets every weapon, melee and ranged', () => {
+      const pool = weaponMasteryPool('fighter').map((w) => w.id)
+      expect(pool).toContain('longsword') // martial melee
+      expect(pool).toContain('longbow') // martial ranged
+      expect(pool).toContain('club') // simple melee
+    })
+
+    it('Barbarian (Simple or Martial Melee weapons only) excludes every ranged weapon', () => {
+      const pool = weaponMasteryPool('barbarian')
+      expect(pool.map((w) => w.id)).toContain('greataxe')
+      expect(pool.every((w) => /Melee Weapons/.test(w.description ?? ''))).toBe(true)
+    })
+
+    it("Rogue (Simple weapons, plus Martial weapons with Finesse or Light) excludes non-Finesse/Light martial weapons like Longsword", () => {
+      const pool = weaponMasteryPool('rogue').map((w) => w.id)
+      expect(pool).toContain('shortsword') // martial, Finesse+Light
+      expect(pool).toContain('dagger') // simple
+      expect(pool).not.toContain('longsword') // martial, neither Finesse nor Light
+    })
+
+    it('throws for an unknown class id', () => {
+      expect(() => weaponMasteryPool('not-a-real-class')).toThrow()
+    })
   })
 })
