@@ -301,7 +301,7 @@ export function CharacterSheetPage() {
               const mod = abilityModifier(score)
               return (
                 <div key={ability} className="pixel-panel !p-2 text-center">
-                  <p className="pixel-label text-[0.55rem]">{ability}</p>
+                  <p className="pixel-label text-[0.55rem] break-words">{ability}</p>
                   <p className="text-lg font-bold">
                     {score} ({formatModifier(mod)})
                   </p>
@@ -333,7 +333,7 @@ export function CharacterSheetPage() {
                     proficient ? 'outline outline-2 outline-[var(--color-arcane)]' : ''
                   }`}
                 >
-                  <p className="pixel-label text-[0.55rem]">{ability}</p>
+                  <p className="pixel-label text-[0.55rem] break-words">{ability}</p>
                   <p>{formatModifier(mod)}</p>
                 </div>
               )
