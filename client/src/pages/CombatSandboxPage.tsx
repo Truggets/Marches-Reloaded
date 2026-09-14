@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
-import { getClass, getSpell, listMonsters } from '@data'
+import { getClass, getFeat, getSpell, listMonsters } from '@data'
 import type { EquipmentEntry, MonsterEntry } from '@data/schema'
 import type { CharacterData } from '../character-wizard/types'
 import { spellsForClass } from './CharacterSheetPage'
@@ -9,6 +9,7 @@ import {
   abilityModifier,
   armorClass,
   finalAbilityScores,
+  fightingStyleRangedAttackBonus,
   hitPointsMulticlass,
   proficiencyBonusMulticlass,
   spellcastingInfo,
@@ -216,8 +217,38 @@ export function CombatSandboxPage() {
   // with (see plan doc finding 8 — this constraint is what makes skipping a
   // real weaponProficiencies parse valid for v0).
   const weaponProficiencyBonus = proficiencyBonusMulticlass(data.classes)
+  // Archery Fighting Style: +N to attack rolls with Ranged weapons — checked
+  // across every class (a multiclass character can hold a Fighting Style
+  // feat on any class, same reasoning as armorClass()'s Defense handling).
+  // Undefined (no bonus) unless some class actually has Archery.
+  let archeryBonus = 0
+  for (const c of data.classes) {
+    if (!c.fightingStyleFeatId) continue
+    const feat = getFeat(c.fightingStyleFeatId)
+    if (!feat) continue
+    const bonus = fightingStyleRangedAttackBonus(feat)
+    if (bonus !== undefined) {
+      archeryBonus = bonus
+      break
+    }
+  }
+  const isRangedWeapon = (weapon: EquipmentEntry) => /Ranged Weapons/.test(weapon.description ?? '')
   function weaponAttackBonus(weapon: EquipmentEntry): number {
-    return weaponProficiencyBonus + abilityForWeapon(weapon, strengthMod, dexterityMod)
+    const rangedBonus = isRangedWeapon(weapon) ? archeryBonus : 0
+    return weaponProficiencyBonus + abilityForWeapon(weapon, strengthMod, dexterityMod) + rangedBonus
+  }
+  // Graze mastery: on a miss, deal the attack's ability modifier as damage
+  // anyway — the one mastery property that's pure math with no extra combat
+  // state (advantage, conditions, a second target) the sandbox doesn't
+  // track. Applies only when the weapon's mastery is unlocked for SOME class
+  // (weaponMasteryIds), matching the "must have a feature that unlocks the
+  // property" SRD rule — not just because the weapon happens to have Graze
+  // printed on it.
+  function grazeDamageIfUnlocked(weapon: EquipmentEntry): number | undefined {
+    if (weapon.mastery !== 'Graze') return undefined
+    const unlocked = data.classes.some((c) => c.weaponMasteryIds?.includes(weapon.id))
+    if (!unlocked) return undefined
+    return abilityForWeapon(weapon, strengthMod, dexterityMod)
   }
   // SRD 5.2: a weapon attack adds the same ability modifier to damage that
   // it uses for the attack roll (unlike cantrip damage, which doesn't scale
@@ -287,13 +318,27 @@ export function CombatSandboxPage() {
       const bonus = weaponAttackBonus(selectedWeapon)
       const weaponForResolve = { ...selectedWeapon, damage: weaponDamageString(selectedWeapon) }
       const result = resolveWeaponAttack(weaponForResolve, bonus, selectedMonster.monster.ac)
+      let grazeDmg: number | undefined
       if (result.hit && result.damage) {
         const dmg = estimateDamage(result.damage, result.critical)
         setBattleMonsters((prev) =>
           prev.map((m) => (m.key === selectedMonster.key ? { ...m, currentHp: Math.max(0, m.currentHp - dmg) } : m)),
         )
+      } else if (!result.hit) {
+        grazeDmg = grazeDamageIfUnlocked(selectedWeapon)
+        if (grazeDmg !== undefined) {
+          const applied = Math.max(0, grazeDmg)
+          setBattleMonsters((prev) =>
+            prev.map((m) => (m.key === selectedMonster.key ? { ...m, currentHp: Math.max(0, m.currentHp - applied) } : m)),
+          )
+        }
       }
-      const masteryNote = selectedWeapon.mastery ? ` (Mastery: ${selectedWeapon.mastery} — not applied)` : ''
+      const masteryNote =
+        grazeDmg !== undefined
+          ? ` (Mastery: Graze — ${Math.max(0, grazeDmg)} damage on the miss)`
+          : selectedWeapon.mastery
+            ? ` (Mastery: ${selectedWeapon.mastery} — not applied)`
+            : ''
       pushLog({
         side: 'player',
         label: `${selectedWeapon.name} vs ${selectedMonster.monster.name}${masteryNote}`,

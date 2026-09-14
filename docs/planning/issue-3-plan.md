@@ -108,3 +108,49 @@ Unknown-class-id throws for all four.
 session (prior local dev-server verification for #19 hit a native-`<select>` automation
 limitation unrelated to this change) — recommend a manual smoke pass through Fighter,
 Barbarian, and Rogue creation before relying on this without further testing.
+
+## Tier B (mechanical effects) — scope check before building
+
+Before writing any Tier B code, re-checked what the combat sandbox (`engine/sandbox.ts`,
+`pages/CombatSandboxPage.tsx`) actually has state for. It resolves one attack roll at a time
+against one target's flat AC — no advantage/disadvantage, no conditions, no cross-turn state,
+no second target, no positions/speed. That constrains what's honestly buildable right now far
+more than the feat/mastery rules text itself does (the rules text for all 4 Fighting Style
+feats and all 8 Weapon Mastery properties was already fully vendored in
+`data/build/source/equipment.md`'s "Mastery Properties" section — no missing data, contrary to
+a stray code comment elsewhere implying a `weapon_mastery_properties` reference file existed;
+it was never built, and wasn't needed since 8 short property descriptions are read directly
+from source rather than round-tripped through a new parse/build step).
+
+**Built this pass (B1 — pure math, no missing state):**
+- **Defense** (+1 AC while wearing body armor): folded into `armorClass()` in
+  `computeSheet.ts`, checked across every class in `classes[]` (not just `classes[0]`) so a
+  multiclass Fighting Style on a later class still applies — same reasoning as the existing
+  Unarmored Defense multiclass check just above it. Gated on `bodyArmorProperties` being set
+  (a Shield alone doesn't count, matching the SRD's "Light, Medium, or Heavy armor" wording).
+  This is sheet-visible for every character with the feat, not sandbox-only.
+- **Archery** (+2 on Ranged weapon attacks): folded into `CombatSandboxPage.tsx`'s
+  `weaponAttackBonus`, gated on the weapon's `description` containing "Ranged Weapons" (same
+  test `weaponMasteryPool`'s `isMelee` already uses for Melee).
+- **Graze** (on a miss, still deal your ability modifier as damage): the one Weapon Mastery
+  property that's pure math with no extra state — wired into `CombatSandboxPage.tsx`'s
+  `handleAttack`, gated on the weapon's id actually being unlocked in some class's
+  `weaponMasteryIds` (not just "this weapon happens to print Graze"), matching the SRD's "usable
+  only by a character who has a feature that unlocks the property" text.
+- Both new prose parsers (`fightingStyleAcBonus`, `fightingStyleRangedAttackBonus` in
+  `computeSheet.ts`) match the feat's own `benefit` text, not its `id` — an imported pack could
+  namespace Fighting Style feat ids differently, and this file's established convention is to
+  trust prose over ids for exactly that reason.
+
+**Deferred (B2 — needs state the sandbox doesn't have yet, filed as issue #28):**
+- **Push, Sap, Slow, Topple, Vex** — each needs condition/cross-turn tracking (next-attack
+  advantage/disadvantage, a Prone condition, a Speed value, a position) the sandbox has none of.
+- **Cleave** — needs a second target; the sandbox resolves one attacker vs. one selected target.
+- **Nick** — pure action-economy (an extra attack normally costing a Bonus Action instead
+  folds into the Attack action); the sandbox has no action-economy model at all, and
+  Two-Weapon Fighting itself was already out of scope for the same reason (M11 planning).
+- **Great Weapon Fighting** (reroll 1s/2s as 3s) and **Two-Weapon Fighting** (off-hand damage
+  modifier) — both left for the same follow-up: GWF needs per-die roll results (the sandbox's
+  damage is a single averaged/estimated number, not individual dice) and can't reliably tell
+  "Versatile held two-handed" from current data; TWF needs the off-hand/bonus-action extra
+  attack the sandbox doesn't model.

@@ -1,7 +1,7 @@
 // Pure rules-engine functions: turn a saved CharacterData's stored *choices*
 // back into computed numbers for the character sheet view (M4). No React,
 // no side effects — every function here is a plain, testable transform.
-import { getClass, getSpecies, listEquipment } from '@data'
+import { getClass, getFeat, getSpecies, listEquipment } from '@data'
 import { parseEquipmentOptions } from '../character-wizard/parsing'
 import { ABILITIES } from '../character-wizard/types'
 import type { Ability, CharacterClassEntry, CharacterData } from '../character-wizard/types'
@@ -215,6 +215,24 @@ export function armorClass(
 
   if (hasShield) {
     base += 2
+  }
+
+  // Defense Fighting Style: +1 AC while wearing body armor (Light/Medium/
+  // Heavy) — checked against EVERY class, not just classes[0], since a
+  // multiclass character can hold a Fighting Style feat on a later class
+  // (e.g. Fighter 1/Paladin 2, Defense picked at the Paladin level). A
+  // Shield alone doesn't count; the SRD text is explicit about body armor.
+  if (bodyArmorProperties) {
+    for (const c of classes) {
+      if (!c.fightingStyleFeatId) continue
+      const feat = getFeat(c.fightingStyleFeatId)
+      if (!feat) continue
+      const bonus = fightingStyleAcBonus(feat)
+      if (bonus !== undefined) {
+        base += bonus
+        break // SRD: you can only have one Fighting Style feat active benefit of this kind; no stacking multiple Defense picks
+      }
+    }
   }
 
   return base
@@ -784,6 +802,38 @@ export function fightingStyleAlternateCantripClass(classId: string): string | un
   if (!feature) return undefined
   const match = feature.description.match(/learn two (\w+) cantrips/i)
   return match ? match[1].toLowerCase() : undefined
+}
+
+/** +N Armor Class bonus granted by the Defense Fighting Style feat while
+ * wearing body armor, parsed from the feat's own `benefit` text rather than
+ * matched by id — an imported pack could namespace Fighting Style feat ids
+ * differently (e.g. "phb-2024:defense"), and this file's convention is to
+ * trust prose over ids for exactly that reason. Undefined for a feat that
+ * isn't Defense (or any feat with no such bonus). Throws if the phrase
+ * matches but the captured number doesn't parse — should be unreachable on
+ * real data, matching this file's parsed-from-prose convention. */
+export function fightingStyleAcBonus(feat: { id: string; benefit: string }): number | undefined {
+  const match = feat.benefit.match(/\+(\d+) bonus to Armor Class/i)
+  if (!match) return undefined
+  const n = parseInt(match[1], 10)
+  if (Number.isNaN(n)) {
+    throw new Error(`Unparseable Fighting Style AC bonus for feat ${feat.id}: "${feat.benefit}"`)
+  }
+  return n
+}
+
+/** +N attack-roll bonus granted by the Archery Fighting Style feat for
+ * Ranged weapon attacks, parsed from the feat's own `benefit` text (same
+ * prose-over-id reasoning as `fightingStyleAcBonus`). Undefined for a feat
+ * that isn't Archery. */
+export function fightingStyleRangedAttackBonus(feat: { id: string; benefit: string }): number | undefined {
+  const match = feat.benefit.match(/\+(\d+) bonus to attack rolls you make with Ranged weapons/i)
+  if (!match) return undefined
+  const n = parseInt(match[1], 10)
+  if (Number.isNaN(n)) {
+    throw new Error(`Unparseable Fighting Style ranged attack bonus for feat ${feat.id}: "${feat.benefit}"`)
+  }
+  return n
 }
 
 const WEAPON_MASTERY_COUNT_WORDS: Record<string, number> = { one: 1, two: 2, three: 3, four: 4, five: 5 }

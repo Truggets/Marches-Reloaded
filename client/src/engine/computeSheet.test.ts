@@ -5,7 +5,9 @@ import {
   armorClass,
   diffQuickStats,
   featuresForLevel,
+  fightingStyleAcBonus,
   fightingStyleAlternateCantripClass,
+  fightingStyleRangedAttackBonus,
   fightingStyleUnlockLevel,
   finalAbilityScores,
   hitPoints,
@@ -695,6 +697,66 @@ describe('Fighting Style & Weapon Mastery (#3)', () => {
 
     it('throws for an unknown class id', () => {
       expect(() => weaponMasteryPool('not-a-real-class')).toThrow()
+    })
+  })
+})
+
+describe('Fighting Style mechanical effects (#3 Tier B)', () => {
+  describe('fightingStyleAcBonus', () => {
+    it('Defense grants +1', () => {
+      const feat = getFeat('defense')!
+      expect(fightingStyleAcBonus(feat)).toBe(1)
+    })
+
+    it('Archery grants no AC bonus', () => {
+      const feat = getFeat('archery')!
+      expect(fightingStyleAcBonus(feat)).toBeUndefined()
+    })
+  })
+
+  describe('fightingStyleRangedAttackBonus', () => {
+    it('Archery grants +2', () => {
+      const feat = getFeat('archery')!
+      expect(fightingStyleRangedAttackBonus(feat)).toBe(2)
+    })
+
+    it('Defense grants no ranged attack bonus', () => {
+      const feat = getFeat('defense')!
+      expect(fightingStyleRangedAttackBonus(feat)).toBeUndefined()
+    })
+  })
+
+  describe('armorClass folds in Defense', () => {
+    const scores = { Strength: 16, Dexterity: 12, Constitution: 13, Intelligence: 10, Wisdom: 10, Charisma: 8 }
+
+    it('Fighter with Chain Mail (16) + Defense -> 17', () => {
+      const fighter = [{ classId: 'fighter', level: 1, fightingStyleFeatId: 'defense' }]
+      expect(armorClass(fighter, 'A', scores)).toBe(17)
+    })
+
+    it('Fighter with Chain Mail but no Fighting Style chosen yet -> 16 (no bonus)', () => {
+      const fighter = [{ classId: 'fighter', level: 1 }]
+      expect(armorClass(fighter, 'A', scores)).toBe(16)
+    })
+
+    it('unarmored Fighter with Defense gets no bonus (armor-only per SRD text)', () => {
+      // Fighter's startingEquipment option C is a pure-GP choice with no
+      // armor, so bodyArmorProperties stays unset -> unarmored 10 + Dex path.
+      const fighter = [{ classId: 'fighter', level: 1, fightingStyleFeatId: 'defense' }]
+      const dexMod = abilityModifier(scores.Dexterity)
+      expect(armorClass(fighter, 'C', scores)).toBe(10 + dexMod)
+    })
+
+    it('multiclass: Defense on classes[1] still applies (checked across every class, not just [0])', () => {
+      // classes[0] (Fighter) supplies the equipment/armor per armorClass's
+      // own rule and has NO Fighting Style chosen; classes[1] (Paladin) is
+      // the one holding Defense. Confirms the bonus isn't silently dropped
+      // just because it lives on a later class.
+      const classes = [
+        { classId: 'fighter', level: 1 },
+        { classId: 'paladin', level: 2, fightingStyleFeatId: 'defense' },
+      ]
+      expect(armorClass(classes, 'A', scores)).toBe(17)
     })
   })
 })
