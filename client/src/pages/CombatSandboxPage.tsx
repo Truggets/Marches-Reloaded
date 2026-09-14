@@ -7,8 +7,10 @@ import { spellsForClass } from './CharacterSheetPage'
 import { renderEmphasis } from '../EmphasisText'
 import {
   abilityModifier,
+  archeryAttackBonus,
   armorClass,
   finalAbilityScores,
+  grazeDamage,
   hitPointsMulticlass,
   proficiencyBonusMulticlass,
   spellcastingInfo,
@@ -217,7 +219,11 @@ export function CombatSandboxPage() {
   // real weaponProficiencies parse valid for v0).
   const weaponProficiencyBonus = proficiencyBonusMulticlass(data.classes)
   function weaponAttackBonus(weapon: EquipmentEntry): number {
-    return weaponProficiencyBonus + abilityForWeapon(weapon, strengthMod, dexterityMod)
+    const rangedBonus = archeryAttackBonus(weapon, data.classes) ?? 0
+    return weaponProficiencyBonus + abilityForWeapon(weapon, strengthMod, dexterityMod) + rangedBonus
+  }
+  function grazeDamageIfUnlocked(weapon: EquipmentEntry): number | undefined {
+    return grazeDamage(weapon, data.classes, abilityForWeapon(weapon, strengthMod, dexterityMod))
   }
   // SRD 5.2: a weapon attack adds the same ability modifier to damage that
   // it uses for the attack roll (unlike cantrip damage, which doesn't scale
@@ -287,13 +293,27 @@ export function CombatSandboxPage() {
       const bonus = weaponAttackBonus(selectedWeapon)
       const weaponForResolve = { ...selectedWeapon, damage: weaponDamageString(selectedWeapon) }
       const result = resolveWeaponAttack(weaponForResolve, bonus, selectedMonster.monster.ac)
+      let grazeDmg: number | undefined
       if (result.hit && result.damage) {
         const dmg = estimateDamage(result.damage, result.critical)
         setBattleMonsters((prev) =>
           prev.map((m) => (m.key === selectedMonster.key ? { ...m, currentHp: Math.max(0, m.currentHp - dmg) } : m)),
         )
+      } else if (!result.hit) {
+        grazeDmg = grazeDamageIfUnlocked(selectedWeapon)
+        if (grazeDmg !== undefined) {
+          const applied = Math.max(0, grazeDmg)
+          setBattleMonsters((prev) =>
+            prev.map((m) => (m.key === selectedMonster.key ? { ...m, currentHp: Math.max(0, m.currentHp - applied) } : m)),
+          )
+        }
       }
-      const masteryNote = selectedWeapon.mastery ? ` (Mastery: ${selectedWeapon.mastery} — not applied)` : ''
+      const masteryNote =
+        grazeDmg !== undefined
+          ? ` (Mastery: Graze — ${Math.max(0, grazeDmg)} damage on the miss)`
+          : selectedWeapon.mastery
+            ? ` (Mastery: ${selectedWeapon.mastery} — not applied)`
+            : ''
       pushLog({
         side: 'player',
         label: `${selectedWeapon.name} vs ${selectedMonster.monster.name}${masteryNote}`,

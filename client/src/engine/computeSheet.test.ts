@@ -1,15 +1,20 @@
 import { describe, expect, it } from 'vitest'
-import { getBackground, getClass, getFeat, listClasses } from '@data'
+import { getBackground, getClass, getEquipment, getFeat, listClasses } from '@data'
 import {
   abilityModifier,
+  archeryAttackBonus,
   armorClass,
   diffQuickStats,
   featuresForLevel,
+  fightingStyleAcBonus,
   fightingStyleAlternateCantripClass,
+  fightingStyleRangedAttackBonus,
   fightingStyleUnlockLevel,
   finalAbilityScores,
+  grazeDamage,
   hitPoints,
   isAsiLevel,
+  isRangedWeapon,
   parseFeatAbilityIncrease,
   parseFeatSpellAbilities,
   parseFeatSpellLists,
@@ -695,6 +700,131 @@ describe('Fighting Style & Weapon Mastery (#3)', () => {
 
     it('throws for an unknown class id', () => {
       expect(() => weaponMasteryPool('not-a-real-class')).toThrow()
+    })
+  })
+})
+
+describe('Fighting Style mechanical effects (#3 Tier B)', () => {
+  describe('fightingStyleAcBonus', () => {
+    it('Defense grants +1', () => {
+      const feat = getFeat('defense')!
+      expect(fightingStyleAcBonus(feat)).toBe(1)
+    })
+
+    it('Archery grants no AC bonus', () => {
+      const feat = getFeat('archery')!
+      expect(fightingStyleAcBonus(feat)).toBeUndefined()
+    })
+  })
+
+  describe('fightingStyleRangedAttackBonus', () => {
+    it('Archery grants +2', () => {
+      const feat = getFeat('archery')!
+      expect(fightingStyleRangedAttackBonus(feat)).toBe(2)
+    })
+
+    it('Defense grants no ranged attack bonus', () => {
+      const feat = getFeat('defense')!
+      expect(fightingStyleRangedAttackBonus(feat)).toBeUndefined()
+    })
+  })
+
+  describe('armorClass folds in Defense', () => {
+    const scores = { Strength: 16, Dexterity: 12, Constitution: 13, Intelligence: 10, Wisdom: 10, Charisma: 8 }
+
+    it('Fighter with Chain Mail (16) + Defense -> 17', () => {
+      const fighter = [{ classId: 'fighter', level: 1, fightingStyleFeatId: 'defense' }]
+      expect(armorClass(fighter, 'A', scores)).toBe(17)
+    })
+
+    it('Fighter with Chain Mail but no Fighting Style chosen yet -> 16 (no bonus)', () => {
+      const fighter = [{ classId: 'fighter', level: 1 }]
+      expect(armorClass(fighter, 'A', scores)).toBe(16)
+    })
+
+    it('unarmored Fighter with Defense gets no bonus (armor-only per SRD text)', () => {
+      // Fighter's startingEquipment option C is a pure-GP choice with no
+      // armor, so bodyArmorProperties stays unset -> unarmored 10 + Dex path.
+      const fighter = [{ classId: 'fighter', level: 1, fightingStyleFeatId: 'defense' }]
+      const dexMod = abilityModifier(scores.Dexterity)
+      expect(armorClass(fighter, 'C', scores)).toBe(10 + dexMod)
+    })
+
+    it('multiclass: Defense on classes[1] still applies (checked across every class, not just [0])', () => {
+      // classes[0] (Fighter) supplies the equipment/armor per armorClass's
+      // own rule and has NO Fighting Style chosen; classes[1] (Paladin) is
+      // the one holding Defense. Confirms the bonus isn't silently dropped
+      // just because it lives on a later class.
+      const classes = [
+        { classId: 'fighter', level: 1 },
+        { classId: 'paladin', level: 2, fightingStyleFeatId: 'defense' },
+      ]
+      expect(armorClass(classes, 'A', scores)).toBe(17)
+    })
+  })
+
+  describe('isRangedWeapon', () => {
+    it('Longbow is ranged', () => {
+      expect(isRangedWeapon(getEquipment('longbow')!)).toBe(true)
+    })
+
+    it('Greatsword (melee) is not ranged', () => {
+      expect(isRangedWeapon(getEquipment('greatsword')!)).toBe(false)
+    })
+
+    it('Javelin (Thrown melee weapon) is not ranged', () => {
+      expect(isRangedWeapon(getEquipment('javelin')!)).toBe(false)
+    })
+  })
+
+  describe('archeryAttackBonus', () => {
+    it('applies to a Ranged weapon when the class has Archery', () => {
+      const classes = [{ classId: 'fighter', level: 1, fightingStyleFeatId: 'archery' }]
+      expect(archeryAttackBonus(getEquipment('longbow')!, classes)).toBe(2)
+    })
+
+    it('does not apply to a Melee weapon even with Archery chosen', () => {
+      const classes = [{ classId: 'fighter', level: 1, fightingStyleFeatId: 'archery' }]
+      expect(archeryAttackBonus(getEquipment('greatsword')!, classes)).toBeUndefined()
+    })
+
+    it('does not apply when no class has Archery', () => {
+      const classes = [{ classId: 'fighter', level: 1, fightingStyleFeatId: 'defense' }]
+      expect(archeryAttackBonus(getEquipment('longbow')!, classes)).toBeUndefined()
+    })
+
+    it('multiclass: Archery on classes[1] still applies', () => {
+      const classes = [
+        { classId: 'wizard', level: 1 },
+        { classId: 'fighter', level: 1, fightingStyleFeatId: 'archery' },
+      ]
+      expect(archeryAttackBonus(getEquipment('longbow')!, classes)).toBe(2)
+    })
+  })
+
+  describe('grazeDamage', () => {
+    it('applies when the weapon is unlocked via weaponMasteryIds', () => {
+      const classes = [{ classId: 'fighter', level: 1, weaponMasteryIds: ['greatsword'] }]
+      expect(grazeDamage(getEquipment('greatsword')!, classes, 3)).toBe(3)
+    })
+
+    it('does not apply when the weapon is not in any class\'s weaponMasteryIds', () => {
+      const classes = [{ classId: 'fighter', level: 1, weaponMasteryIds: ['longsword'] }]
+      expect(grazeDamage(getEquipment('greatsword')!, classes, 3)).toBeUndefined()
+    })
+
+    it('does not apply to a weapon whose mastery is not Graze', () => {
+      // Longbow's mastery is Slow, not Graze.
+      const classes = [{ classId: 'ranger', level: 1, weaponMasteryIds: ['longbow'] }]
+      expect(grazeDamage(getEquipment('longbow')!, classes, 3)).toBeUndefined()
+    })
+
+    it('multiclass: unlocked via classes[1] still applies', () => {
+      const classes = [
+        { classId: 'wizard', level: 1 },
+        { classId: 'fighter', level: 1, weaponMasteryIds: ['greatsword'] },
+      ]
+      expect(grazeDamage(getEquipment('greatsword')!, classes, 3)).toBe(3)
     })
   })
 })
