@@ -1,15 +1,16 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
-import { getClass, getFeat, getSpell, listMonsters } from '@data'
+import { getClass, getSpell, listMonsters } from '@data'
 import type { EquipmentEntry, MonsterEntry } from '@data/schema'
 import type { CharacterData } from '../character-wizard/types'
 import { spellsForClass } from './CharacterSheetPage'
 import { renderEmphasis } from '../EmphasisText'
 import {
   abilityModifier,
+  archeryAttackBonus,
   armorClass,
   finalAbilityScores,
-  fightingStyleRangedAttackBonus,
+  grazeDamage,
   hitPointsMulticlass,
   proficiencyBonusMulticlass,
   spellcastingInfo,
@@ -217,38 +218,12 @@ export function CombatSandboxPage() {
   // with (see plan doc finding 8 — this constraint is what makes skipping a
   // real weaponProficiencies parse valid for v0).
   const weaponProficiencyBonus = proficiencyBonusMulticlass(data.classes)
-  // Archery Fighting Style: +N to attack rolls with Ranged weapons — checked
-  // across every class (a multiclass character can hold a Fighting Style
-  // feat on any class, same reasoning as armorClass()'s Defense handling).
-  // Undefined (no bonus) unless some class actually has Archery.
-  let archeryBonus = 0
-  for (const c of data.classes) {
-    if (!c.fightingStyleFeatId) continue
-    const feat = getFeat(c.fightingStyleFeatId)
-    if (!feat) continue
-    const bonus = fightingStyleRangedAttackBonus(feat)
-    if (bonus !== undefined) {
-      archeryBonus = bonus
-      break
-    }
-  }
-  const isRangedWeapon = (weapon: EquipmentEntry) => /Ranged Weapons/.test(weapon.description ?? '')
   function weaponAttackBonus(weapon: EquipmentEntry): number {
-    const rangedBonus = isRangedWeapon(weapon) ? archeryBonus : 0
+    const rangedBonus = archeryAttackBonus(weapon, data.classes) ?? 0
     return weaponProficiencyBonus + abilityForWeapon(weapon, strengthMod, dexterityMod) + rangedBonus
   }
-  // Graze mastery: on a miss, deal the attack's ability modifier as damage
-  // anyway — the one mastery property that's pure math with no extra combat
-  // state (advantage, conditions, a second target) the sandbox doesn't
-  // track. Applies only when the weapon's mastery is unlocked for SOME class
-  // (weaponMasteryIds), matching the "must have a feature that unlocks the
-  // property" SRD rule — not just because the weapon happens to have Graze
-  // printed on it.
   function grazeDamageIfUnlocked(weapon: EquipmentEntry): number | undefined {
-    if (weapon.mastery !== 'Graze') return undefined
-    const unlocked = data.classes.some((c) => c.weaponMasteryIds?.includes(weapon.id))
-    if (!unlocked) return undefined
-    return abilityForWeapon(weapon, strengthMod, dexterityMod)
+    return grazeDamage(weapon, data.classes, abilityForWeapon(weapon, strengthMod, dexterityMod))
   }
   // SRD 5.2: a weapon attack adds the same ability modifier to damage that
   // it uses for the attack roll (unlike cantrip damage, which doesn't scale

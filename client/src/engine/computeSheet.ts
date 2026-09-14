@@ -836,6 +836,53 @@ export function fightingStyleRangedAttackBonus(feat: { id: string; benefit: stri
   return n
 }
 
+/** True for a weapon whose `description` marks it "Simple/Martial Ranged
+ * Weapons" — same style of check as `weaponMasteryPool`'s `isMelee` helper
+ * below, verified against all 38 bundled SRD weapons with zero exceptions
+ * (every ranged weapon's description starts "Simple Ranged Weapons." or
+ * "Martial Ranged Weapons."). A Thrown melee weapon like Javelin is
+ * correctly excluded — it's a Melee weapon usable at range, not a Ranged
+ * weapon, and Archery's own SRD text is specific to "Ranged weapons". */
+export function isRangedWeapon(weapon: EquipmentEntry): boolean {
+  return /Ranged Weapons/.test(weapon.description ?? '')
+}
+
+/** The Archery Fighting Style's +N attack-roll bonus for a given weapon —
+ * `undefined` (no bonus) unless the weapon is Ranged AND some class in
+ * `classes` actually has Archery (checked across every class, not just
+ * `classes[0]`, matching `armorClass()`'s Defense handling — a multiclass
+ * character can hold a Fighting Style feat on any class). */
+export function archeryAttackBonus(weapon: EquipmentEntry, classes: CharacterClassEntry[]): number | undefined {
+  if (!isRangedWeapon(weapon)) return undefined
+  for (const c of classes) {
+    if (!c.fightingStyleFeatId) continue
+    const feat = getFeat(c.fightingStyleFeatId)
+    if (!feat) continue
+    const bonus = fightingStyleRangedAttackBonus(feat)
+    if (bonus !== undefined) return bonus
+  }
+  return undefined
+}
+
+/** Graze weapon mastery: the ability modifier a miss with `weapon` still
+ * deals as damage, or `undefined` if Graze doesn't apply — either the
+ * weapon's mastery property isn't Graze, or (the actual SRD gate: "usable
+ * only by a character who has a feature that unlocks the property") no
+ * class's `weaponMasteryIds` actually includes this weapon's id. Having
+ * `mastery: 'Graze'` printed on the weapon entry is not, by itself,
+ * sufficient — a character who hasn't picked this weapon for their Weapon
+ * Mastery can't use its property yet. */
+export function grazeDamage(
+  weapon: EquipmentEntry,
+  classes: CharacterClassEntry[],
+  abilityMod: number,
+): number | undefined {
+  if (weapon.mastery !== 'Graze') return undefined
+  const unlocked = classes.some((c) => c.weaponMasteryIds?.includes(weapon.id))
+  if (!unlocked) return undefined
+  return abilityMod
+}
+
 const WEAPON_MASTERY_COUNT_WORDS: Record<string, number> = { one: 1, two: 2, three: 3, four: 4, five: 5 }
 
 /** How many kinds of weapons' mastery properties a class can use at the
