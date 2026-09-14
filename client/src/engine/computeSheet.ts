@@ -952,3 +952,36 @@ export function weaponMasteryPool(classId: string): EquipmentEntry[] {
 
   return pool
 }
+
+export interface MartialChoiceOwed {
+  fightingStyle: boolean
+  masteryCount: number
+}
+
+/** #26: what Fighting Style / Weapon Mastery choices a class entry currently
+ * owes, for a class/level already reached with the field(s) left unset —
+ * shared by LevelUpPage.tsx (live, mid-session), MartialChoicePage.tsx (the
+ * retroactive picker), and CharacterSheetPage.tsx (the "owed" banner/link),
+ * so the same diff logic isn't independently reimplemented three times (the
+ * PR #29 review flagged exactly that pattern for Archery/Graze — logic
+ * living only as page-component duplication, untestable at the engine
+ * level). `fightingStyle` is true iff the class has a Fighting Style feature
+ * whose unlock level has been reached and NEITHER the feat nor the
+ * cantrip-alternative has been recorded yet. `masteryCount` is diff-based
+ * (current level's cap minus however many are already picked) rather than a
+ * level check, so it stays correct however many growth levels a level-up
+ * session crosses in one sitting, or however many were skipped before this
+ * character was ever checked. */
+export function martialChoiceOwed(classEntry: CharacterClassEntry): MartialChoiceOwed {
+  const fightingStyleLevel = fightingStyleUnlockLevel(classEntry.classId)
+  const fightingStyle =
+    fightingStyleLevel !== undefined &&
+    classEntry.level >= fightingStyleLevel &&
+    !classEntry.fightingStyleFeatId &&
+    !(classEntry.fightingStyleAlternateCantrips && classEntry.fightingStyleAlternateCantrips.length > 0)
+
+  const masteryCap = weaponMasteryCount(classEntry.classId, classEntry.level)
+  const masteryCount = masteryCap !== undefined ? Math.max(0, masteryCap - (classEntry.weaponMasteryIds?.length ?? 0)) : 0
+
+  return { fightingStyle, masteryCount }
+}

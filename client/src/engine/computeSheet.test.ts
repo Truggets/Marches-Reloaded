@@ -15,6 +15,7 @@ import {
   hitPoints,
   isAsiLevel,
   isRangedWeapon,
+  martialChoiceOwed,
   parseFeatAbilityIncrease,
   parseFeatSpellAbilities,
   parseFeatSpellLists,
@@ -826,5 +827,69 @@ describe('Fighting Style mechanical effects (#3 Tier B)', () => {
       ]
       expect(grazeDamage(getEquipment('greatsword')!, classes, 3)).toBe(3)
     })
+  })
+})
+
+describe('martialChoiceOwed (#26: level-up wiring for #3)', () => {
+  it('Paladin below the Fighting Style unlock level (2) owes nothing for it, but owes its 2 Weapon Mastery picks at level 1', () => {
+    const owed = martialChoiceOwed({ classId: 'paladin', level: 1 })
+    expect(owed.fightingStyle).toBe(false)
+    expect(owed.masteryCount).toBe(2)
+  })
+
+  it('Paladin at level 2 with nothing chosen owes both Fighting Style and its Weapon Mastery picks', () => {
+    const owed = martialChoiceOwed({ classId: 'paladin', level: 2 })
+    expect(owed.fightingStyle).toBe(true)
+    expect(owed.masteryCount).toBe(2)
+  })
+
+  it('Paladin at level 2 with a Fighting Style feat already chosen owes nothing for it', () => {
+    const owed = martialChoiceOwed({
+      classId: 'paladin',
+      level: 2,
+      fightingStyleFeatId: 'defense',
+      weaponMasteryIds: ['longsword', 'mace'],
+    })
+    expect(owed.fightingStyle).toBe(false)
+    expect(owed.masteryCount).toBe(0)
+  })
+
+  it('Paladin at level 2 with the cantrip alternative already chosen owes nothing for Fighting Style', () => {
+    const owed = martialChoiceOwed({
+      classId: 'paladin',
+      level: 2,
+      fightingStyleAlternateCantrips: ['guidance', 'sacred-flame'],
+    })
+    expect(owed.fightingStyle).toBe(false)
+  })
+
+  it('Fighter at level 1 with 3 mastery picks owes nothing yet; at level 4 owes 1 more', () => {
+    const atLevel1 = martialChoiceOwed({
+      classId: 'fighter',
+      level: 1,
+      fightingStyleFeatId: 'defense',
+      weaponMasteryIds: ['longsword', 'greatsword', 'shortsword'],
+    })
+    expect(atLevel1.masteryCount).toBe(0)
+
+    const atLevel4 = martialChoiceOwed({
+      classId: 'fighter',
+      level: 4,
+      fightingStyleFeatId: 'defense',
+      weaponMasteryIds: ['longsword', 'greatsword', 'shortsword'],
+    })
+    expect(atLevel4.masteryCount).toBe(1)
+  })
+
+  it('Barbarian (no Fighting Style at all) never owes one, but does owe Weapon Mastery growth', () => {
+    const owed = martialChoiceOwed({ classId: 'barbarian', level: 4, weaponMasteryIds: ['greataxe', 'handaxe'] })
+    expect(owed.fightingStyle).toBe(false)
+    expect(owed.masteryCount).toBe(1)
+  })
+
+  it('Wizard (no martial features at all) owes nothing', () => {
+    const owed = martialChoiceOwed({ classId: 'wizard', level: 10 })
+    expect(owed.fightingStyle).toBe(false)
+    expect(owed.masteryCount).toBe(0)
   })
 })

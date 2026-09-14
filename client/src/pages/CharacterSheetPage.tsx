@@ -15,6 +15,7 @@ import {
   featuresForLevel,
   finalAbilityScores,
   hitPointsMulticlass,
+  martialChoiceOwed,
   proficiencyBonusMulticlass,
   skillBonus,
   spellcastingInfo,
@@ -388,19 +389,36 @@ export function CharacterSheetPage() {
                 !validSubclassId &&
                 c.level >= subclassUnlockLevel(c.classId) &&
                 user?.id === character.ownerId
-              if (features.length === 0 && !needsSubclassChoice) return null
+              // #26: same "owed but never prompted" gap as subclass above —
+              // a class already past its Fighting Style unlock level (or a
+              // Weapon Mastery growth level) before #26 shipped, or leveled
+              // up via a session that advanced a DIFFERENT class, never got
+              // asked.
+              const owed = martialChoiceOwed(c)
+              const needsMartialChoice = (owed.fightingStyle || owed.masteryCount > 0) && user?.id === character.ownerId
+              if (features.length === 0 && !needsSubclassChoice && !needsMartialChoice) return null
               return (
                 <div key={c.classId}>
                   <div className="flex items-center justify-between">
                     <p className="pixel-label">{getClass(c.classId)?.name ?? c.classId}</p>
-                    {needsSubclassChoice && (
-                      <Link
-                        to={`/characters/${id}/choose-subclass/${c.classId}`}
-                        className="pixel-btn pixel-btn-secondary !py-1 !px-2 text-xs"
-                      >
-                        Choose Subclass
-                      </Link>
-                    )}
+                    <div className="flex gap-2">
+                      {needsSubclassChoice && (
+                        <Link
+                          to={`/characters/${id}/choose-subclass/${c.classId}`}
+                          className="pixel-btn pixel-btn-secondary !py-1 !px-2 text-xs"
+                        >
+                          Choose Subclass
+                        </Link>
+                      )}
+                      {needsMartialChoice && (
+                        <Link
+                          to={`/characters/${id}/choose-martial/${c.classId}`}
+                          className="pixel-btn pixel-btn-secondary !py-1 !px-2 text-xs"
+                        >
+                          Martial Training
+                        </Link>
+                      )}
+                    </div>
                   </div>
                   {c.subclassId && !hasKnownSubclass && (
                     <p className="text-sm italic text-[var(--color-danger)]">
