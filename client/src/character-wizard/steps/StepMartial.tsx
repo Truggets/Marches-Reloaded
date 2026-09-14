@@ -145,6 +145,15 @@ export function StepMartial({
               checked={usingAlternate}
               onChange={() => {
                 setUsingAlternate(true)
+                // '' clears the feat picker's selection (ContentPicker takes
+                // a plain string, not string|null) — every consumer must
+                // treat this as "unset," the same as `null`, not as a real
+                // feat id. PR #30 review caught a real bug where two
+                // consumers gated "done" on `!== null` (true for '') while
+                // committing on truthiness (false for '') — Continue/Confirm
+                // enabled with nothing saved. Fixed at both call sites to use
+                // truthiness consistently; flagging here so a future new
+                // consumer doesn't reintroduce the same mismatch.
                 onChangeFightingStyleFeatId('')
               }}
             />

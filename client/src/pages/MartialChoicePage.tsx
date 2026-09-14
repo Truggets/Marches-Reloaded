@@ -111,8 +111,9 @@ export function MartialChoicePage() {
   }
 
   const combinedWeaponMasteryIds = [...existingWeaponMasteryIds, ...newWeaponMasteryIds]
+  // Truthy, not `!== null` — see StepMartial.tsx's '' sentinel note (PR #30 review).
   const fightingStyleDone =
-    !fightingStyleOwed || fightingStyleFeatId !== null || fightingStyleAlternateCantrips.length === 2
+    !fightingStyleOwed || !!fightingStyleFeatId || fightingStyleAlternateCantrips.length === 2
   const masteryDone = masteryOwed <= 0 || newWeaponMasteryIds.length >= masteryOwed
   const canConfirm = fightingStyleDone && masteryDone
 

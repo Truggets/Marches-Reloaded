@@ -879,6 +879,28 @@ describe('martialChoiceOwed (#26: level-up wiring for #3)', () => {
       weaponMasteryIds: ['longsword', 'greatsword', 'shortsword'],
     })
     expect(atLevel4.masteryCount).toBe(1)
+
+    // Second growth level (4 -> 5 -> 10): 4 already picked, level 10 caps at
+    // 5 -> 1 more owed. Not just "no more growth after the first bump."
+    const atLevel10 = martialChoiceOwed({
+      classId: 'fighter',
+      level: 10,
+      fightingStyleFeatId: 'defense',
+      weaponMasteryIds: ['longsword', 'greatsword', 'shortsword', 'shortbow'],
+    })
+    expect(atLevel10.masteryCount).toBe(1)
+  })
+
+  it('multiclass: a Fighter/Paladin pair can each independently owe something at once', () => {
+    // Fighter (classes[0]) already has its level-1 picks; Paladin (classes[1])
+    // just reached level 2 with nothing chosen yet. martialChoiceOwed takes a
+    // single class entry, so each class in a multiclass build is checked
+    // independently by its caller (CharacterSheetPage.tsx does this per-class
+    // in its map, not just for classes[0]).
+    const fighterEntry = { classId: 'fighter', level: 3, fightingStyleFeatId: 'defense', weaponMasteryIds: ['longsword', 'greatsword', 'shortsword'] }
+    const paladinEntry = { classId: 'paladin', level: 2, weaponMasteryIds: ['mace', 'javelin'] }
+    expect(martialChoiceOwed(fighterEntry)).toEqual({ fightingStyle: false, masteryCount: 0 })
+    expect(martialChoiceOwed(paladinEntry)).toEqual({ fightingStyle: true, masteryCount: 0 })
   })
 
   it('Barbarian (no Fighting Style at all) never owes one, but does owe Weapon Mastery growth', () => {

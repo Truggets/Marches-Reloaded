@@ -494,7 +494,13 @@ export function LevelUpPage() {
   const subclassStepDone = !needsSubclassChoice || chosenSubclassId !== null
   const fightingStyleStepDone =
     !needsFightingStyleChoice ||
-    chosenFightingStyleFeatId !== null ||
+    // Truthy, not `!== null` — StepMartial signals "switched to the cantrip
+    // alternative" by emitting '' for the feat id (see StepMartial.tsx), and
+    // '' !== null is true, which let Continue/Confirm enable with nothing
+    // actually committed (caught by PR #30 review). The commit logic below
+    // already used truthiness (`else if (chosenFightingStyleFeatId)`) — this
+    // now matches it.
+    !!chosenFightingStyleFeatId ||
     chosenFightingStyleAlternateCantrips.length === 2
   const masteryStepDone = !needsMasteryChoice || chosenMasteryPicks.length >= owed.masteryCount
   const canContinue = featStepDone && spellStepDone && subclassStepDone && fightingStyleStepDone && masteryStepDone
