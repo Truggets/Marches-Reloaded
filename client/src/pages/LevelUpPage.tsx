@@ -3,6 +3,7 @@ import { Link, useNavigate, useParams } from 'react-router-dom'
 import { getClass, getSpellsByClass, listClasses, listFeats } from '@data'
 import { renderEmphasis } from '../EmphasisText'
 import { ContentPicker } from '../ContentPicker'
+import { StepMartial } from '../character-wizard/steps/StepMartial'
 import type { Ability, CharacterClassEntry, CharacterData, LevelUpEntry } from '../character-wizard/types'
 import { ABILITIES } from '../character-wizard/types'
 import {
@@ -12,6 +13,7 @@ import {
   finalAbilityScores,
   hitPointsMulticlass,
   isAsiLevel,
+  martialChoiceOwed,
   parseFeatAbilityIncrease,
   spellSlots,
   subclassUnlockLevel,
@@ -94,6 +96,28 @@ export function LevelUpPage() {
   // Phase 3 save even though later levels reset chosenSubclassId).
   const [committedSubclassId, setCommittedSubclassId] = useState<string | null>(null)
 
+  // #26: same per-level in-progress / committed split as the subclass state
+  // above, for the Fighting Style + Weapon Mastery choices a martial class
+  // can owe at a level-up (Fighter/Barbarian's Weapon Mastery grows again at
+  // 4/10; Paladin/Ranger's Fighting Style unlocks at 2). Fighting Style is
+  // chosen at most once per class ever, same shape as subclass — a single
+  // committed value that survives resetLevelChoices. Weapon Mastery can grow
+  // at MULTIPLE levels within one stepper session (e.g. leveling Fighter
+  // 1->10 in one sitting crosses both growth levels), so its committed value
+  // is a running array, appended to (not replaced) each time a mastery step
+  // is confirmed.
+  const [chosenFightingStyleFeatId, setChosenFightingStyleFeatId] = useState<string | null>(null)
+  const [chosenFightingStyleAlternateCantrips, setChosenFightingStyleAlternateCantrips] = useState<string[]>([])
+  const [committedFightingStyleFeatId, setCommittedFightingStyleFeatId] = useState<string | null>(null)
+  const [committedFightingStyleAlternateCantrips, setCommittedFightingStyleAlternateCantrips] = useState<
+    string[] | null
+  >(null)
+  // This level's NEW weapon-mastery picks only (not the running total —
+  // that's `runningWeaponMasteryIds`, derived below from `existingEntry` +
+  // `committedWeaponMasteryIds`).
+  const [chosenMasteryPicks, setChosenMasteryPicks] = useState<string[]>([])
+  const [committedWeaponMasteryIds, setCommittedWeaponMasteryIds] = useState<string[] | null>(null)
+
   const load = useCallback(async () => {
     setError(null)
     try {
@@ -121,6 +145,9 @@ export function LevelUpPage() {
     setCantripPicks([])
     setPreparedPicks([])
     setChosenSubclassId(null)
+    setChosenFightingStyleFeatId(null)
+    setChosenFightingStyleAlternateCantrips([])
+    setChosenMasteryPicks([])
   }
 
   if (error) {
@@ -273,9 +300,18 @@ export function LevelUpPage() {
 
   // ---- Phase 3: stepper finished, show confirm screen ----
   if (targetLevel !== null && currentLevel > targetLevel) {
-    const finalClasses = withClassLevel(data.classes, classId, targetLevel).map((c) =>
-      c.classId === classId && committedSubclassId ? { ...c, subclassId: committedSubclassId } : c,
-    )
+    const finalClasses = withClassLevel(data.classes, classId, targetLevel).map((c) => {
+      if (c.classId !== classId) return c
+      return {
+        ...c,
+        ...(committedSubclassId ? { subclassId: committedSubclassId } : {}),
+        ...(committedFightingStyleFeatId ? { fightingStyleFeatId: committedFightingStyleFeatId } : {}),
+        ...(committedFightingStyleAlternateCantrips
+          ? { fightingStyleAlternateCantrips: committedFightingStyleAlternateCantrips }
+          : {}),
+        ...(committedWeaponMasteryIds ? { weaponMasteryIds: committedWeaponMasteryIds } : {}),
+      }
+    })
     const finalHp = hitPointsMulticlass(finalClasses, conModSoFar, data.speciesId)
     return (
       <PageShell id={id}>
@@ -342,6 +378,25 @@ export function LevelUpPage() {
     classHasSubclasses && !existingEntry?.subclassId && level === subclassUnlockLevel(classId)
   const activeSubclassId = chosenSubclassId ?? existingEntry?.subclassId ?? committedSubclassId ?? undefined
   const features = featuresForLevel(classId, level, activeSubclassId)
+
+  // #26: martial (Fighting Style / Weapon Mastery) choices this level might
+  // owe, via the shared `martialChoiceOwed` helper (same one MartialChoicePage
+  // and CharacterSheetPage use) — built from a synthetic "as of just before
+  // this level's picks" class entry: `level` is the STEPPER's current level
+  // (not `existingEntry.level`, which lags behind mid-session), and the
+  // fighting-style/mastery fields fold in whatever this session has already
+  // committed at an earlier level, not just what's saved on the server.
+  const runningWeaponMasteryIds = committedWeaponMasteryIds ?? existingEntry?.weaponMasteryIds ?? []
+  const owed = martialChoiceOwed({
+    classId,
+    level,
+    fightingStyleFeatId: committedFightingStyleFeatId ?? existingEntry?.fightingStyleFeatId,
+    fightingStyleAlternateCantrips: committedFightingStyleAlternateCantrips ?? existingEntry?.fightingStyleAlternateCantrips,
+    weaponMasteryIds: runningWeaponMasteryIds,
+  })
+  const needsFightingStyleChoice = owed.fightingStyle
+  const needsMasteryChoice = owed.masteryCount > 0
+  const needsMartialChoice = needsFightingStyleChoice || needsMasteryChoice
   const asiLevel = isAsiLevel(classId, level)
   const selectedFeat = selectedFeatId ? listFeats(['General', 'General / Racial']).find((f) => f.id === selectedFeatId) : undefined
   // #24: derived from the selected feat's own prose (any pack), not two
@@ -437,7 +492,18 @@ export function LevelUpPage() {
     (cantripDelta <= 0 || cantripPicks.length === cantripDelta) &&
     (preparedDelta <= 0 || preparedPicks.length === preparedDelta)
   const subclassStepDone = !needsSubclassChoice || chosenSubclassId !== null
-  const canContinue = featStepDone && spellStepDone && subclassStepDone
+  const fightingStyleStepDone =
+    !needsFightingStyleChoice ||
+    // Truthy, not `!== null` — StepMartial signals "switched to the cantrip
+    // alternative" by emitting '' for the feat id (see StepMartial.tsx), and
+    // '' !== null is true, which let Continue/Confirm enable with nothing
+    // actually committed (caught by PR #30 review). The commit logic below
+    // already used truthiness (`else if (chosenFightingStyleFeatId)`) — this
+    // now matches it.
+    !!chosenFightingStyleFeatId ||
+    chosenFightingStyleAlternateCantrips.length === 2
+  const masteryStepDone = !needsMasteryChoice || chosenMasteryPicks.length >= owed.masteryCount
+  const canContinue = featStepDone && spellStepDone && subclassStepDone && fightingStyleStepDone && masteryStepDone
 
   function toggleCantripPick(spellId: string) {
     if (cantripPicks.includes(spellId)) {
@@ -458,6 +524,16 @@ export function LevelUpPage() {
   function confirmLevel() {
     if (needsSubclassChoice && chosenSubclassId) {
       setCommittedSubclassId(chosenSubclassId)
+    }
+    if (needsFightingStyleChoice) {
+      if (chosenFightingStyleAlternateCantrips.length === 2) {
+        setCommittedFightingStyleAlternateCantrips(chosenFightingStyleAlternateCantrips)
+      } else if (chosenFightingStyleFeatId) {
+        setCommittedFightingStyleFeatId(chosenFightingStyleFeatId)
+      }
+    }
+    if (chosenMasteryPicks.length > 0) {
+      setCommittedWeaponMasteryIds([...runningWeaponMasteryIds, ...chosenMasteryPicks])
     }
     // "Before this level" snapshot: for a brand-new class's very first level,
     // that's simply the character's classes as they stand today (no entry
@@ -550,6 +626,23 @@ export function LevelUpPage() {
             })}
           </div>
         </section>
+      )}
+
+      {needsMartialChoice && (
+        <StepMartial
+          classId={classId}
+          level={level}
+          fightingStyleFeatId={chosenFightingStyleFeatId}
+          onChangeFightingStyleFeatId={setChosenFightingStyleFeatId}
+          fightingStyleAlternateCantrips={chosenFightingStyleAlternateCantrips}
+          onChangeFightingStyleAlternateCantrips={setChosenFightingStyleAlternateCantrips}
+          weaponMasteryIds={[...runningWeaponMasteryIds, ...chosenMasteryPicks]}
+          onChangeWeaponMasteryIds={(ids) =>
+            setChosenMasteryPicks(ids.filter((wid) => !runningWeaponMasteryIds.includes(wid)))
+          }
+          lockedWeaponMasteryIds={runningWeaponMasteryIds}
+          hideFightingStyle={!needsFightingStyleChoice}
+        />
       )}
 
       {asiLevel && (
