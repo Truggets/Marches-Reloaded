@@ -1,6 +1,11 @@
 import { describe, expect, it } from 'vitest'
 import { getClass, getEquipment } from '@data'
-import { abilityForWeapon, parseWeaponsFromEquipmentChoice, weaponDamageWithAbilityModifier } from './equipmentAttack'
+import {
+  abilityForWeapon,
+  cleaveDamageString,
+  parseWeaponsFromEquipmentChoice,
+  weaponDamageWithAbilityModifier,
+} from './equipmentAttack'
 
 describe('parseWeaponsFromEquipmentChoice', () => {
   it("resolves Fighter's option A to Greatsword, Flail, and Javelin", () => {
@@ -168,5 +173,19 @@ describe('weaponDamageWithAbilityModifier', () => {
 
   it('falls back to the original string for an unexpected shape', () => {
     expect(weaponDamageWithAbilityModifier('not a damage string', 3)).toBe('not a damage string')
+  })
+})
+
+describe('cleaveDamageString (#28)', () => {
+  it('leaves the damage string untouched for a positive modifier', () => {
+    expect(cleaveDamageString('2d6 Slashing', 3)).toBe('2d6 Slashing')
+  })
+
+  it('leaves the damage string untouched for a zero modifier', () => {
+    expect(cleaveDamageString('2d6 Slashing', 0)).toBe('2d6 Slashing')
+  })
+
+  it('subtracts a negative modifier, unlike a normal weapon attack', () => {
+    expect(cleaveDamageString('2d6 Slashing', -1)).toBe('2d6 - 1 Slashing')
   })
 })

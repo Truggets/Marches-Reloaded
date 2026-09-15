@@ -12,10 +12,12 @@ import {
   fightingStyleUnlockLevel,
   finalAbilityScores,
   grazeDamage,
+  hasGreatWeaponFighting,
   hitPoints,
   isAsiLevel,
   isMasteryUnlocked,
   isRangedWeapon,
+  isTwoHandedWeapon,
   martialChoiceOwed,
   parseFeatAbilityIncrease,
   parseFeatSpellAbilities,
@@ -801,6 +803,45 @@ describe('Fighting Style mechanical effects (#3 Tier B)', () => {
         { classId: 'fighter', level: 1, fightingStyleFeatId: 'archery' },
       ]
       expect(archeryAttackBonus(getEquipment('longbow')!, classes)).toBe(2)
+    })
+  })
+
+  describe('hasGreatWeaponFighting (#28)', () => {
+    it('true when a class has the Great Weapon Fighting feat', () => {
+      const classes = [{ classId: 'fighter', level: 1, fightingStyleFeatId: 'great-weapon-fighting' }]
+      expect(hasGreatWeaponFighting(classes)).toBe(true)
+    })
+
+    it('false with a different Fighting Style feat', () => {
+      const classes = [{ classId: 'fighter', level: 1, fightingStyleFeatId: 'archery' }]
+      expect(hasGreatWeaponFighting(classes)).toBe(false)
+    })
+
+    it('false with no Fighting Style chosen at all', () => {
+      const classes = [{ classId: 'fighter', level: 1 }]
+      expect(hasGreatWeaponFighting(classes)).toBe(false)
+    })
+
+    it('multiclass: on classes[1] still applies', () => {
+      const classes = [
+        { classId: 'wizard', level: 1 },
+        { classId: 'fighter', level: 1, fightingStyleFeatId: 'great-weapon-fighting' },
+      ]
+      expect(hasGreatWeaponFighting(classes)).toBe(true)
+    })
+  })
+
+  describe('isTwoHandedWeapon (#28)', () => {
+    it('true for Greatsword', () => {
+      expect(isTwoHandedWeapon(getEquipment('greatsword')!)).toBe(true)
+    })
+
+    it('false for Longsword (Versatile, not Two-Handed)', () => {
+      expect(isTwoHandedWeapon(getEquipment('longsword')!)).toBe(false)
+    })
+
+    it('false for Shortsword (Finesse, Light)', () => {
+      expect(isTwoHandedWeapon(getEquipment('shortsword')!)).toBe(false)
     })
   })
 

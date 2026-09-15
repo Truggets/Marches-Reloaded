@@ -11,18 +11,22 @@ import {
   armorClass,
   finalAbilityScores,
   grazeDamage,
+  hasGreatWeaponFighting,
   hitPointsMulticlass,
   isMasteryUnlocked,
+  isTwoHandedWeapon,
   proficiencyBonusMulticlass,
   spellcastingInfo,
 } from '../engine/computeSheet'
 import {
   abilityForWeapon,
+  cleaveDamageString,
   parseWeaponsFromEquipmentChoice,
   weaponDamageWithAbilityModifier,
 } from '../engine/equipmentAttack'
 import {
   attackModeAgainst,
+  gwfAdjustedDieAverage,
   isPushable,
   monsterAttackMode,
   resolveMonsterAttack,
@@ -105,15 +109,19 @@ interface BattleMonster {
  * average); it exists only to keep the tracked HP counter moving in the
  * sandbox, and the raw damage string is always shown alongside it in the log
  * so the player can hand-verify or track exact HP themselves. */
-// #28: which of the 8 Weapon Mastery properties actually affect combat math
-// in this sandbox — Graze (#3 Tier B) plus Vex/Sap/Topple/Push here. Nick,
-// Slow, and Cleave remain flavor-only (#28's own scope split: Nick needs an
-// action-economy model, Slow needs a per-turn Speed reduction the sandbox
-// doesn't track, Cleave needs multi-target resolution — deferred to a
-// follow-up, not silently dropped).
-const IMPLEMENTED_MASTERIES = new Set(['Graze', 'Vex', 'Sap', 'Topple', 'Push'])
+// #28 PR A+B: which of the 8 Weapon Mastery properties actually affect
+// combat math in this sandbox — Graze (#3 Tier B) plus Vex/Sap/Topple/Push
+// (PR A) and Cleave (PR B) here. Nick and Slow remain flavor-only: Nick
+// needs an action-economy model, Slow needs a per-turn Speed reduction the
+// sandbox doesn't track — deferred to a follow-up, not silently dropped.
+const IMPLEMENTED_MASTERIES = new Set(['Graze', 'Vex', 'Sap', 'Topple', 'Push', 'Cleave'])
 
-function estimateDamage(damage: string, critical: boolean): number {
+/** #28 PR B: `gwf` applies Great Weapon Fighting's die-reroll-as-3 effect to
+ * the dice-average calculation (via `gwfAdjustedDieAverage`) instead of the
+ * ordinary `(sides + 1) / 2` — the caller is responsible for deciding GWF
+ * applies (`hasGreatWeaponFighting(classes) && isTwoHandedWeapon(weapon)`),
+ * this function only does the math once that's already decided. */
+function estimateDamage(damage: string, critical: boolean, gwf = false): number {
   // e.g. "1d10 Fire", "1d6 + 2 Piercing", "2d8 Slashing"
   const diceMatch = damage.match(/(\d+)d(\d+)/)
   const flatMatch = damage.match(/([+-]\s*\d+)(?!d)/)
@@ -121,7 +129,7 @@ function estimateDamage(damage: string, critical: boolean): number {
   if (diceMatch) {
     const count = parseInt(diceMatch[1], 10) * (critical ? 2 : 1)
     const sides = parseInt(diceMatch[2], 10)
-    diceAverage = Math.floor((count * (sides + 1)) / 2)
+    diceAverage = gwf ? Math.floor(count * gwfAdjustedDieAverage(sides)) : Math.floor((count * (sides + 1)) / 2)
   }
   const flat = flatMatch ? parseInt(flatMatch[1].replace(/\s+/g, ''), 10) : 0
   return Math.max(0, diceAverage + flat)
@@ -347,6 +355,12 @@ export function CombatSandboxPage() {
         targetInMeleeRange: selectedMonster.inMeleeRange,
       })
       const bonus = weaponAttackBonus(selectedWeapon)
+      // #28 PR B: Great Weapon Fighting only cares about the Two-Handed
+      // property (see isTwoHandedWeapon's doc — Versatile-held-two-handed is
+      // deliberately excluded, unknowable from current data), applied to
+      // every damage-average calculation for THIS weapon this turn (the
+      // primary hit and, if Cleave also applies, the second attack below).
+      const gwfApplies = hasGreatWeaponFighting(data.classes) && isTwoHandedWeapon(selectedWeapon)
       const weaponForResolve = { ...selectedWeapon, damage: weaponDamageString(selectedWeapon) }
       const result = resolveWeaponAttack(weaponForResolve, bonus, selectedMonster.monster.ac, undefined, mode)
 
@@ -358,8 +372,9 @@ export function CombatSandboxPage() {
 
       let grazeDmg: number | undefined
       const masteryNotes: string[] = []
+      let cleaveLog: Omit<LogEntry, 'id'> | undefined
       if (result.hit && result.damage) {
-        const dmg = estimateDamage(result.damage, result.critical)
+        const dmg = estimateDamage(result.damage, result.critical, gwfApplies)
         patch.currentHp = Math.max(0, selectedMonster.currentHp - dmg)
 
         if (isMasteryUnlocked(selectedWeapon, data.classes)) {
@@ -384,6 +399,34 @@ export function CombatSandboxPage() {
             masteryNotes.push(
               `Topple — Con save DC ${dc}, rolled ${save.roll}: ${save.success ? 'succeeded' : 'failed, now Prone'}`,
             )
+          } else if (selectedWeapon.mastery === 'Cleave') {
+            // SRD: a second melee attack roll against another creature
+            // within reach of the first, damage WITHOUT the ability
+            // modifier unless that modifier is negative — "once per turn,"
+            // which this sandbox's one-click-per-attack model already
+            // matches (no separate action economy to abuse it against).
+            const secondTarget = battleMonsters.find((m) => m.key !== selectedMonster.key && m.currentHp > 0)
+            if (secondTarget) {
+              const cleaveAbilityMod = abilityForWeapon(selectedWeapon, strengthMod, dexterityMod)
+              const cleaveDamageStr = cleaveDamageString(selectedWeapon.damage ?? '', cleaveAbilityMod)
+              const cleaveResult = resolveWeaponAttack(
+                { ...selectedWeapon, damage: cleaveDamageStr },
+                bonus,
+                secondTarget.monster.ac,
+              )
+              if (cleaveResult.hit && cleaveResult.damage) {
+                const cleaveDmg = estimateDamage(cleaveResult.damage, cleaveResult.critical, gwfApplies)
+                updateMonster(secondTarget.key, { currentHp: Math.max(0, secondTarget.currentHp - cleaveDmg) })
+              }
+              cleaveLog = {
+                side: 'player',
+                label: `${selectedWeapon.name} Cleave vs ${secondTarget.monster.name}`,
+                result: cleaveResult,
+              }
+              masteryNotes.push(`Cleave — ${cleaveResult.hit ? `also hit ${secondTarget.monster.name}` : `missed ${secondTarget.monster.name}`}`)
+            } else {
+              masteryNotes.push('Cleave — no second target in the battle')
+            }
           }
         }
       } else if (!result.hit) {
@@ -409,6 +452,7 @@ export function CombatSandboxPage() {
         label: `${selectedWeapon.name} vs ${selectedMonster.monster.name}${modeNote}${masteryNote}`,
         result,
       })
+      if (cleaveLog) pushLog(cleaveLog)
     }
   }
 

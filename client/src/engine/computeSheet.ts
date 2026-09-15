@@ -847,6 +847,15 @@ export function isRangedWeapon(weapon: EquipmentEntry): boolean {
   return /Ranged Weapons/.test(weapon.description ?? '')
 }
 
+/** #28: true for a weapon with the Two-Handed property — the one Great
+ * Weapon Fighting gate the sandbox CAN check from data. Deliberately does
+ * NOT also cover Versatile weapons (SRD: GWF applies to a Versatile weapon
+ * only "held with two hands," a per-attack player choice this app has no
+ * field for) — see docs/planning/issue-28-plan.md's explicit exclusion. */
+export function isTwoHandedWeapon(weapon: EquipmentEntry): boolean {
+  return /Two-Handed/.test(weapon.properties ?? '')
+}
+
 /** The Archery Fighting Style's +N attack-roll bonus for a given weapon —
  * `undefined` (no bonus) unless the weapon is Ranged AND some class in
  * `classes` actually has Archery (checked across every class, not just
@@ -862,6 +871,33 @@ export function archeryAttackBonus(weapon: EquipmentEntry, classes: CharacterCla
     if (bonus !== undefined) return bonus
   }
   return undefined
+}
+
+/** #28: true for the Great Weapon Fighting Fighting Style feat, parsed from
+ * its own `benefit` prose (same prose-over-id reasoning as
+ * `fightingStyleAcBonus`/`fightingStyleRangedAttackBonus`) rather than a
+ * numeric bonus — GWF changes how damage dice are rolled, not a flat
+ * add. */
+export function fightingStyleHasGreatWeaponFighting(feat: { benefit: string }): boolean {
+  return /treat any 1 or 2 on a damage die as a 3/i.test(feat.benefit)
+}
+
+/** #28: whether ANY class in `classes` has the Great Weapon Fighting
+ * Fighting Style — checked across every class, not just `classes[0]`, same
+ * multiclass reasoning as `archeryAttackBonus`/`armorClass`'s Defense
+ * handling. Doesn't check the weapon itself (Two-Handed property, not
+ * Versatile-held-two-handed since that's unknowable from current data — see
+ * docs/planning/issue-28-plan.md) — that's the caller's job, same division
+ * of responsibility as `archeryAttackBonus` leaving melee/ranged to the
+ * caller via `isRangedWeapon`. */
+export function hasGreatWeaponFighting(classes: CharacterClassEntry[]): boolean {
+  for (const c of classes) {
+    if (!c.fightingStyleFeatId) continue
+    const feat = getFeat(c.fightingStyleFeatId)
+    if (!feat) continue
+    if (fightingStyleHasGreatWeaponFighting(feat)) return true
+  }
+  return false
 }
 
 /** #28: whether `weapon`'s mastery property is actually usable for `classes`
