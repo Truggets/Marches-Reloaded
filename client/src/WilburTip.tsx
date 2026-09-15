@@ -15,6 +15,21 @@ interface Props {
 // shown — truncate by default and let the player expand it.
 const PREVIEW_LENGTH = 120
 
+/** Truncates `text` to at most `maxLength` characters at the last word
+ * boundary at or before that cutoff (never mid-word — a raw
+ * `text.slice(0, maxLength)` produced things like "...pick one that fits how
+ * you wan…", cut off mid-"want", reported live by Truman). Falls back to a
+ * hard character cut only if there's no whitespace at all within the first
+ * `maxLength` characters (a single implausibly long "word") — better than
+ * returning nothing. */
+export function truncateAtWordBoundary(text: string, maxLength: number): string {
+  if (text.length <= maxLength) return text
+  const slice = text.slice(0, maxLength)
+  const lastSpace = slice.lastIndexOf(' ')
+  const cut = lastSpace > 0 ? slice.slice(0, lastSpace) : slice
+  return `${cut.trimEnd()}…`
+}
+
 /** Inline building-advice bubble shown during character creation. Deliberately
  * NOT the fixed-position WilburCompanion — that one is purely decorative and
  * hidden below 640px (it was overlapping real content), but this tip is real
@@ -23,7 +38,7 @@ const PREVIEW_LENGTH = 120
 export function WilburTip({ tip, stats }: Props) {
   const [expanded, setExpanded] = useState(false)
   const isLong = tip.length > PREVIEW_LENGTH
-  const displayText = expanded || !isLong ? tip : `${tip.slice(0, PREVIEW_LENGTH).trimEnd()}…`
+  const displayText = expanded || !isLong ? tip : truncateAtWordBoundary(tip, PREVIEW_LENGTH)
 
   return (
     <div className="pixel-panel !p-3 flex items-start gap-3">
