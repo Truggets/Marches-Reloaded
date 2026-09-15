@@ -137,6 +137,12 @@ export interface CharacterData {
   originFeatSpellList?: string
   originFeatSpellAbility?: string
   versatileFeatSpells?: { cantrips: string[]; prepared: string[] }
+  // #16: 2 Standard Languages chosen at creation, from `listLanguages()`
+  // filtered to `standard && !alwaysKnown` — every character also knows
+  // Common (not stored here; it's implied, same as every class's weapon/
+  // armor proficiencies aren't re-stated per character). Optional/absent-safe
+  // — absent on every character saved before this was implemented.
+  languages?: string[]
 }
 
 export const WIZARD_STEPS = [
@@ -144,6 +150,7 @@ export const WIZARD_STEPS = [
   'origin',
   'abilities',
   'skills',
+  'languages',
   'speciesBonus',
   'martial',
   'equipment',
