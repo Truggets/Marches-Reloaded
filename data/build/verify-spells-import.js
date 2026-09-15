@@ -68,6 +68,15 @@ console.log('\nFixture Mind Whip (leveled, concentration, higherLevels extracted
       s.description.includes('At Higher Levels'),
       false,
     )
+    // The fixture's "At Higher Levels" bullet is NOT last — a bullet after
+    // it ("Aftermath") must still survive into description, proving the
+    // extraction works by index (findIndex + two-sided slice), not just by
+    // "drop everything from the last bullet onward".
+    check(
+      'a later bullet (after the extracted one) still survives into description',
+      s.description.includes('Aftermath'),
+      true,
+    )
   }
 }
 

@@ -27,10 +27,11 @@ function slugify(name) {
 
 // The vault's `level` field combines level + school into one free-text
 // string in one of two shapes: "2nd-Level Enchantment" / "9th-Level
-// Evocation" (leveled) or "Evocation Cantrip (0 Level)" / "Necromancy
-// Cantrip" (cantrip, the "(0 Level)" suffix isn't always present — verified
-// against all 5 vault files, both forms occur). Returns null (not a throw)
-// so the caller can name the offending spell in its own error message.
+// Evocation" (leveled) or "Evocation Cantrip (0 Level)" (cantrip — the only
+// form the 5 real vault files actually use is with the "(0 Level)" suffix;
+// the bare "Necromancy Cantrip" form (no suffix) is matched defensively,
+// not because it's been observed). Returns null (not a throw) so the caller
+// can name the offending spell in its own error message.
 function parseLevelAndSchool(levelStr) {
   if (typeof levelStr !== 'string') return null
   const cantripMatch = levelStr.match(/^([A-Za-z]+) Cantrip(?:\s*\(0 Level\))?$/)

@@ -31,7 +31,8 @@
       "classes": ["Sorcerer", "Wizard"],
       "mechanics_first": [
         "**Save & Damage:** the target must make an Intelligence saving throw.",
-        "**At Higher Levels:** you can target one additional creature for each slot level above 2nd."
+        "**At Higher Levels:** you can target one additional creature for each slot level above 2nd.",
+        "**Aftermath:** the target is stunned until the end of its next turn."
       ],
       "lore_and_flavor": "Tasha designed this spell to scramble her enemies' focus."
     },
