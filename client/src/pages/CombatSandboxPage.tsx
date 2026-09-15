@@ -11,10 +11,9 @@ import {
   armorClass,
   finalAbilityScores,
   grazeDamage,
-  hasGreatWeaponFighting,
+  greatWeaponFightingApplies,
   hitPointsMulticlass,
   isMasteryUnlocked,
-  isTwoHandedWeapon,
   proficiencyBonusMulticlass,
   spellcastingInfo,
 } from '../engine/computeSheet'
@@ -119,8 +118,8 @@ const IMPLEMENTED_MASTERIES = new Set(['Graze', 'Vex', 'Sap', 'Topple', 'Push', 
 /** #28 PR B: `gwf` applies Great Weapon Fighting's die-reroll-as-3 effect to
  * the dice-average calculation (via `gwfAdjustedDieAverage`) instead of the
  * ordinary `(sides + 1) / 2` — the caller is responsible for deciding GWF
- * applies (`hasGreatWeaponFighting(classes) && isTwoHandedWeapon(weapon)`),
- * this function only does the math once that's already decided. */
+ * applies (`greatWeaponFightingApplies(weapon, classes)`), this function
+ * only does the math once that's already decided. */
 function estimateDamage(damage: string, critical: boolean, gwf = false): number {
   // e.g. "1d10 Fire", "1d6 + 2 Piercing", "2d8 Slashing"
   const diceMatch = damage.match(/(\d+)d(\d+)/)
@@ -355,12 +354,16 @@ export function CombatSandboxPage() {
         targetInMeleeRange: selectedMonster.inMeleeRange,
       })
       const bonus = weaponAttackBonus(selectedWeapon)
-      // #28 PR B: Great Weapon Fighting only cares about the Two-Handed
-      // property (see isTwoHandedWeapon's doc — Versatile-held-two-handed is
-      // deliberately excluded, unknowable from current data), applied to
-      // every damage-average calculation for THIS weapon this turn (the
-      // primary hit and, if Cleave also applies, the second attack below).
-      const gwfApplies = hasGreatWeaponFighting(data.classes) && isTwoHandedWeapon(selectedWeapon)
+      // #28 PR B: Great Weapon Fighting requires a MELEE weapon with the
+      // Two-Handed property (Versatile-held-two-handed is deliberately
+      // excluded, unknowable from current data) — greatWeaponFightingApplies
+      // composes all three checks so this can't accidentally drop the
+      // melee-only requirement (5 bundled Ranged weapons are also
+      // Two-Handed: crossbows, bows, musket — PR #34 review caught this).
+      // Applied to every damage-average calculation for THIS weapon this
+      // turn (the primary hit and, if Cleave also applies, the second
+      // attack below).
+      const gwfApplies = greatWeaponFightingApplies(selectedWeapon, data.classes)
       const weaponForResolve = { ...selectedWeapon, damage: weaponDamageString(selectedWeapon) }
       const result = resolveWeaponAttack(weaponForResolve, bonus, selectedMonster.monster.ac, undefined, mode)
 
@@ -405,27 +408,45 @@ export function CombatSandboxPage() {
             // modifier unless that modifier is negative — "once per turn,"
             // which this sandbox's one-click-per-attack model already
             // matches (no separate action economy to abuse it against).
-            const secondTarget = battleMonsters.find((m) => m.key !== selectedMonster.key && m.currentHp > 0)
+            // "Within reach" -> only a monster the position toggle says is
+            // in melee range is eligible (PR #34 review: an earlier version
+            // ignored the toggle/Vex/Prone entirely for the second target,
+            // inconsistent with how the primary attack already treats them).
+            const secondTarget = battleMonsters.find(
+              (m) => m.key !== selectedMonster.key && m.currentHp > 0 && m.inMeleeRange,
+            )
             if (secondTarget) {
+              const cleaveMode = attackModeAgainst({
+                vexed: secondTarget.vexed,
+                prone: secondTarget.prone,
+                targetInMeleeRange: true,
+              })
               const cleaveAbilityMod = abilityForWeapon(selectedWeapon, strengthMod, dexterityMod)
               const cleaveDamageStr = cleaveDamageString(selectedWeapon.damage ?? '', cleaveAbilityMod)
               const cleaveResult = resolveWeaponAttack(
                 { ...selectedWeapon, damage: cleaveDamageStr },
                 bonus,
                 secondTarget.monster.ac,
+                undefined,
+                cleaveMode,
               )
+              const secondPatch: Partial<BattleMonster> = {}
+              if (secondTarget.vexed) secondPatch.vexed = false
               if (cleaveResult.hit && cleaveResult.damage) {
                 const cleaveDmg = estimateDamage(cleaveResult.damage, cleaveResult.critical, gwfApplies)
-                updateMonster(secondTarget.key, { currentHp: Math.max(0, secondTarget.currentHp - cleaveDmg) })
+                secondPatch.currentHp = Math.max(0, secondTarget.currentHp - cleaveDmg)
               }
+              if (Object.keys(secondPatch).length > 0) updateMonster(secondTarget.key, secondPatch)
+              const cleaveModeNote =
+                cleaveMode !== 'normal' ? ` [${cleaveMode}${cleaveResult.rolls ? `: ${cleaveResult.rolls.join(', ')}` : ''}]` : ''
               cleaveLog = {
                 side: 'player',
-                label: `${selectedWeapon.name} Cleave vs ${secondTarget.monster.name}`,
+                label: `${selectedWeapon.name} Cleave vs ${secondTarget.monster.name}${cleaveModeNote}`,
                 result: cleaveResult,
               }
               masteryNotes.push(`Cleave — ${cleaveResult.hit ? `also hit ${secondTarget.monster.name}` : `missed ${secondTarget.monster.name}`}`)
             } else {
-              masteryNotes.push('Cleave — no second target in the battle')
+              masteryNotes.push('Cleave — no second target within reach')
             }
           }
         }

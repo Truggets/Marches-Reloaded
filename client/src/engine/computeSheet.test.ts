@@ -12,6 +12,7 @@ import {
   fightingStyleUnlockLevel,
   finalAbilityScores,
   grazeDamage,
+  greatWeaponFightingApplies,
   hasGreatWeaponFighting,
   hitPoints,
   isAsiLevel,
@@ -842,6 +843,30 @@ describe('Fighting Style mechanical effects (#3 Tier B)', () => {
 
     it('false for Shortsword (Finesse, Light)', () => {
       expect(isTwoHandedWeapon(getEquipment('shortsword')!)).toBe(false)
+    })
+  })
+
+  describe('greatWeaponFightingApplies (#28, PR #34 review)', () => {
+    it('applies to a Melee Two-Handed weapon when the class has GWF', () => {
+      const classes = [{ classId: 'fighter', level: 1, fightingStyleFeatId: 'great-weapon-fighting' }]
+      expect(greatWeaponFightingApplies(getEquipment('greatsword')!, classes)).toBe(true)
+    })
+
+    it('does NOT apply to a Ranged Two-Handed weapon even with GWF chosen', () => {
+      // Longbow is Two-Handed but Ranged — the bug PR #34's review caught:
+      // isTwoHandedWeapon alone isn't melee-specific like the feat text is.
+      const classes = [{ classId: 'fighter', level: 1, fightingStyleFeatId: 'great-weapon-fighting' }]
+      expect(greatWeaponFightingApplies(getEquipment('longbow')!, classes)).toBe(false)
+    })
+
+    it('does not apply to a Melee weapon without Two-Handed (Longsword is Versatile)', () => {
+      const classes = [{ classId: 'fighter', level: 1, fightingStyleFeatId: 'great-weapon-fighting' }]
+      expect(greatWeaponFightingApplies(getEquipment('longsword')!, classes)).toBe(false)
+    })
+
+    it('does not apply without the Fighting Style chosen', () => {
+      const classes = [{ classId: 'fighter', level: 1, fightingStyleFeatId: 'defense' }]
+      expect(greatWeaponFightingApplies(getEquipment('greatsword')!, classes)).toBe(false)
     })
   })
 

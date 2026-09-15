@@ -856,6 +856,21 @@ export function isTwoHandedWeapon(weapon: EquipmentEntry): boolean {
   return /Two-Handed/.test(weapon.properties ?? '')
 }
 
+/** #28: whether Great Weapon Fighting's damage-reroll effect actually
+ * applies to an attack with `weapon`. The feat's own text is explicit:
+ * "a Melee weapon that you are holding with two hands" — `isTwoHandedWeapon`
+ * alone is NOT sufficient, since 5 bundled SRD weapons (Light/Heavy
+ * Crossbow, Shortbow, Longbow, Musket) carry the Two-Handed property but
+ * are Ranged, not Melee (PR #34 review caught this: a Fighter with GWF and
+ * a starting Longbow was getting GWF-boosted ranged damage). Composes
+ * `isRangedWeapon`, `isTwoHandedWeapon`, and `hasGreatWeaponFighting` so
+ * this single predicate is the one place a caller needs to check, rather
+ * than each caller re-deriving "melee AND two-handed AND has the feat"
+ * itself and risking dropping one of the three conditions. */
+export function greatWeaponFightingApplies(weapon: EquipmentEntry, classes: CharacterClassEntry[]): boolean {
+  return !isRangedWeapon(weapon) && isTwoHandedWeapon(weapon) && hasGreatWeaponFighting(classes)
+}
+
 /** The Archery Fighting Style's +N attack-roll bonus for a given weapon —
  * `undefined` (no bonus) unless the weapon is Ranged AND some class in
  * `classes` actually has Archery (checked across every class, not just
