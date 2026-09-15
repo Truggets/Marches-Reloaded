@@ -25,7 +25,16 @@ const PREVIEW_LENGTH = 120
 export function truncateAtWordBoundary(text: string, maxLength: number): string {
   if (text.length <= maxLength) return text
   const slice = text.slice(0, maxLength)
-  const lastSpace = slice.lastIndexOf(' ')
+  // Any whitespace, not just a literal space — a newline is the only
+  // separator within budget for a small slice of curated content-pack
+  // prose (PR #37 review), and `\s` still finds it.
+  const lastSpaceMatch = [...slice.matchAll(/\s/g)].pop()
+  const lastSpace = lastSpaceMatch ? lastSpaceMatch.index! : -1
+  // `> 0`, not `>= 0` — a whitespace character at index 0 (a leading space
+  // before one unbroken token) would otherwise cut to an empty string and
+  // return a bare "…". Falling through to the hard cut instead is the
+  // documented fallback, not a bug (PR #37 review confirmed this is the
+  // deliberate choice).
   const cut = lastSpace > 0 ? slice.slice(0, lastSpace) : slice
   return `${cut.trimEnd()}…`
 }

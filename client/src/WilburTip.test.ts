@@ -17,8 +17,17 @@ describe('truncateAtWordBoundary', () => {
   })
 
   it('ends with an ellipsis, not the raw cut character', () => {
+    // Asserts the exact output, not just endsWith('…') — a raw mid-word
+    // slice with an appended ellipsis would also pass an endsWith-only
+    // check (PR #37 review), which wouldn't actually guard the
+    // word-boundary logic this test is meant to cover.
     const result = truncateAtWordBoundary('one two three four five', 10)
-    expect(result.endsWith('…')).toBe(true)
+    expect(result).toBe('one two…')
+  })
+
+  it('treats a newline as a word boundary too, not just a literal space', () => {
+    const result = truncateAtWordBoundary('one two\nthree four', 10)
+    expect(result).toBe('one two…')
   })
 
   it('falls back to a hard cut for a single word longer than maxLength', () => {
