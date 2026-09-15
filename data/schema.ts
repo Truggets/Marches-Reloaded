@@ -135,6 +135,15 @@ export interface SpellEntry {
   classes: string[] // which class spell lists include this spell
   description: string
   higherLevels?: string
+  // #33: previously untracked even for the 339 bundled SRD spells — derived
+  // from `duration`/`castingTime`'s own prose for the bundled parser
+  // (`/Concentration/` in duration, `/Ritual/` in castingTime), read
+  // directly from a vault spell file's explicit "Yes"/"No" fields for an
+  // imported pack. Optional/absent-safe: absent on any spell saved before
+  // this field existed on a character (spells aren't stored per-character
+  // beyond their id, so this only affects display, never a saved choice).
+  concentration?: boolean
+  ritual?: boolean
   pack: string
   source: SourceRef
 }

@@ -27,6 +27,8 @@ function main() {
   assert(fireball.classes.includes('Sorcerer') && fireball.classes.includes('Wizard'), 'classes include Sorcerer, Wizard')
   assert(/8d6 Fire damage/.test(fireball.description), 'description mentions 8d6 Fire damage')
   assert(fireball.higherLevels && /1d6 for each spell slot level above 3/.test(fireball.higherLevels), 'higherLevels mentions +1d6 per slot level above 3')
+  assert(fireball.concentration === false, `concentration is false (got ${fireball.concentration}) — duration is Instantaneous`)
+  assert(fireball.ritual === false, `ritual is false (got ${fireball.ritual})`)
 
   // 2. Acid Splash — cantrip, level 0, correct scaling text present.
   console.log('\nAcid Splash:')
@@ -47,6 +49,8 @@ function main() {
   assert(detectMagic.level === 1, `level is 1 (got ${detectMagic.level})`)
   assert(detectMagic.classes.length === 8, `has 8 classes (got ${detectMagic.classes.length}: ${detectMagic.classes.join(', ')})`)
   assert(/Ritual/.test(detectMagic.castingTime), `castingTime mentions Ritual (got ${detectMagic.castingTime})`)
+  assert(detectMagic.ritual === true, `ritual is true (got ${detectMagic.ritual})`)
+  assert(detectMagic.concentration === true, `concentration is true (got ${detectMagic.concentration}) — duration is Concentration, up to 10 minutes`)
 
   // 4. Guidance — cantrip with singular "**Component:**" typo in source
   //    (regression check for the metadata-block regex).
@@ -77,6 +81,8 @@ function main() {
   assert(spells.every((s) => s.pack === 'srd-5.2'), 'all spells tagged pack: srd-5.2')
   assert(spells.every((s) => s.source && s.source.book === 'SRD 5.2.1'), 'all spells tagged source.book: SRD 5.2.1')
   assert(spells.every((s) => typeof s.level === 'number'), 'all spells have numeric level')
+  assert(spells.every((s) => typeof s.concentration === 'boolean'), 'all spells have a boolean concentration (#33)')
+  assert(spells.every((s) => typeof s.ritual === 'boolean'), 'all spells have a boolean ritual (#33)')
 
   console.log('\nAll checks passed.')
 }
