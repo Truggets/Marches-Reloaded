@@ -11,6 +11,7 @@ import { parseBackgroundsImport } from "../../../data/build/parse-backgrounds-im
 import { parseSpeciesImport } from "../../../data/build/parse-species-import.js";
 import { parseEquipmentImport } from "../../../data/build/parse-equipment-import.js";
 import { parseSpellsImport } from "../../../data/build/parse-spells-import.js";
+import { parseSubclassesImport } from "../../../data/build/parse-subclasses-import.js";
 
 const router = express.Router();
 
@@ -105,27 +106,34 @@ router.get("/characters", (req, res) => {
 });
 
 // M2b: import an additional content pack (feats, backgrounds, species,
-// equipment, and/or spells; at least one required). The pack is stored in
-// pack_content (shared/data/marches.sqlite), never in the shipped data/
-// directory — see CLAUDE.md's SRD-only bundling rule and
+// equipment, spells, and/or subclasses; at least one required). The pack is
+// stored in pack_content (shared/data/marches.sqlite), never in the shipped
+// data/ directory — see CLAUDE.md's SRD-only bundling rule and
 // docs/planning/m2b-execution-plan.md / m2b-phase2-backgrounds-plan.md /
-// m2b-phase3-4-species-equipment-plan.md / issue-33-plan.md. Body shape:
-// { packId, packName, feats?, backgrounds?, species?, equipment?, spells? }
-// (each the vault-shaped top-level object for that content type, e.g.
-// {feats: [...]} / {spells: [...]}). Runs each provided field through the
-// same parser/validator used by its build-time CLI (parse-feats-import.js /
-// parse-backgrounds-import.js / parse-species-import.js /
-// parse-equipment-import.js / parse-spells-import.js) — reject the whole
+// m2b-phase3-4-species-equipment-plan.md / issue-33-plan.md /
+// issue-22-and-subclass-import-plan.md. Body shape: { packId, packName,
+// feats?, backgrounds?, species?, equipment?, spells?, subclasses? } (each
+// the vault-shaped top-level object for that content type, e.g.
+// {feats: [...]} / {subclasses: [...]}). Runs each provided field through
+// the same parser/validator used by its build-time CLI
+// (parse-feats-import.js / parse-backgrounds-import.js /
+// parse-species-import.js / parse-equipment-import.js /
+// parse-spells-import.js / parse-subclasses-import.js) — reject the whole
 // pack, name the offending entry, per the plan's "validation moves to the
 // import boundary" decision. #33: each expansion-book spell file is its own
 // pack (a distinct packId per import call), not merged into a shared pack —
 // this endpoint itself doesn't need to know that; it's a caller convention.
+// Subclasses stay a distinct case even so: unlike every other content type
+// here, `subclasses` isn't a top-level ContentPack category — it's merged
+// into the right bundled class's `subclasses[]` at READ time
+// (data/index.ts's getClass()), not nested at import time, since
+// classes.json itself isn't importable.
 // Not wrapped in an explicit DB transaction: the SELECT-then-INSERT below
 // isn't atomic across statements in general, but better-sqlite3 is
 // synchronous and this is a single-process deployment, so no other request
 // can interleave in that window (see M2b Phase 2 review).
 router.post("/packs/import", (req, res) => {
-  const { packId, packName, feats, backgrounds, species, equipment, spells } = req.body || {};
+  const { packId, packName, feats, backgrounds, species, equipment, spells, subclasses } = req.body || {};
 
   if (typeof packId !== "string" || !packId.trim()) {
     return res.status(400).json({ error: "packId is required" });
@@ -138,11 +146,12 @@ router.post("/packs/import", (req, res) => {
     backgrounds === undefined &&
     species === undefined &&
     equipment === undefined &&
-    spells === undefined
+    spells === undefined &&
+    subclasses === undefined
   ) {
     return res
       .status(400)
-      .json({ error: "At least one of feats, backgrounds, species, equipment, or spells is required" });
+      .json({ error: "At least one of feats, backgrounds, species, equipment, spells, or subclasses is required" });
   }
 
   let parsedFeats;
@@ -190,6 +199,15 @@ router.post("/packs/import", (req, res) => {
     }
   }
 
+  let parsedSubclasses;
+  if (subclasses !== undefined) {
+    try {
+      parsedSubclasses = parseSubclassesImport(subclasses, packId);
+    } catch (err) {
+      return res.status(400).json({ error: `Import rejected: ${err.message}` });
+    }
+  }
+
   // Merge with whatever's already stored for this pack_id so importing one
   // field (e.g. backgrounds) doesn't wipe out a previously-imported other
   // field (e.g. feats) — see CLAUDE.md / M2b Phase 2 plan on pack_content
@@ -203,11 +221,13 @@ router.post("/packs/import", (req, res) => {
   const finalSpecies = parsedSpecies !== undefined ? parsedSpecies : existingContent.species;
   const finalEquipment = parsedEquipment !== undefined ? parsedEquipment : existingContent.equipment;
   const finalSpells = parsedSpells !== undefined ? parsedSpells : existingContent.spells;
+  const finalSubclasses = parsedSubclasses !== undefined ? parsedSubclasses : existingContent.subclasses;
   if (finalFeats !== undefined) mergedContent.feats = finalFeats;
   if (finalBackgrounds !== undefined) mergedContent.backgrounds = finalBackgrounds;
   if (finalSpecies !== undefined) mergedContent.species = finalSpecies;
   if (finalEquipment !== undefined) mergedContent.equipment = finalEquipment;
   if (finalSpells !== undefined) mergedContent.spells = finalSpells;
+  if (finalSubclasses !== undefined) mergedContent.subclasses = finalSubclasses;
 
   const manifest = JSON.stringify({ id: packId, name: packName, importedAt: new Date().toISOString() });
   const content = JSON.stringify(mergedContent);
@@ -225,6 +245,7 @@ router.post("/packs/import", (req, res) => {
   if (parsedSpecies !== undefined) response.speciesCount = parsedSpecies.length;
   if (parsedEquipment !== undefined) response.equipmentCount = parsedEquipment.length;
   if (parsedSpells !== undefined) response.spellCount = parsedSpells.length;
+  if (parsedSubclasses !== undefined) response.subclassCount = parsedSubclasses.length;
 
   return res.status(200).json(response);
 });

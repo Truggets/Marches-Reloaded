@@ -1,0 +1,34 @@
+{
+  "subclasses": [
+    {
+      "name": "Path of the Berserker",
+      "class": "Barbarian",
+      "source": "Player's Handbook (2024)",
+      "category": "Core Rulebook",
+      "mechanics_first": [
+        "**Frenzy (Level 3):** When you enter a Rage, you can make a single melee weapon attack.",
+        "**Mindless Rage (Level 6):** You gain Immunity to the Charmed and Frightened conditions while raging."
+      ],
+      "lore_and_flavor": "Berserkers are barbarians who define their rage by a terrifying, singular focus on violence."
+    },
+    {
+      "name": "Alchemist",
+      "class": "Artificer",
+      "source": "Tasha's Cauldron of Everything",
+      "category": "Modular Expansion Subclass",
+      "mechanics_first": ["**Experimental Elixir (Level 3):** You concoct an elixir."],
+      "lore_and_flavor": "An artificer who dabbles in alchemy."
+    },
+    {
+      "name": "Fixture Malformed Subclass",
+      "class": "Fighter",
+      "source": "Fixture Sourcebook",
+      "category": "Test",
+      "mechanics_first": [
+        "**Real Feature (Level 3):** A properly formatted feature.",
+        "**Ungrouped Rider:** This bullet has no level number at all."
+      ],
+      "lore_and_flavor": "Exists to test the malformed-bullet error path."
+    }
+  ]
+}

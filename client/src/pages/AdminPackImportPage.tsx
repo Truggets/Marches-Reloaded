@@ -32,6 +32,7 @@ export function AdminPackImportPage() {
   const [speciesText, setSpeciesText] = useState('')
   const [equipmentText, setEquipmentText] = useState('')
   const [spellsText, setSpellsText] = useState('')
+  const [subclassesText, setSubclassesText] = useState('')
   const [importing, setImporting] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [result, setResult] = useState<{
@@ -40,6 +41,7 @@ export function AdminPackImportPage() {
     speciesCount?: number
     equipmentCount?: number
     spellCount?: number
+    subclassCount?: number
   } | null>(null)
 
   async function handleImport() {
@@ -51,9 +53,10 @@ export function AdminPackImportPage() {
       !backgroundsText.trim() &&
       !speciesText.trim() &&
       !equipmentText.trim() &&
-      !spellsText.trim()
+      !spellsText.trim() &&
+      !subclassesText.trim()
     ) {
-      setError('Paste at least one of Feats, Backgrounds, Species, Equipment, or Spells JSON before importing.')
+      setError('Paste at least one of Feats, Backgrounds, Species, Equipment, Spells, or Subclasses JSON before importing.')
       return
     }
 
@@ -107,13 +110,23 @@ export function AdminPackImportPage() {
       }
     }
 
+    let subclasses: unknown
+    if (subclassesText.trim()) {
+      try {
+        subclasses = JSON.parse(subclassesText)
+      } catch {
+        setError('Subclasses JSON is not valid — fix the syntax error and try again.')
+        return
+      }
+    }
+
     setImporting(true)
     try {
       const res = await fetch('/api/admin/packs/import', {
         method: 'POST',
         credentials: 'include',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ packId, packName, feats, backgrounds, species, equipment, spells }),
+        body: JSON.stringify({ packId, packName, feats, backgrounds, species, equipment, spells, subclasses }),
       })
       if (!res.ok) throw new Error(await extractErrorMessage(res))
       const body = (await res.json()) as {
@@ -122,6 +135,7 @@ export function AdminPackImportPage() {
         speciesCount?: number
         equipmentCount?: number
         spellCount?: number
+        subclassCount?: number
       }
       await initPacks() // so the admin's own freshly-imported pack shows up without a manual refresh
       setResult({
@@ -130,6 +144,7 @@ export function AdminPackImportPage() {
         speciesCount: body.speciesCount,
         equipmentCount: body.equipmentCount,
         spellCount: body.spellCount,
+        subclassCount: body.subclassCount,
       })
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to import pack')
@@ -160,10 +175,14 @@ export function AdminPackImportPage() {
           document), the vault-shaped species JSON (the {' {species: [...]} '}
           document), the vault-shaped equipment JSON (the
           {' {weapons: [...], armor: [...], adventuring_gear: [...]} '}
-          document), and/or a vault-shaped spell-book JSON (the {' {spells: [...]} '}
+          document), a vault-shaped spell-book JSON (the {' {spells: [...]} '}
           document — each expansion book is its own pack, so use a distinct Pack ID
-          per book rather than importing multiple books under the same one) below —
-          each is independently optional, but at least one is required.
+          per book rather than importing multiple books under the same one), and/or
+          a vault-shaped subclasses JSON (the {' {subclasses: [...]} '} document —
+          each entry needs a "class" matching one of the app's 12 bundled classes;
+          a subclass for a class the app doesn't have, like Artificer, will reject
+          the whole import) below — each is independently optional, but at least
+          one is required.
         </p>
 
         <label className="flex flex-col gap-1">
@@ -238,6 +257,17 @@ export function AdminPackImportPage() {
           />
         </label>
 
+        <label className="flex flex-col gap-1">
+          <span className="pixel-label text-xs">Subclasses JSON</span>
+          <textarea
+            value={subclassesText}
+            onChange={(e) => setSubclassesText(e.target.value)}
+            spellCheck={false}
+            placeholder='{"subclasses": [...]}'
+            className="pixel-input h-[24rem] w-full font-mono text-xs"
+          />
+        </label>
+
         {error && <p className="text-sm text-[var(--color-danger)]">{error}</p>}
         {result && (
           <p className="text-sm text-[var(--color-success,green)]">
@@ -248,6 +278,7 @@ export function AdminPackImportPage() {
               result.speciesCount !== undefined ? `${result.speciesCount} species` : null,
               result.equipmentCount !== undefined ? `${result.equipmentCount} equipment` : null,
               result.spellCount !== undefined ? `${result.spellCount} spells` : null,
+              result.subclassCount !== undefined ? `${result.subclassCount} subclasses` : null,
             ]
               .filter(Boolean)
               .join(', ')}{' '}
@@ -265,7 +296,8 @@ export function AdminPackImportPage() {
                 !backgroundsText.trim() &&
                 !speciesText.trim() &&
                 !equipmentText.trim() &&
-                !spellsText.trim())
+                !spellsText.trim() &&
+                !subclassesText.trim())
             }
             className="pixel-btn"
           >

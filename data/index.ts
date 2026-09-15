@@ -20,6 +20,7 @@ import type {
   EquipmentEntry,
   MonsterEntry,
   LanguageEntry,
+  Subclass,
   ContentPack,
 } from './schema'
 
@@ -55,6 +56,15 @@ let importedBackgrounds: BackgroundEntry[] = []
 let importedSpecies: SpeciesEntry[] = []
 let importedEquipment: EquipmentEntry[] = []
 let importedSpells: SpellEntry[] = []
+// #subclass-import: unlike the other imported content types above, Subclass
+// isn't merged into a flat list — it's nested inside `ClassEntry.subclasses`
+// (see Subclass's own classId field), so it's merged into the right class
+// at read time by getClass()/listClasses() below rather than exposed via
+// its own listSubclasses()/getSubclass() pair. See
+// docs/planning/issue-22-and-subclass-import-plan.md for why classes.json
+// itself isn't an M2b-importable category the way the nesting could
+// otherwise happen at import time.
+let importedSubclasses: Subclass[] = []
 let importedPackManifests: { id: string; name: string }[] = []
 
 /** Fetches this instance's admin-imported packs and merges their feats in.
@@ -76,6 +86,7 @@ export async function initPacks(): Promise<void> {
           species?: SpeciesEntry[]
           equipment?: EquipmentEntry[]
           spells?: SpellEntry[]
+          subclasses?: Subclass[]
         }
       }[]
     }
@@ -84,6 +95,7 @@ export async function initPacks(): Promise<void> {
     importedSpecies = body.packs.flatMap((p) => p.content.species ?? [])
     importedEquipment = body.packs.flatMap((p) => p.content.equipment ?? [])
     importedSpells = body.packs.flatMap((p) => p.content.spells ?? [])
+    importedSubclasses = body.packs.flatMap((p) => p.content.subclasses ?? [])
     importedPackManifests = body.packs.map((p) => ({ id: p.packId, name: p.manifest.name }))
   } catch {
     // Network failure, malformed response, etc. — degrade to SRD-only.
@@ -101,12 +113,26 @@ export function getManifest(): PackManifest {
   return manifest
 }
 
+// #subclass-import: folds any imported subclasses whose `classId` matches
+// into `entry.subclasses` — every existing call site (LevelUpPage,
+// SubclassChoicePage, CharacterSheetPage, computeSheet.ts's
+// subclassUnlockLevel/featuresForLevel) already reads `classEntry.subclasses`
+// off whatever getClass()/listClasses() returns, so merging here is the
+// ONLY change needed to make imported subclasses show up everywhere a
+// bundled one already does — no other file needs to know imports exist.
+function withImportedSubclasses(entry: ClassEntry): ClassEntry {
+  const extra = importedSubclasses.filter((s) => s.classId === entry.id)
+  if (extra.length === 0) return entry
+  return { ...entry, subclasses: [...entry.subclasses, ...extra] }
+}
+
 export function listClasses(): ClassEntry[] {
-  return classes
+  return classes.map(withImportedSubclasses)
 }
 
 export function getClass(id: string): ClassEntry | undefined {
-  return classes.find((c) => c.id === id)
+  const entry = classes.find((c) => c.id === id)
+  return entry ? withImportedSubclasses(entry) : undefined
 }
 
 export function listSpecies(): SpeciesEntry[] {
