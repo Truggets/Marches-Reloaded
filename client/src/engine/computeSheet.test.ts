@@ -5,6 +5,7 @@ import {
   archeryAttackBonus,
   armorClass,
   diffQuickStats,
+  earliestBundledSubclassFeatureLevel,
   featuresForLevel,
   fightingStyleAcBonus,
   fightingStyleAlternateCantripClass,
@@ -34,6 +35,7 @@ import {
   weaponMasteryPool,
 } from './computeSheet'
 import type { CharacterData } from '../character-wizard/types'
+import type { Subclass } from '@data/schema'
 
 describe('abilityModifier', () => {
   it('uses Math.floor, not truncation, for odd scores below 10', () => {
@@ -159,6 +161,50 @@ describe('M12: subclass selection', () => {
 
   it('subclassUnlockLevel throws for an unknown class id (same "data gap fails loud" contract as the rest of the engine)', () => {
     expect(() => subclassUnlockLevel('not-a-real-class')).toThrow()
+  })
+
+  describe('earliestBundledSubclassFeatureLevel (subclass-import PR review: imported subclasses must not shift this)', () => {
+    it('a level-1 feature from an IMPORTED subclass does not drag the result down from the real bundled unlock level', () => {
+      // Reproduces the real bug: importing the vault's Core Rulebook
+      // subclass pack gives Cleric's "Life Domain" a level-1 "Domain
+      // Spells" feature. Before this fix, subclassUnlockLevel took
+      // Math.min across bundled AND imported subclasses together, so this
+      // would have silently changed the unlock level for every Cleric
+      // character to 1, even one that never picked an imported subclass.
+      const subclasses: Subclass[] = [
+        {
+          id: 'srd-5.2:life-domain',
+          name: 'Life Domain',
+          classId: 'cleric',
+          features: [{ level: 3, name: 'Disciple of Life', description: '...' }],
+          pack: 'srd-5.2',
+          source: { book: 'SRD 5.2.1' },
+        },
+        {
+          id: 'expansion-subclasses:life-domain-import',
+          name: 'Life Domain (imported)',
+          classId: 'cleric',
+          features: [{ level: 1, name: 'Domain Spells', description: '...' }],
+          pack: 'expansion-subclasses',
+          source: { book: "Player's Handbook (2024)" },
+        },
+      ]
+      expect(earliestBundledSubclassFeatureLevel(subclasses, 'cleric', 'srd-5.2')).toBe(3)
+    })
+
+    it('throws if the class has no BUNDLED subclasses, even if imported ones exist', () => {
+      const subclasses: Subclass[] = [
+        {
+          id: 'expansion-subclasses:only-imported',
+          name: 'Only Imported',
+          classId: 'cleric',
+          features: [{ level: 1, name: 'Something', description: '...' }],
+          pack: 'expansion-subclasses',
+          source: { book: 'Some Book' },
+        },
+      ]
+      expect(() => earliestBundledSubclassFeatureLevel(subclasses, 'cleric', 'srd-5.2')).toThrow()
+    })
   })
 
   it('featuresForLevel with no subclassId is unaffected (existing behavior preserved)', () => {
