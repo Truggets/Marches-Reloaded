@@ -1,11 +1,11 @@
 // Pure rules-engine functions: turn a saved CharacterData's stored *choices*
 // back into computed numbers for the character sheet view (M4). No React,
 // no side effects — every function here is a plain, testable transform.
-import { getClass, getFeat, getSpecies, listEquipment } from '@data'
+import { getClass, getFeat, getManifest, getSpecies, listEquipment } from '@data'
 import { parseEquipmentOptions } from '../character-wizard/parsing'
 import { ABILITIES } from '../character-wizard/types'
 import type { Ability, CharacterClassEntry, CharacterData } from '../character-wizard/types'
-import type { EquipmentEntry } from '@data/schema'
+import type { EquipmentEntry, Subclass } from '@data/schema'
 
 /** floor((score - 10) / 2). Must use Math.floor (not truncation) so odd
  * scores below 10 round further down, e.g. 7 -> -1.5 -> -2. */
@@ -441,12 +441,36 @@ export function spellcastingInfo(
  * derived from data, not hardcoded, though every bundled SRD subclass grants
  * its first feature at level 3 (2024 rules unified subclass choice to level
  * 3 across every class). Throws if the class has no subclasses at all, so a
- * data gap fails loud instead of silently never offering the choice. */
+ * data gap fails loud instead of silently never offering the choice.
+ *
+ * Deliberately scoped to BUNDLED subclasses only (`s.pack === getManifest().id`)
+ * — an imported subclass pack's own prose can grant features as early as
+ * level 1 (verified against the real vault: Cleric's "Life Domain" grants
+ * "Domain Spells (Level 1)"), which would otherwise drag this Math.min down
+ * and silently change WHEN every character of that class is prompted to
+ * choose a subclass — including one who never picks an imported subclass at
+ * all, since `getClass()` merges bundled + imported subclasses together
+ * before this function ever sees them. Caught by PR #38's review: this
+ * would have broken subclass-choice timing for every Cleric/Sorcerer/
+ * Warlock character the moment anyone imported the Core Rulebook subclass
+ * pack. The unlock level answers "when does THIS APP offer the choice,"
+ * which should stay anchored to the app's own bundled content, not drift
+ * based on what an admin happens to have imported. */
 export function subclassUnlockLevel(classId: string): number {
   const classEntry = getClass(classId)
   if (!classEntry) throw new Error(`Unknown class: ${classId}`)
-  if (classEntry.subclasses.length === 0) throw new Error(`Class has no subclasses: ${classId}`)
-  return Math.min(...classEntry.subclasses.flatMap((s) => s.features.map((f) => f.level)))
+  return earliestBundledSubclassFeatureLevel(classEntry.subclasses, classId, getManifest().id)
+}
+
+/** The actual `Math.min`-over-bundled-only computation, pulled out as its
+ * own pure, exported function so the "imported subclasses must not affect
+ * this" guarantee is directly testable — constructing a real imported pack
+ * via `initPacks()`'s fetch isn't practical in a unit test, but a mixed
+ * bundled+imported `Subclass[]` array is. */
+export function earliestBundledSubclassFeatureLevel(subclasses: Subclass[], classId: string, bundledPackId: string): number {
+  const bundled = subclasses.filter((s) => s.pack === bundledPackId)
+  if (bundled.length === 0) throw new Error(`Class has no subclasses: ${classId}`)
+  return Math.min(...bundled.flatMap((s) => s.features.map((f) => f.level)))
 }
 
 /** Feature names granted exactly at the given level (that level's
