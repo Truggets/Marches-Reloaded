@@ -78,7 +78,7 @@ rule, `attackModeAgainst`'s full advantage/disadvantage/cancel matrix, `toppleSa
 die sizes. `computeSheet.test.ts`: `isMasteryUnlocked` (extracted, same coverage `grazeDamage`
 already exercised). 216 tests passing (25 new).
 
-## Verification
+## Verification (PR A)
 `npx tsc -b` + `vite build` clean, `vitest run` 216/216. **Not manually browser-tested this
 session** — unlike the wizard-flow limitation cited on #16/#26, this repo's automation
 limitation was specifically about native `<select>` dropdowns in multi-step wizard state, which
@@ -86,3 +86,45 @@ doesn't apply to the sandbox's button-driven UI (M11's original build WAS browse
 Recommend an actual browser pass — pick a weapon with each of Vex/Sap/Topple/Push, confirm the
 condition flags, advantage/disadvantage, and log lines all show correctly — before relying on
 this without further testing.
+
+**PR A review (PR #32) caught 2 real bugs, both fixed before merge:** `handleMonsterAttack`
+never checked the target's own `prone` flag for its own attack-roll disadvantage (Topple landed
+but didn't actually hamper the monster until manually "Stood Up"); and `attackModeAgainst`
+wrongly special-cased melee attacks as unconditional advantage against a Prone target instead of
+applying the SRD's actual range-only rule to both weapon types (made Push a complete no-op
+against melee weapons). Both fixed, `monsterAttackMode` extracted as its own tested pure
+function mirroring `attackModeAgainst`. Merged and deployed 2026-09-15 (`4fb6dc2`), confirmed
+live by Truman's direct "merge and deploy now."
+
+## PR B: Cleave + Great Weapon Fighting
+
+**Cleave.** On a hit with an unlocked Cleave weapon, resolves a SECOND full attack roll (same
+attack bonus, `resolveWeaponAttack` again) against another live monster in the battle roster
+(`battleMonsters.find` — the first one that isn't the primary target and has `currentHp > 0`;
+the sandbox has no reach/adjacency model to pick a "closer" one from). Damage on that second hit
+does NOT add the ability modifier unless it's negative — the SRD's own specific carve-out,
+implemented as a new `cleaveDamageString(damage, abilityMod)` in `equipmentAttack.ts` (mirrors
+`weaponDamageWithAbilityModifier`, but only fires below zero). The sandbox's one-click-per-attack
+model already matches the "once per turn" limit — there's no separate action economy to abuse it
+against. Logged as its own `LogEntry` (a real, separate d20 roll deserves its own log line, not a
+one-word mastery note) via a new `cleaveLog` variable pushed right after the primary attack's log
+entry.
+
+**Great Weapon Fighting.** New `hasGreatWeaponFighting(classes)` / `isTwoHandedWeapon(weapon)` in
+`computeSheet.ts` (prose-matched, same convention as every other Fighting Style check) gate a new
+`gwf` parameter on `estimateDamage()`, which swaps the ordinary `(sides + 1) / 2` per-die average
+for PR A's `gwfAdjustedDieAverage(sides)`. Applies to both the primary hit and a Cleave second
+attack with the same weapon. Versatile-held-two-handed is deliberately excluded (unknowable from
+current data, stated in PR A's plan) — only the Two-Handed property triggers it.
+
+## Tests (PR B)
+`computeSheet.test.ts`: `hasGreatWeaponFighting` (4 cases incl. multiclass), `isTwoHandedWeapon`
+(Greatsword/Longsword/Shortsword). `equipmentAttack.test.ts`: `cleaveDamageString` (positive,
+zero, negative modifier). 229 tests passing (13 new since PR A's 216).
+
+## Verification (PR B)
+`npx tsc -b` + `vite build` clean, `vitest run` 229/229. Not manually browser-tested this
+session — same reasoning as PR A (button-driven UI, genuinely feasible to test live, recommended
+before relying on this without further testing). Cleave specifically needs at least 2 monsters in
+the battle roster to observe — worth calling out in a live test pass since a 1-monster battle
+will only ever show "no second target in the battle."

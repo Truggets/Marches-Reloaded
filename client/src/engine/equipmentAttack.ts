@@ -80,6 +80,17 @@ export function weaponDamageWithAbilityModifier(damage: string, abilityMod: numb
   return `${dice} ${sign} ${Math.abs(abilityMod)} ${type}`
 }
 
+/** #28: Cleave weapon mastery's damage string — the ability modifier is
+ * added ONLY if it's negative ("don't add your ability modifier to that
+ * damage unless that modifier is negative"), unlike a normal weapon attack
+ * which always adds it via `weaponDamageWithAbilityModifier` above.
+ * Extracted as its own tested function rather than left as inline page
+ * glue — this session's PR reviews have twice caught exactly this shape of
+ * untested conditional living only in `CombatSandboxPage.tsx`. */
+export function cleaveDamageString(damage: string, abilityMod: number): string {
+  return abilityMod < 0 ? weaponDamageWithAbilityModifier(damage, abilityMod) : damage
+}
+
 /**
  * Parses a class's chosen starting-equipment letter into the weapon
  * EquipmentEntry objects it grants. Returns `[]` (never throws) when the
