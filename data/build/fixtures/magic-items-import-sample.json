@@ -11,6 +11,19 @@
         "**Slumbering State (Uncommon):** Whenever you roll a 20 on an attack roll with this weapon, each creature of your choice within 5 feet of the target takes 5 damage."
       ],
       "lore_and_flavor": "A weapon infused with the essence of a dragon."
+    },
+    {
+      "name": "The Deck of Many Things",
+      "source": "The Book of Many Things",
+      "category": "Artifact",
+      "rarity": "Legendary / Artifact",
+      "attunement": "Not Required",
+      "mechanics_first": [
+        "**Unabridged Card Effects (Selection of Fates):**",
+        "*   **Balance:** Your mind undergoes a sudden alignment shift.",
+        "*   **Comet:** If you single-handedly defeat the next hostile monster, your level instantly increases by 1."
+      ],
+      "lore_and_flavor": "A legendary packet of parchment cards."
     }
   ]
 }

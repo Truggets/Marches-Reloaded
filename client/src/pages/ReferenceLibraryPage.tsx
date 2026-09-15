@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { listHazards, listMagicItems } from '@data'
+import { renderEmphasis } from '../EmphasisText'
 import { WilburCompanion } from '../WilburCompanion'
 
 /**
@@ -14,8 +15,11 @@ import { WilburCompanion } from '../WilburCompanion'
 export function ReferenceLibraryPage() {
   const [query, setQuery] = useState('')
 
-  const hazards = listHazards()
-  const magicItems = listMagicItems()
+  // listHazards()/listMagicItems() return a fresh array each call, so these
+  // stay memoized on mount only (not on every render) rather than as a
+  // useMemo dependency, which would never hit its cache.
+  const hazards = useMemo(() => listHazards(), [])
+  const magicItems = useMemo(() => listMagicItems(), [])
 
   const filteredHazards = useMemo(() => {
     const q = query.trim().toLowerCase()
@@ -60,7 +64,10 @@ export function ReferenceLibraryPage() {
           <div className="flex w-full max-w-3xl flex-col gap-8">
             <section className="flex flex-col gap-3">
               <h2 className="pixel-title text-lg">Hazards &amp; Conditions</h2>
-              {filteredHazards.length === 0 && (
+              {hazards.length === 0 && (
+                <p className="italic text-[var(--color-shadow)]/70">Nothing imported yet.</p>
+              )}
+              {hazards.length > 0 && filteredHazards.length === 0 && (
                 <p className="italic text-[var(--color-shadow)]/70">No matches.</p>
               )}
               {filteredHazards.map((h) => (
@@ -69,7 +76,7 @@ export function ReferenceLibraryPage() {
                     <p className="pixel-title text-sm">{h.name}</p>
                     {h.category && <p className="text-xs italic text-[var(--color-shadow)]/70">{h.category}</p>}
                   </div>
-                  <p className="whitespace-pre-line text-sm">{h.description}</p>
+                  <p className="whitespace-pre-line text-sm">{renderEmphasis(h.description)}</p>
                   <p className="text-xs italic text-[var(--color-shadow)]/70">{h.source.book}</p>
                 </div>
               ))}
@@ -77,7 +84,10 @@ export function ReferenceLibraryPage() {
 
             <section className="flex flex-col gap-3">
               <h2 className="pixel-title text-lg">Magic Items</h2>
-              {filteredMagicItems.length === 0 && (
+              {magicItems.length === 0 && (
+                <p className="italic text-[var(--color-shadow)]/70">Nothing imported yet.</p>
+              )}
+              {magicItems.length > 0 && filteredMagicItems.length === 0 && (
                 <p className="italic text-[var(--color-shadow)]/70">No matches.</p>
               )}
               {filteredMagicItems.map((m) => (
@@ -90,7 +100,7 @@ export function ReferenceLibraryPage() {
                         .join(' · ')}
                     </p>
                   </div>
-                  <p className="whitespace-pre-line text-sm">{m.description}</p>
+                  <p className="whitespace-pre-line text-sm">{renderEmphasis(m.description)}</p>
                   <p className="text-xs italic text-[var(--color-shadow)]/70">{m.source.book}</p>
                 </div>
               ))}

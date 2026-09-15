@@ -39,6 +39,21 @@ console.log("\nDragon's Wrath Weapon:")
   }
 }
 
+console.log('\nThe Deck of Many Things (leading "*   " list-marker bullets normalized to "-"):')
+{
+  const i = items.find((x) => x.name === 'The Deck of Many Things')
+  if (!i) {
+    console.log('  [FAIL] entry not found')
+    failures++
+  } else {
+    check(
+      'description normalizes "*   **X:**" list markers to "-   **X:**" so renderEmphasis never sees a stray leading "*"',
+      i.description,
+      '**Unabridged Card Effects (Selection of Fates):**\n\n-   **Balance:** Your mind undergoes a sudden alignment shift.\n\n-   **Comet:** If you single-handedly defeat the next hostile monster, your level instantly increases by 1.\n\nA legendary packet of parchment cards.',
+    )
+  }
+}
+
 console.log('\nMissing mechanics_first throws, naming the offender:')
 {
   let threw = false

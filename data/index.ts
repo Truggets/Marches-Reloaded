@@ -222,7 +222,7 @@ export function getLanguage(id: string): LanguageEntry | undefined {
 // importedHazards/importedMagicItems doc comment above) — nothing to spread
 // alongside a bundled array, since none exists.
 export function listHazards(): HazardEntry[] {
-  return importedHazards
+  return [...importedHazards]
 }
 
 export function getHazard(id: string): HazardEntry | undefined {
@@ -230,7 +230,7 @@ export function getHazard(id: string): HazardEntry | undefined {
 }
 
 export function listMagicItems(): MagicItemEntry[] {
-  return importedMagicItems
+  return [...importedMagicItems]
 }
 
 export function getMagicItem(id: string): MagicItemEntry | undefined {

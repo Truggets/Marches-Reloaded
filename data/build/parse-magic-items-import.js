@@ -39,10 +39,20 @@ function parseMagicItemEntry(vaultEntry, packId) {
     throw new Error(`Magic item "${name}" has no "mechanics_first" bullets to build a description from`)
   }
 
+  // Some vault entries nest sub-bullets under a bullet as markdown list items,
+  // e.g. "*   **Balance:** ...". A single leading "*" is a list marker here,
+  // not emphasis, but the client's renderEmphasis (EmphasisText.tsx) doesn't
+  // know that and would pair it with the very next "*" it sees — the first
+  // "*" of the following "**Bold**" — mangling the bold span. Normalize the
+  // list-marker "*" to "-" so renderEmphasis only ever sees real emphasis.
+  const normalizedMechanicsFirst = mechanics_first.map((bullet) =>
+    typeof bullet === 'string' ? bullet.replace(/^\*(?!\*)(\s+)/, '-$1') : bullet,
+  )
+
   const description =
     typeof lore_and_flavor === 'string' && lore_and_flavor.trim()
-      ? `${mechanics_first.join('\n\n')}\n\n${lore_and_flavor.trim()}`
-      : mechanics_first.join('\n\n')
+      ? `${normalizedMechanicsFirst.join('\n\n')}\n\n${lore_and_flavor.trim()}`
+      : normalizedMechanicsFirst.join('\n\n')
 
   return {
     id: `${packId}:${slugify(name)}`,
