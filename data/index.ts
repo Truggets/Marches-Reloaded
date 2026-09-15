@@ -21,6 +21,8 @@ import type {
   MonsterEntry,
   LanguageEntry,
   Subclass,
+  HazardEntry,
+  MagicItemEntry,
   ContentPack,
 } from './schema'
 
@@ -65,6 +67,12 @@ let importedSpells: SpellEntry[] = []
 // itself isn't an M2b-importable category the way the nesting could
 // otherwise happen at import time.
 let importedSubclasses: Subclass[] = []
+// #22: 100% import-only categories, no bundled SRD equivalent at all (there
+// IS no bundled "hazards.json"/"magic-items.json") — unlike every other
+// imported type above, listHazards()/listMagicItems() have nothing to spread
+// alongside, they're just these arrays directly.
+let importedHazards: HazardEntry[] = []
+let importedMagicItems: MagicItemEntry[] = []
 let importedPackManifests: { id: string; name: string }[] = []
 
 /** Fetches this instance's admin-imported packs and merges their feats in.
@@ -87,6 +95,8 @@ export async function initPacks(): Promise<void> {
           equipment?: EquipmentEntry[]
           spells?: SpellEntry[]
           subclasses?: Subclass[]
+          hazards?: HazardEntry[]
+          magicItems?: MagicItemEntry[]
         }
       }[]
     }
@@ -96,6 +106,8 @@ export async function initPacks(): Promise<void> {
     importedEquipment = body.packs.flatMap((p) => p.content.equipment ?? [])
     importedSpells = body.packs.flatMap((p) => p.content.spells ?? [])
     importedSubclasses = body.packs.flatMap((p) => p.content.subclasses ?? [])
+    importedHazards = body.packs.flatMap((p) => p.content.hazards ?? [])
+    importedMagicItems = body.packs.flatMap((p) => p.content.magicItems ?? [])
     importedPackManifests = body.packs.map((p) => ({ id: p.packId, name: p.manifest.name }))
   } catch {
     // Network failure, malformed response, etc. — degrade to SRD-only.
@@ -204,4 +216,23 @@ export function listLanguages(): LanguageEntry[] {
 
 export function getLanguage(id: string): LanguageEntry | undefined {
   return languages.find((l) => l.id === id)
+}
+
+// #22: display-only reference content, 100% import-only (see the
+// importedHazards/importedMagicItems doc comment above) — nothing to spread
+// alongside a bundled array, since none exists.
+export function listHazards(): HazardEntry[] {
+  return importedHazards
+}
+
+export function getHazard(id: string): HazardEntry | undefined {
+  return importedHazards.find((h) => h.id === id)
+}
+
+export function listMagicItems(): MagicItemEntry[] {
+  return importedMagicItems
+}
+
+export function getMagicItem(id: string): MagicItemEntry | undefined {
+  return importedMagicItems.find((m) => m.id === id)
 }

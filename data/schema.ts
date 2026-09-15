@@ -203,6 +203,34 @@ export interface MonsterEntry {
   source: SourceRef
 }
 
+// #22: display-only reference content — no mechanical integration (a
+// condition like "Blinded" isn't consumed by any engine function; the
+// sandbox's #28 work hand-coded the SRD conditions it actually needed
+// directly rather than reading them from data — see
+// docs/planning/issue-22-and-subclass-import-plan.md). Both are 100%
+// import-only categories: there's no bundled SRD equivalent to merge into
+// (unlike subclasses), so `listHazards()`/`listMagicItems()` are simply
+// `[...importedHazards]` — empty until an admin imports something.
+export interface HazardEntry {
+  id: string
+  name: string
+  category?: string // e.g. "Condition", "Environmental Hazard" — vault-provided, informational only
+  description: string // mechanics_first bullets + lore_and_flavor folded together, same as SpellEntry.description
+  pack: string
+  source: SourceRef
+}
+
+export interface MagicItemEntry {
+  id: string
+  name: string
+  category?: string
+  rarity?: string
+  attunement?: string
+  description: string
+  pack: string
+  source: SourceRef
+}
+
 export interface ContentPack {
   manifest: PackManifest
   classes: ClassEntry[]

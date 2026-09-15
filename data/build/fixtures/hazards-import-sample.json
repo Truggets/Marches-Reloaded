@@ -1,0 +1,14 @@
+{
+  "rules_hazards_conditions": [
+    {
+      "name": "Blinded",
+      "source": "Player's Handbook (2024)",
+      "category": "Condition",
+      "mechanics_first": [
+        "**Attack Rolls Against You:** Attack rolls against you have Advantage.",
+        "**Your Attack Rolls:** Your attack rolls have Disadvantage."
+      ],
+      "lore_and_flavor": "Your vision is completely obscured."
+    }
+  ]
+}
