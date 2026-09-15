@@ -5,6 +5,7 @@ import { StepClass } from '../character-wizard/steps/StepClass'
 import { StepOrigin } from '../character-wizard/steps/StepOrigin'
 import { StepAbilities } from '../character-wizard/steps/StepAbilities'
 import { StepSkills } from '../character-wizard/steps/StepSkills'
+import { StepLanguages } from '../character-wizard/steps/StepLanguages'
 import { StepSpeciesBonus } from '../character-wizard/steps/StepSpeciesBonus'
 import { StepMartial } from '../character-wizard/steps/StepMartial'
 import { StepEquipment } from '../character-wizard/steps/StepEquipment'
@@ -143,6 +144,8 @@ function wilburTipFor(
         : 'Assign your highest scores to whichever abilities matter most for your class.'
     case 'skills':
       return 'Skills marked "(bg)" are already granted by your background — choosing a different skill here means broader coverage instead of a wasted pick.'
+    case 'languages':
+      return 'Every character knows Common. Pick languages that fit your backstory, or ones useful for talking to creatures you expect to meet.'
     case 'speciesBonus': {
       const feat = originFeatId ? getFeat(originFeatId) : undefined
       if (feat) return `${feat.name}: ${feat.benefit}`
@@ -280,6 +283,7 @@ export function CreateCharacterPage() {
   const [backgroundId, setBackgroundId] = useState<string | null>(null)
   const [abilityScores, setAbilityScores] = useState<AbilityScoresData | null>(null)
   const [skillsChosen, setSkillsChosen] = useState<string[]>([])
+  const [languagesChosen, setLanguagesChosen] = useState<string[]>([])
   const [bonusSkill, setBonusSkill] = useState<string | null>(null)
   const [originFeatId, setOriginFeatId] = useState<string | null>(null)
   const [equipmentChoice, setEquipmentChoice] = useState<string | null>(null)
@@ -343,7 +347,18 @@ export function CreateCharacterPage() {
   const steps = useMemo(
     () =>
       (
-        ['class', 'origin', 'abilities', 'skills', 'speciesBonus', 'martial', 'equipment', 'spells', 'name'] as const
+        [
+          'class',
+          'origin',
+          'abilities',
+          'skills',
+          'languages',
+          'speciesBonus',
+          'martial',
+          'equipment',
+          'spells',
+          'name',
+        ] as const
       ).filter(
         (s) =>
           (s !== 'spells' || isCaster || hasFeatSpells || grantsVersatileSpells) &&
@@ -390,6 +405,8 @@ export function CreateCharacterPage() {
         const count = skillsChosen.length
         return count > 0 && count === parseInt(classEntry.skillProficiencies.match(/Choose\s+(?:any\s+)?(\d+)/i)?.[1] ?? '0', 10)
       }
+      case 'languages':
+        return languagesChosen.length === 2
       case 'speciesBonus':
         return (
           (!hasSkillfulTrait || !!bonusSkill) &&
@@ -483,6 +500,7 @@ export function CreateCharacterPage() {
         new Set([...skillsChosen, ...(backgroundEntry?.skillProficiencies ?? []), ...(bonusSkill ? [bonusSkill] : [])]),
       ),
       equipmentChoice,
+      ...(languagesChosen.length > 0 ? { languages: languagesChosen } : {}),
       ...(isCaster ? { spells: { cantrips: spellCantrips, prepared: spellPrepared } } : {}),
       ...(originFeatId ? { originFeatId } : {}),
       ...(hasFeatSpells ? { originFeatSpells: { cantrips: featSpellCantrips, prepared: featSpellPrepared } } : {}),
@@ -566,6 +584,8 @@ export function CreateCharacterPage() {
             onChange={setSkillsChosen}
           />
         )}
+
+        {step === 'languages' && <StepLanguages chosen={languagesChosen} onChange={setLanguagesChosen} />}
 
         {step === 'speciesBonus' && (
           <StepSpeciesBonus

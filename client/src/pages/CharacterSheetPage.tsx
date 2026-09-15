@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
-import { getBackground, getClass, getEquipment, getFeat, getSpecies, getSpell } from '@data'
+import { getBackground, getClass, getEquipment, getFeat, getLanguage, getSpecies, getSpell } from '@data'
 import type { Ability } from '../character-wizard/types'
 import { ABILITIES, ALL_SKILLS } from '../character-wizard/types'
 import { parseEquipmentOptions } from '../character-wizard/parsing'
@@ -365,6 +365,16 @@ export function CharacterSheetPage() {
               )
             })}
           </div>
+        </section>
+
+        {/* #16: Languages — Common is always known (not stored, see
+            CharacterData.languages), plus whatever was chosen at creation.
+            Absent-safe for characters saved before #16 shipped. */}
+        <section>
+          <h2 className="pixel-title text-base mb-2">Languages</h2>
+          <p className="text-sm">
+            {['Common', ...(data.languages ?? []).map((id) => getLanguage(id)?.name ?? id)].join(', ')}
+          </p>
         </section>
 
         {/* Class Features */}

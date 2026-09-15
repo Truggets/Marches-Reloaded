@@ -95,6 +95,23 @@ export interface BackgroundEntry {
   source: SourceRef
 }
 
+// #16: SRD 5.2 languages are NOT granted per species/background (unlike the
+// 2014 rules this issue was originally scoped against) — every character
+// simply knows Common plus 2 chosen from the Standard Languages table
+// ("Choose Languages", character-creation.md). Rare languages (Druidic,
+// Thieves' Cant, etc.) come from specific class features, not this
+// creation-time choice, and aren't curated here — `standard: false` entries
+// exist for completeness/future display but aren't offered as creation
+// picks (see StepLanguages.tsx).
+export interface LanguageEntry {
+  id: string
+  name: string
+  standard: boolean // true = Standard Languages table (creation-choosable); false = Rare Languages table
+  alwaysKnown?: boolean // true only for Common
+  pack: string
+  source: SourceRef
+}
+
 export interface FeatEntry {
   id: string
   name: string
@@ -186,4 +203,5 @@ export interface ContentPack {
   spells: SpellEntry[]
   equipment: EquipmentEntry[]
   monsters: MonsterEntry[]
+  languages: LanguageEntry[]
 }

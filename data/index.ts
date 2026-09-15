@@ -9,6 +9,7 @@ import featsJson from './feats.json'
 import spellsJson from './spells.json'
 import equipmentJson from './equipment.json'
 import monstersJson from './monsters.json'
+import languagesJson from './languages.json'
 import type {
   PackManifest,
   ClassEntry,
@@ -18,6 +19,7 @@ import type {
   SpellEntry,
   EquipmentEntry,
   MonsterEntry,
+  LanguageEntry,
   ContentPack,
 } from './schema'
 
@@ -29,6 +31,7 @@ const bundledFeats = featsJson as unknown as FeatEntry[]
 const spells = spellsJson as unknown as SpellEntry[]
 const equipment = equipmentJson as unknown as EquipmentEntry[]
 const monsters = monstersJson as unknown as MonsterEntry[]
+const languages = languagesJson as unknown as LanguageEntry[]
 
 export const srdPack: ContentPack = {
   manifest,
@@ -39,6 +42,7 @@ export const srdPack: ContentPack = {
   spells,
   equipment,
   monsters,
+  languages,
 }
 
 // M2b: admin-imported content packs (e.g. PHB-2024 feats), fetched once at
@@ -160,4 +164,15 @@ export function listMonsters(): MonsterEntry[] {
 
 export function getMonster(id: string): MonsterEntry | undefined {
   return monsters.find((m) => m.id === id)
+}
+
+// #16: bundled-only, same reasoning/pattern as monsters — no M2b import path
+// planned for languages (a fixed, small SRD list, not the kind of thing a
+// player's own content pack would extend).
+export function listLanguages(): LanguageEntry[] {
+  return languages
+}
+
+export function getLanguage(id: string): LanguageEntry | undefined {
+  return languages.find((l) => l.id === id)
 }

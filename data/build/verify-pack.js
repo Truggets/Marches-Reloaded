@@ -15,6 +15,7 @@ const feats = load('feats')
 const spells = load('spells')
 const equipment = load('equipment')
 const monsters = load('monsters')
+const languages = load('languages')
 
 let failures = 0
 function check(label, cond) {
@@ -34,7 +35,10 @@ check('9 species present', species.length === 9)
 check('4 backgrounds present', backgrounds.length === 4)
 check('spells count in plausible SRD range (300-400)', spells.length >= 300 && spells.length <= 400)
 check('10 monsters present', monsters.length === 10)
-check('all entries tagged pack srd-5.2', [...classes, ...species, ...backgrounds, ...feats, ...spells, ...equipment, ...monsters].every((e) => e.pack === 'srd-5.2'))
+check('19 languages present (1 Common + 9 Standard + 9 Rare)', languages.length === 19)
+check('exactly 1 language flagged alwaysKnown (Common)', languages.filter((l) => l.alwaysKnown).length === 1)
+check('9 standard (creation-choosable) languages besides Common', languages.filter((l) => l.standard && !l.alwaysKnown).length === 9)
+check('all entries tagged pack srd-5.2', [...classes, ...species, ...backgrounds, ...feats, ...spells, ...equipment, ...monsters, ...languages].every((e) => e.pack === 'srd-5.2'))
 
 const allIds = (arr) => arr.map((e) => e.id)
 const dupes = (ids) => ids.length !== new Set(ids).size
@@ -45,6 +49,7 @@ check('no duplicate feat ids', !dupes(allIds(feats)))
 check('no duplicate spell ids', !dupes(allIds(spells)))
 check('no duplicate equipment ids', !dupes(allIds(equipment)))
 check('no duplicate monster ids', !dupes(allIds(monsters)))
+check('no duplicate language ids', !dupes(allIds(languages)))
 
 console.log('\n--- Known-value spot checks (engine query correctness) ---')
 const barbarian = classes.find((c) => c.id === 'barbarian')
