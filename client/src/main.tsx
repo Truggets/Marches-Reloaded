@@ -19,6 +19,7 @@ import { CombatSandboxPage } from './pages/CombatSandboxPage'
 import { PartyViewPage } from './pages/PartyViewPage'
 import { AdminEditJsonPage } from './pages/AdminEditJsonPage'
 import { AdminPackImportPage } from './pages/AdminPackImportPage'
+import { ReferenceLibraryPage } from './pages/ReferenceLibraryPage'
 import { NotFoundPage } from './pages/NotFoundPage'
 
 // M2b: merge any admin-imported content packs in before the app renders, so
@@ -112,6 +113,14 @@ void initPacks().then(() => {
               element={
                 <RequireAuth>
                   <AdminPackImportPage />
+                </RequireAuth>
+              }
+            />
+            <Route
+              path="/reference"
+              element={
+                <RequireAuth>
+                  <ReferenceLibraryPage />
                 </RequireAuth>
               }
             />

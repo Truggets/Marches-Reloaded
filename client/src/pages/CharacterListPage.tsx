@@ -141,6 +141,9 @@ export function CharacterListPage() {
         <Link to="/characters/new" className="pixel-btn">
           New Character
         </Link>
+        <Link to="/reference" className="pixel-link text-sm">
+          Reference Library
+        </Link>
       </div>
 
       {error && <p className="text-sm text-[var(--color-danger)]">{error}</p>}

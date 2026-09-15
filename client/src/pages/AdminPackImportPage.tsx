@@ -33,6 +33,8 @@ export function AdminPackImportPage() {
   const [equipmentText, setEquipmentText] = useState('')
   const [spellsText, setSpellsText] = useState('')
   const [subclassesText, setSubclassesText] = useState('')
+  const [hazardsText, setHazardsText] = useState('')
+  const [magicItemsText, setMagicItemsText] = useState('')
   const [importing, setImporting] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [result, setResult] = useState<{
@@ -42,6 +44,8 @@ export function AdminPackImportPage() {
     equipmentCount?: number
     spellCount?: number
     subclassCount?: number
+    hazardCount?: number
+    magicItemCount?: number
   } | null>(null)
 
   async function handleImport() {
@@ -54,9 +58,11 @@ export function AdminPackImportPage() {
       !speciesText.trim() &&
       !equipmentText.trim() &&
       !spellsText.trim() &&
-      !subclassesText.trim()
+      !subclassesText.trim() &&
+      !hazardsText.trim() &&
+      !magicItemsText.trim()
     ) {
-      setError('Paste at least one of Feats, Backgrounds, Species, Equipment, Spells, or Subclasses JSON before importing.')
+      setError('Paste at least one of Feats, Backgrounds, Species, Equipment, Spells, Subclasses, Hazards, or Magic Items JSON before importing.')
       return
     }
 
@@ -120,13 +126,33 @@ export function AdminPackImportPage() {
       }
     }
 
+    let hazards: unknown
+    if (hazardsText.trim()) {
+      try {
+        hazards = JSON.parse(hazardsText)
+      } catch {
+        setError('Hazards JSON is not valid — fix the syntax error and try again.')
+        return
+      }
+    }
+
+    let magicItems: unknown
+    if (magicItemsText.trim()) {
+      try {
+        magicItems = JSON.parse(magicItemsText)
+      } catch {
+        setError('Magic Items JSON is not valid — fix the syntax error and try again.')
+        return
+      }
+    }
+
     setImporting(true)
     try {
       const res = await fetch('/api/admin/packs/import', {
         method: 'POST',
         credentials: 'include',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ packId, packName, feats, backgrounds, species, equipment, spells, subclasses }),
+        body: JSON.stringify({ packId, packName, feats, backgrounds, species, equipment, spells, subclasses, hazards, magicItems }),
       })
       if (!res.ok) throw new Error(await extractErrorMessage(res))
       const body = (await res.json()) as {
@@ -136,6 +162,8 @@ export function AdminPackImportPage() {
         equipmentCount?: number
         spellCount?: number
         subclassCount?: number
+        hazardCount?: number
+        magicItemCount?: number
       }
       await initPacks() // so the admin's own freshly-imported pack shows up without a manual refresh
       setResult({
@@ -145,6 +173,8 @@ export function AdminPackImportPage() {
         equipmentCount: body.equipmentCount,
         spellCount: body.spellCount,
         subclassCount: body.subclassCount,
+        hazardCount: body.hazardCount,
+        magicItemCount: body.magicItemCount,
       })
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to import pack')
@@ -181,8 +211,13 @@ export function AdminPackImportPage() {
           a vault-shaped subclasses JSON (the {' {subclasses: [...]} '} document —
           each entry needs a "class" matching one of the app's 12 bundled classes;
           a subclass for a class the app doesn't have, like Artificer, will reject
-          the whole import) below — each is independently optional, but at least
-          one is required.
+          the whole import), a vault-shaped hazards/conditions JSON (the
+          {' {rules_hazards_conditions: [...]} '}
+          document), and/or a vault-shaped magic items JSON (the
+          {' {items: [...]} '}
+          document — hazards and magic items are display-only reference content,
+          not wired into any mechanical calculation) below — each is
+          independently optional, but at least one is required.
         </p>
 
         <label className="flex flex-col gap-1">
@@ -268,6 +303,28 @@ export function AdminPackImportPage() {
           />
         </label>
 
+        <label className="flex flex-col gap-1">
+          <span className="pixel-label text-xs">Hazards / Conditions JSON</span>
+          <textarea
+            value={hazardsText}
+            onChange={(e) => setHazardsText(e.target.value)}
+            spellCheck={false}
+            placeholder='{"rules_hazards_conditions": [...]}'
+            className="pixel-input h-[24rem] w-full font-mono text-xs"
+          />
+        </label>
+
+        <label className="flex flex-col gap-1">
+          <span className="pixel-label text-xs">Magic Items JSON</span>
+          <textarea
+            value={magicItemsText}
+            onChange={(e) => setMagicItemsText(e.target.value)}
+            spellCheck={false}
+            placeholder='{"items": [...]}'
+            className="pixel-input h-[24rem] w-full font-mono text-xs"
+          />
+        </label>
+
         {error && <p className="text-sm text-[var(--color-danger)]">{error}</p>}
         {result && (
           <p className="text-sm text-[var(--color-success,green)]">
@@ -279,6 +336,8 @@ export function AdminPackImportPage() {
               result.equipmentCount !== undefined ? `${result.equipmentCount} equipment` : null,
               result.spellCount !== undefined ? `${result.spellCount} spells` : null,
               result.subclassCount !== undefined ? `${result.subclassCount} subclasses` : null,
+              result.hazardCount !== undefined ? `${result.hazardCount} hazards` : null,
+              result.magicItemCount !== undefined ? `${result.magicItemCount} magic items` : null,
             ]
               .filter(Boolean)
               .join(', ')}{' '}
@@ -297,7 +356,9 @@ export function AdminPackImportPage() {
                 !speciesText.trim() &&
                 !equipmentText.trim() &&
                 !spellsText.trim() &&
-                !subclassesText.trim())
+                !subclassesText.trim() &&
+                !hazardsText.trim() &&
+                !magicItemsText.trim())
             }
             className="pixel-btn"
           >
