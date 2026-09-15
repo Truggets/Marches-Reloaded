@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 import {
   attackModeAgainst,
   gwfAdjustedDieAverage,
+  monsterAttackMode,
   resolveMonsterAttack,
   resolveSpellAttack,
   resolveWeaponAttack,
@@ -219,7 +220,7 @@ describe('resolveWeaponAttack', () => {
 })
 
 describe('attackModeAgainst (#28)', () => {
-  const base = { vexed: false, prone: false, targetInMeleeRange: true, isRanged: false }
+  const base = { vexed: false, prone: false, targetInMeleeRange: true }
 
   it('normal with no flags', () => {
     expect(attackModeAgainst(base)).toBe('normal')
@@ -227,25 +228,43 @@ describe('attackModeAgainst (#28)', () => {
 
   it('vexed -> advantage, regardless of range/prone', () => {
     expect(attackModeAgainst({ ...base, vexed: true })).toBe('advantage')
-    expect(attackModeAgainst({ ...base, vexed: true, isRanged: true, targetInMeleeRange: false })).toBe('advantage')
+    expect(attackModeAgainst({ ...base, vexed: true, targetInMeleeRange: false })).toBe('advantage')
   })
 
-  it('prone + melee attack -> advantage', () => {
-    expect(attackModeAgainst({ ...base, prone: true, isRanged: false })).toBe('advantage')
+  // #28 PR review: Prone's advantage/disadvantage is purely about the
+  // attacker's distance, not the weapon type (SRD: "an attack roll against
+  // [a Prone creature] has Advantage if the attacker is within 5 feet of
+  // it, disadvantage otherwise") — verified for both cases, no melee/ranged
+  // distinction in the function's input at all anymore (an earlier version
+  // wrongly special-cased melee as unconditional advantage).
+  it('prone + attacker in melee range -> advantage', () => {
+    expect(attackModeAgainst({ ...base, prone: true, targetInMeleeRange: true })).toBe('advantage')
   })
 
-  it('prone + ranged attack + attacker in melee range -> advantage', () => {
-    expect(attackModeAgainst({ ...base, prone: true, isRanged: true, targetInMeleeRange: true })).toBe('advantage')
+  it('prone + attacker NOT in melee range -> disadvantage', () => {
+    expect(attackModeAgainst({ ...base, prone: true, targetInMeleeRange: false })).toBe('disadvantage')
   })
 
-  it('prone + ranged attack + attacker NOT in melee range -> disadvantage', () => {
-    expect(attackModeAgainst({ ...base, prone: true, isRanged: true, targetInMeleeRange: false })).toBe('disadvantage')
+  it('vexed AND prone-disadvantage cancel out to normal', () => {
+    expect(attackModeAgainst({ ...base, vexed: true, prone: true, targetInMeleeRange: false })).toBe('normal')
+  })
+})
+
+describe('monsterAttackMode (#28)', () => {
+  it('normal with no flags', () => {
+    expect(monsterAttackMode({ sapped: false, prone: false })).toBe('normal')
   })
 
-  it('vexed AND prone-ranged-disadvantage cancel out to normal', () => {
-    expect(
-      attackModeAgainst({ ...base, vexed: true, prone: true, isRanged: true, targetInMeleeRange: false }),
-    ).toBe('normal')
+  it('sapped -> disadvantage', () => {
+    expect(monsterAttackMode({ sapped: true, prone: false })).toBe('disadvantage')
+  })
+
+  it('prone -> disadvantage (its own "Disadvantage on attack rolls", not consumed)', () => {
+    expect(monsterAttackMode({ sapped: false, prone: true })).toBe('disadvantage')
+  })
+
+  it('sapped AND prone -> still just disadvantage, not double-penalized', () => {
+    expect(monsterAttackMode({ sapped: true, prone: true })).toBe('disadvantage')
   })
 })
 

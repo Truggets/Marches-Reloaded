@@ -162,24 +162,40 @@ export function isPushable(size: string): boolean {
  * disadvantage source together cancel out to `'normal'`, per the SRD 2024
  * rule (not "disadvantage wins," and not "first one applied wins").
  *  - `vexed` (Vex weapon mastery): advantage, unconditionally.
- *  - `prone` + melee (or a Ranged attack while `targetInMeleeRange`):
- *    advantage — SRD: "an attack roll against [a Prone creature] has
- *    advantage if the attacker is within 5 feet of it."
- *  - `prone` + Ranged while NOT `targetInMeleeRange`: disadvantage — the
- *    same sentence's "...disadvantage otherwise."
+ *  - `prone` + `targetInMeleeRange`: advantage — SRD's Prone condition: "an
+ *    attack roll against [a Prone creature] has Advantage if the attacker
+ *    is within 5 feet of it, disadvantage otherwise." This is purely about
+ *    the ATTACKER'S DISTANCE, not the weapon type — PR #32's review caught
+ *    an earlier version of this function that special-cased melee as
+ *    unconditional advantage regardless of `targetInMeleeRange`, which both
+ *    contradicted this doc comment's own quoted rule and made Push (which
+ *    sets `targetInMeleeRange: false`) a complete no-op against melee
+ *    weapons. Fixed to apply the same range-only rule to both weapon types.
+ *  - `prone` + NOT `targetInMeleeRange`: disadvantage.
  */
-export function attackModeAgainst(target: {
-  vexed: boolean
-  prone: boolean
-  targetInMeleeRange: boolean
-  isRanged: boolean
-}): AttackMode {
-  const hasAdvantage = target.vexed || (target.prone && (!target.isRanged || target.targetInMeleeRange))
-  const hasDisadvantage = target.prone && target.isRanged && !target.targetInMeleeRange
+export function attackModeAgainst(target: { vexed: boolean; prone: boolean; targetInMeleeRange: boolean }): AttackMode {
+  const hasAdvantage = target.vexed || (target.prone && target.targetInMeleeRange)
+  const hasDisadvantage = target.prone && !target.targetInMeleeRange
   if (hasAdvantage && hasDisadvantage) return 'normal'
   if (hasAdvantage) return 'advantage'
   if (hasDisadvantage) return 'disadvantage'
   return 'normal'
+}
+
+/**
+ * #28: what `AttackMode` a MONSTER's own attack should use, given its own
+ * condition flags — the mirror of `attackModeAgainst` for the other
+ * direction of combat. Sap (disadvantage on the target's next attack) and
+ * Prone's own "Disadvantage on attack rolls" are two independent
+ * disadvantage sources; either alone (or both together, which still
+ * doesn't stack past plain disadvantage) yields `'disadvantage'`. Pulled
+ * out as its own pure function (PR #32 review) rather than left as
+ * unexported page-component glue, matching this file's Archery/Graze
+ * precedent (#3 Tier B PR #29's review) of keeping condition-to-mode logic
+ * testable at the engine level, not just inline in `CombatSandboxPage.tsx`.
+ */
+export function monsterAttackMode(monster: { sapped: boolean; prone: boolean }): AttackMode {
+  return monster.sapped || monster.prone ? 'disadvantage' : 'normal'
 }
 
 /**

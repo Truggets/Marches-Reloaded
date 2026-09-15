@@ -13,7 +13,6 @@ import {
   grazeDamage,
   hitPointsMulticlass,
   isMasteryUnlocked,
-  isRangedWeapon,
   proficiencyBonusMulticlass,
   spellcastingInfo,
 } from '../engine/computeSheet'
@@ -25,13 +24,14 @@ import {
 import {
   attackModeAgainst,
   isPushable,
+  monsterAttackMode,
   resolveMonsterAttack,
   resolveSpellAttack,
   resolveWeaponAttack,
   savingThrow,
   toppleSaveDc,
 } from '../engine/sandbox'
-import type { AttackMode, AttackResult } from '../engine/sandbox'
+import type { AttackResult } from '../engine/sandbox'
 
 interface CharacterRecord {
   id: number
@@ -338,13 +338,13 @@ export function CombatSandboxPage() {
     if (selectedWeapon && selectedMonster) {
       // #28: advantage/disadvantage from the target's current condition
       // flags — see attackModeAgainst's doc for the exact rule (multiple
-      // advantage sources don't stack; advantage + disadvantage cancel out).
-      const isRanged = isRangedWeapon(selectedWeapon)
+      // advantage sources don't stack; advantage + disadvantage cancel out;
+      // Prone's advantage/disadvantage is purely range-based, not keyed to
+      // weapon type — same rule for melee and ranged attacks).
       const mode = attackModeAgainst({
         vexed: selectedMonster.vexed,
         prone: selectedMonster.prone,
         targetInMeleeRange: selectedMonster.inMeleeRange,
-        isRanged,
       })
       const bonus = weaponAttackBonus(selectedWeapon)
       const weaponForResolve = { ...selectedWeapon, damage: weaponDamageString(selectedWeapon) }
@@ -416,8 +416,14 @@ export function CombatSandboxPage() {
     if (!selectedMonster) return
     // Sap: this monster's next attack has disadvantage, consumed on use
     // regardless of hit/miss (same "used up by attempting the attack"
-    // reasoning as Vex above).
-    const mode: AttackMode = selectedMonster.sapped ? 'disadvantage' : 'normal'
+    // reasoning as Vex above). Prone ALSO gives its own attack rolls
+    // disadvantage (SRD: "You have Disadvantage on attack rolls") — a
+    // separate effect from the advantage/disadvantage attacks AGAINST a
+    // prone creature get (attackModeAgainst, used on the player's side) —
+    // and does NOT get consumed here (it only clears via "Stand Up"), so a
+    // Topple that lands doesn't just cosmetically flag the target as Prone,
+    // it actually hampers every attack the monster makes until it stands.
+    const mode = monsterAttackMode(selectedMonster)
     const result = resolveMonsterAttack(selectedMonster.monster, playerAc, undefined, mode)
     if (!result) {
       pushLog({
