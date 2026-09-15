@@ -14,6 +14,7 @@ import {
   grazeDamage,
   hitPoints,
   isAsiLevel,
+  isMasteryUnlocked,
   isRangedWeapon,
   martialChoiceOwed,
   parseFeatAbilityIncrease,
@@ -826,6 +827,23 @@ describe('Fighting Style mechanical effects (#3 Tier B)', () => {
         { classId: 'fighter', level: 1, weaponMasteryIds: ['greatsword'] },
       ]
       expect(grazeDamage(getEquipment('greatsword')!, classes, 3)).toBe(3)
+    })
+  })
+
+  describe('isMasteryUnlocked (#28)', () => {
+    it('true when the weapon id is in some class\'s weaponMasteryIds', () => {
+      const classes = [{ classId: 'fighter', level: 1, weaponMasteryIds: ['longsword'] }]
+      expect(isMasteryUnlocked(getEquipment('longsword')!, classes)).toBe(true)
+    })
+
+    it('false when no class has picked this weapon', () => {
+      const classes = [{ classId: 'fighter', level: 1, weaponMasteryIds: ['greatsword'] }]
+      expect(isMasteryUnlocked(getEquipment('longsword')!, classes)).toBe(false)
+    })
+
+    it('false when no class has any weaponMasteryIds at all', () => {
+      const classes = [{ classId: 'fighter', level: 1 }]
+      expect(isMasteryUnlocked(getEquipment('longsword')!, classes)).toBe(false)
     })
   })
 })

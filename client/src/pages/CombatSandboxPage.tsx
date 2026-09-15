@@ -12,6 +12,8 @@ import {
   finalAbilityScores,
   grazeDamage,
   hitPointsMulticlass,
+  isMasteryUnlocked,
+  isRangedWeapon,
   proficiencyBonusMulticlass,
   spellcastingInfo,
 } from '../engine/computeSheet'
@@ -20,8 +22,16 @@ import {
   parseWeaponsFromEquipmentChoice,
   weaponDamageWithAbilityModifier,
 } from '../engine/equipmentAttack'
-import { resolveMonsterAttack, resolveSpellAttack, resolveWeaponAttack } from '../engine/sandbox'
-import type { AttackResult } from '../engine/sandbox'
+import {
+  attackModeAgainst,
+  isPushable,
+  resolveMonsterAttack,
+  resolveSpellAttack,
+  resolveWeaponAttack,
+  savingThrow,
+  toppleSaveDc,
+} from '../engine/sandbox'
+import type { AttackMode, AttackResult } from '../engine/sandbox'
 
 interface CharacterRecord {
   id: number
@@ -55,11 +65,32 @@ interface LogEntry {
 
 /** A monster added to the battle, tracked purely in local component state —
  * per the plan, this is a non-persistent scratch space: HP here is never
- * sent to the server and never saved on the character record. */
+ * sent to the server and never saved on the character record. #28 adds
+ * condition/position flags, same non-persistent treatment as HP:
+ *  - `inMeleeRange`: the sandbox has no real position model, so this is the
+ *    one toggle standing in for "is the player adjacent to this monster" —
+ *    defaults true (the sandbox's existing implicit assumption, per M11's
+ *    "no range/reach model" note). Drives Push (sets it false on a hit) and
+ *    whether a Ranged attack against a Prone target gets advantage (true)
+ *    or disadvantage (false) — SRD 2024: "an attack roll against [a Prone
+ *    creature] has advantage if the attacker is within 5 feet of it,
+ *    disadvantage otherwise."
+ *  - `prone`: set by a failed Topple save; SRD says a Prone creature can
+ *    stand up by spending half its Speed, which the sandbox doesn't model
+ *    turn-by-turn, so it's cleared manually via the monster's own toggle
+ *    instead of automatically over time.
+ *  - `vexed`: Vex weapon mastery — the PLAYER's next attack against this
+ *    monster gets advantage, consumed on use.
+ *  - `sapped`: Sap weapon mastery — this MONSTER's next attack gets
+ *    disadvantage, consumed on use. */
 interface BattleMonster {
   key: number
   monster: MonsterEntry
   currentHp: number
+  inMeleeRange: boolean
+  prone: boolean
+  vexed: boolean
+  sapped: boolean
 }
 
 /** Very small "flat modifier only" damage-average parser, used solely to
@@ -74,6 +105,14 @@ interface BattleMonster {
  * average); it exists only to keep the tracked HP counter moving in the
  * sandbox, and the raw damage string is always shown alongside it in the log
  * so the player can hand-verify or track exact HP themselves. */
+// #28: which of the 8 Weapon Mastery properties actually affect combat math
+// in this sandbox — Graze (#3 Tier B) plus Vex/Sap/Topple/Push here. Nick,
+// Slow, and Cleave remain flavor-only (#28's own scope split: Nick needs an
+// action-economy model, Slow needs a per-turn Speed reduction the sandbox
+// doesn't track, Cleave needs multi-target resolution — deferred to a
+// follow-up, not silently dropped).
+const IMPLEMENTED_MASTERIES = new Set(['Graze', 'Vex', 'Sap', 'Topple', 'Push'])
+
 function estimateDamage(damage: string, critical: boolean): number {
   // e.g. "1d10 Fire", "1d6 + 2 Piercing", "2d8 Slashing"
   const diceMatch = damage.match(/(\d+)d(\d+)/)
@@ -259,8 +298,15 @@ export function CombatSandboxPage() {
 
   function addMonster(monster: MonsterEntry) {
     const key = nextKeyRef.current++
-    setBattleMonsters((prev) => [...prev, { key, monster, currentHp: monster.hp }])
+    setBattleMonsters((prev) => [
+      ...prev,
+      { key, monster, currentHp: monster.hp, inMeleeRange: true, prone: false, vexed: false, sapped: false },
+    ])
     setSelectedMonsterKey(key)
+  }
+
+  function updateMonster(key: number, patch: Partial<BattleMonster>) {
+    setBattleMonsters((prev) => prev.map((m) => (m.key === key ? { ...m, ...patch } : m)))
   }
 
   function handleAttack() {
@@ -290,33 +336,77 @@ export function CombatSandboxPage() {
     }
 
     if (selectedWeapon && selectedMonster) {
+      // #28: advantage/disadvantage from the target's current condition
+      // flags — see attackModeAgainst's doc for the exact rule (multiple
+      // advantage sources don't stack; advantage + disadvantage cancel out).
+      const isRanged = isRangedWeapon(selectedWeapon)
+      const mode = attackModeAgainst({
+        vexed: selectedMonster.vexed,
+        prone: selectedMonster.prone,
+        targetInMeleeRange: selectedMonster.inMeleeRange,
+        isRanged,
+      })
       const bonus = weaponAttackBonus(selectedWeapon)
       const weaponForResolve = { ...selectedWeapon, damage: weaponDamageString(selectedWeapon) }
-      const result = resolveWeaponAttack(weaponForResolve, bonus, selectedMonster.monster.ac)
+      const result = resolveWeaponAttack(weaponForResolve, bonus, selectedMonster.monster.ac, undefined, mode)
+
+      const patch: Partial<BattleMonster> = {}
+      // Vex's "advantage on your next attack" is consumed by making that
+      // attack at all, regardless of hit/miss — not contingent on whether
+      // the roll actually benefited from it.
+      if (selectedMonster.vexed) patch.vexed = false
+
       let grazeDmg: number | undefined
+      const masteryNotes: string[] = []
       if (result.hit && result.damage) {
         const dmg = estimateDamage(result.damage, result.critical)
-        setBattleMonsters((prev) =>
-          prev.map((m) => (m.key === selectedMonster.key ? { ...m, currentHp: Math.max(0, m.currentHp - dmg) } : m)),
-        )
+        patch.currentHp = Math.max(0, selectedMonster.currentHp - dmg)
+
+        if (isMasteryUnlocked(selectedWeapon, data.classes)) {
+          if (selectedWeapon.mastery === 'Vex') {
+            patch.vexed = true
+            masteryNotes.push('Vex — advantage on your next attack vs this target')
+          } else if (selectedWeapon.mastery === 'Sap') {
+            patch.sapped = true
+            masteryNotes.push("Sap — disadvantage on this target's next attack")
+          } else if (selectedWeapon.mastery === 'Push') {
+            if (isPushable(selectedMonster.monster.size)) {
+              patch.inMeleeRange = false
+              masteryNotes.push('Push — moved out of melee range')
+            } else {
+              masteryNotes.push(`Push — ${selectedMonster.monster.name} is too big to move`)
+            }
+          } else if (selectedWeapon.mastery === 'Topple') {
+            const dc = toppleSaveDc(abilityForWeapon(selectedWeapon, strengthMod, dexterityMod), weaponProficiencyBonus)
+            const conMod = abilityModifier(selectedMonster.monster.abilityScores.Constitution)
+            const save = savingThrow(conMod, dc)
+            if (!save.success) patch.prone = true
+            masteryNotes.push(
+              `Topple — Con save DC ${dc}, rolled ${save.roll}: ${save.success ? 'succeeded' : 'failed, now Prone'}`,
+            )
+          }
+        }
       } else if (!result.hit) {
         grazeDmg = grazeDamageIfUnlocked(selectedWeapon)
         if (grazeDmg !== undefined) {
-          const applied = Math.max(0, grazeDmg)
-          setBattleMonsters((prev) =>
-            prev.map((m) => (m.key === selectedMonster.key ? { ...m, currentHp: Math.max(0, m.currentHp - applied) } : m)),
-          )
+          patch.currentHp = Math.max(0, selectedMonster.currentHp - Math.max(0, grazeDmg))
         }
       }
+
+      if (Object.keys(patch).length > 0) updateMonster(selectedMonster.key, patch)
+
+      const modeNote = mode !== 'normal' ? ` [${mode}${result.rolls ? `: ${result.rolls.join(', ')}` : ''}]` : ''
       const masteryNote =
         grazeDmg !== undefined
           ? ` (Mastery: Graze — ${Math.max(0, grazeDmg)} damage on the miss)`
-          : selectedWeapon.mastery
-            ? ` (Mastery: ${selectedWeapon.mastery} — not applied)`
-            : ''
+          : masteryNotes.length > 0
+            ? ` (Mastery: ${masteryNotes.join('; ')})`
+            : selectedWeapon.mastery
+              ? ` (Mastery: ${selectedWeapon.mastery} — not applied)`
+              : ''
       pushLog({
         side: 'player',
-        label: `${selectedWeapon.name} vs ${selectedMonster.monster.name}${masteryNote}`,
+        label: `${selectedWeapon.name} vs ${selectedMonster.monster.name}${modeNote}${masteryNote}`,
         result,
       })
     }
@@ -324,7 +414,11 @@ export function CombatSandboxPage() {
 
   function handleMonsterAttack() {
     if (!selectedMonster) return
-    const result = resolveMonsterAttack(selectedMonster.monster, playerAc)
+    // Sap: this monster's next attack has disadvantage, consumed on use
+    // regardless of hit/miss (same "used up by attempting the attack"
+    // reasoning as Vex above).
+    const mode: AttackMode = selectedMonster.sapped ? 'disadvantage' : 'normal'
+    const result = resolveMonsterAttack(selectedMonster.monster, playerAc, undefined, mode)
     if (!result) {
       pushLog({
         side: 'monster',
@@ -333,13 +427,15 @@ export function CombatSandboxPage() {
       })
       return
     }
+    if (selectedMonster.sapped) updateMonster(selectedMonster.key, { sapped: false })
     if (result.hit && result.damage) {
       const dmg = estimateDamage(result.damage, result.critical)
       setPlayerHp((prev) => Math.max(0, (prev ?? maxHp ?? 0) - dmg))
     }
+    const modeNote = mode !== 'normal' ? ` [${mode}${result.rolls ? `: ${result.rolls.join(', ')}` : ''}]` : ''
     pushLog({
       side: 'monster',
-      label: `${selectedMonster.monster.name} — ${result.actionName}`,
+      label: `${selectedMonster.monster.name} — ${result.actionName}${modeNote}`,
       result,
     })
   }
@@ -437,7 +533,11 @@ export function CombatSandboxPage() {
                 {selectedWeapon && (
                   <p className="text-xs mt-1">
                     {weaponDamageString(selectedWeapon)}
-                    {selectedWeapon.mastery && ` — Mastery: ${selectedWeapon.mastery} (not applied)`}
+                    {selectedWeapon.mastery &&
+                      (isMasteryUnlocked(selectedWeapon, data.classes) &&
+                      IMPLEMENTED_MASTERIES.has(selectedWeapon.mastery)
+                        ? ` — Mastery: ${selectedWeapon.mastery}`
+                        : ` — Mastery: ${selectedWeapon.mastery} (not applied)`)}
                   </p>
                 )}
               </>
@@ -456,6 +556,38 @@ export function CombatSandboxPage() {
                 <p className="text-sm">
                   AC: <span className="font-bold">{selectedMonster.monster.ac}</span>
                 </p>
+                {(selectedMonster.prone || selectedMonster.vexed || selectedMonster.sapped) && (
+                  <p className="text-xs italic">
+                    {[
+                      selectedMonster.prone && 'Prone',
+                      selectedMonster.vexed && 'Vexed (you have advantage next)',
+                      selectedMonster.sapped && "Sapped (its next attack has disadvantage)",
+                    ]
+                      .filter(Boolean)
+                      .join(' · ')}
+                  </p>
+                )}
+                {/* #28: the sandbox's one position primitive — see BattleMonster's
+                    doc comment. Toggled manually since there's no turn/movement
+                    model to derive it from automatically. */}
+                <div className="flex flex-wrap gap-2 mt-1">
+                  <button
+                    type="button"
+                    className={`pixel-btn !py-1 !px-2 text-xs ${selectedMonster.inMeleeRange ? '' : 'pixel-btn-secondary'}`}
+                    onClick={() => updateMonster(selectedMonster.key, { inMeleeRange: !selectedMonster.inMeleeRange })}
+                  >
+                    {selectedMonster.inMeleeRange ? 'In Melee Range' : 'Out of Melee Range'}
+                  </button>
+                  {selectedMonster.prone && (
+                    <button
+                      type="button"
+                      className="pixel-btn pixel-btn-secondary !py-1 !px-2 text-xs"
+                      onClick={() => updateMonster(selectedMonster.key, { prone: false })}
+                    >
+                      Stand Up
+                    </button>
+                  )}
+                </div>
               </>
             ) : (
               <p className="text-sm italic">No monster selected.</p>

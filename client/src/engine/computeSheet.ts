@@ -864,22 +864,30 @@ export function archeryAttackBonus(weapon: EquipmentEntry, classes: CharacterCla
   return undefined
 }
 
+/** #28: whether `weapon`'s mastery property is actually usable for `classes`
+ * — the SRD's real gate ("usable only by a character who has a feature that
+ * unlocks the property"), not just "the weapon happens to print this
+ * mastery." Having `mastery: 'X'` on the weapon entry is not, by itself,
+ * sufficient — a character who hasn't picked this weapon for their Weapon
+ * Mastery can't use its property yet. Shared by every per-property mastery
+ * check (`grazeDamage` here, and Vex/Sap/Topple/Cleave/Push in
+ * `sandbox.ts`/`CombatSandboxPage.tsx`) so the gate exists in exactly one
+ * place. */
+export function isMasteryUnlocked(weapon: EquipmentEntry, classes: CharacterClassEntry[]): boolean {
+  return classes.some((c) => c.weaponMasteryIds?.includes(weapon.id))
+}
+
 /** Graze weapon mastery: the ability modifier a miss with `weapon` still
  * deals as damage, or `undefined` if Graze doesn't apply — either the
- * weapon's mastery property isn't Graze, or (the actual SRD gate: "usable
- * only by a character who has a feature that unlocks the property") no
- * class's `weaponMasteryIds` actually includes this weapon's id. Having
- * `mastery: 'Graze'` printed on the weapon entry is not, by itself,
- * sufficient — a character who hasn't picked this weapon for their Weapon
- * Mastery can't use its property yet. */
+ * weapon's mastery property isn't Graze, or it isn't unlocked yet
+ * (`isMasteryUnlocked`). */
 export function grazeDamage(
   weapon: EquipmentEntry,
   classes: CharacterClassEntry[],
   abilityMod: number,
 ): number | undefined {
   if (weapon.mastery !== 'Graze') return undefined
-  const unlocked = classes.some((c) => c.weaponMasteryIds?.includes(weapon.id))
-  if (!unlocked) return undefined
+  if (!isMasteryUnlocked(weapon, classes)) return undefined
   return abilityMod
 }
 
