@@ -31,6 +31,7 @@ export function AdminPackImportPage() {
   const [backgroundsText, setBackgroundsText] = useState('')
   const [speciesText, setSpeciesText] = useState('')
   const [equipmentText, setEquipmentText] = useState('')
+  const [spellsText, setSpellsText] = useState('')
   const [importing, setImporting] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [result, setResult] = useState<{
@@ -38,14 +39,21 @@ export function AdminPackImportPage() {
     backgroundCount?: number
     speciesCount?: number
     equipmentCount?: number
+    spellCount?: number
   } | null>(null)
 
   async function handleImport() {
     setError(null)
     setResult(null)
 
-    if (!featsText.trim() && !backgroundsText.trim() && !speciesText.trim() && !equipmentText.trim()) {
-      setError('Paste at least one of Feats, Backgrounds, Species, or Equipment JSON before importing.')
+    if (
+      !featsText.trim() &&
+      !backgroundsText.trim() &&
+      !speciesText.trim() &&
+      !equipmentText.trim() &&
+      !spellsText.trim()
+    ) {
+      setError('Paste at least one of Feats, Backgrounds, Species, Equipment, or Spells JSON before importing.')
       return
     }
 
@@ -89,13 +97,23 @@ export function AdminPackImportPage() {
       }
     }
 
+    let spells: unknown
+    if (spellsText.trim()) {
+      try {
+        spells = JSON.parse(spellsText)
+      } catch {
+        setError('Spells JSON is not valid — fix the syntax error and try again.')
+        return
+      }
+    }
+
     setImporting(true)
     try {
       const res = await fetch('/api/admin/packs/import', {
         method: 'POST',
         credentials: 'include',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ packId, packName, feats, backgrounds, species, equipment }),
+        body: JSON.stringify({ packId, packName, feats, backgrounds, species, equipment, spells }),
       })
       if (!res.ok) throw new Error(await extractErrorMessage(res))
       const body = (await res.json()) as {
@@ -103,6 +121,7 @@ export function AdminPackImportPage() {
         backgroundCount?: number
         speciesCount?: number
         equipmentCount?: number
+        spellCount?: number
       }
       await initPacks() // so the admin's own freshly-imported pack shows up without a manual refresh
       setResult({
@@ -110,6 +129,7 @@ export function AdminPackImportPage() {
         backgroundCount: body.backgroundCount,
         speciesCount: body.speciesCount,
         equipmentCount: body.equipmentCount,
+        spellCount: body.spellCount,
       })
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to import pack')
@@ -138,10 +158,12 @@ export function AdminPackImportPage() {
           document, not an individual feat), the vault-shaped backgrounds JSON
           (the {' {backgrounds: [...]} '}
           document), the vault-shaped species JSON (the {' {species: [...]} '}
-          document), and/or the vault-shaped equipment JSON (the
+          document), the vault-shaped equipment JSON (the
           {' {weapons: [...], armor: [...], adventuring_gear: [...]} '}
-          document) below — each is independently optional, but at least one is
-          required.
+          document), and/or a vault-shaped spell-book JSON (the {' {spells: [...]} '}
+          document — each expansion book is its own pack, so use a distinct Pack ID
+          per book rather than importing multiple books under the same one) below —
+          each is independently optional, but at least one is required.
         </p>
 
         <label className="flex flex-col gap-1">
@@ -205,6 +227,17 @@ export function AdminPackImportPage() {
           />
         </label>
 
+        <label className="flex flex-col gap-1">
+          <span className="pixel-label text-xs">Spells JSON (one book at a time — own Pack ID per book)</span>
+          <textarea
+            value={spellsText}
+            onChange={(e) => setSpellsText(e.target.value)}
+            spellCheck={false}
+            placeholder='{"title": "...", "source": "...", "spells": [...]}'
+            className="pixel-input h-[24rem] w-full font-mono text-xs"
+          />
+        </label>
+
         {error && <p className="text-sm text-[var(--color-danger)]">{error}</p>}
         {result && (
           <p className="text-sm text-[var(--color-success,green)]">
@@ -214,6 +247,7 @@ export function AdminPackImportPage() {
               result.backgroundCount !== undefined ? `${result.backgroundCount} backgrounds` : null,
               result.speciesCount !== undefined ? `${result.speciesCount} species` : null,
               result.equipmentCount !== undefined ? `${result.equipmentCount} equipment` : null,
+              result.spellCount !== undefined ? `${result.spellCount} spells` : null,
             ]
               .filter(Boolean)
               .join(', ')}{' '}
@@ -227,7 +261,11 @@ export function AdminPackImportPage() {
             onClick={() => void handleImport()}
             disabled={
               importing ||
-              (!featsText.trim() && !backgroundsText.trim() && !speciesText.trim() && !equipmentText.trim())
+              (!featsText.trim() &&
+                !backgroundsText.trim() &&
+                !speciesText.trim() &&
+                !equipmentText.trim() &&
+                !spellsText.trim())
             }
             className="pixel-btn"
           >

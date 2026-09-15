@@ -1,0 +1,51 @@
+{
+  "title": "Fixture Spells",
+  "source": "Fixture Sourcebook.md",
+  "category": "Test",
+  "spells": [
+    {
+      "name": "Booming Blade",
+      "level": "Evocation Cantrip (0 Level)",
+      "casting_time": "1 Action",
+      "range": "Self (5-foot radius)",
+      "components": "Somatic, Material (a melee weapon worth at least 1 SP)",
+      "duration": "1 round",
+      "concentration": "No",
+      "ritual": "No",
+      "classes": ["Sorcerer", "Warlock", "Wizard"],
+      "mechanics_first": [
+        "**Melee Weapon Attack:** you must make a melee attack with a weapon.",
+        "**Sheathing Sound:** on a hit, the target becomes sheathed in booming energy."
+      ],
+      "lore_and_flavor": "A favorite cantrip of arcane tricksters."
+    },
+    {
+      "name": "Fixture Mind Whip",
+      "level": "2nd-Level Enchantment",
+      "casting_time": "1 Action",
+      "range": "90 feet",
+      "components": "Verbal",
+      "duration": "Concentration, up to 1 minute",
+      "concentration": "Yes",
+      "ritual": "No",
+      "classes": ["Sorcerer", "Wizard"],
+      "mechanics_first": [
+        "**Save & Damage:** the target must make an Intelligence saving throw.",
+        "**At Higher Levels:** you can target one additional creature for each slot level above 2nd."
+      ],
+      "lore_and_flavor": "Tasha designed this spell to scramble her enemies' focus."
+    },
+    {
+      "name": "Fixture Ritual Spell",
+      "level": "1st-Level Divination",
+      "casting_time": "1 minute or Ritual",
+      "range": "Self",
+      "components": "Verbal, Somatic",
+      "duration": "Instantaneous",
+      "concentration": "No",
+      "ritual": "Yes",
+      "classes": ["Wizard"],
+      "mechanics_first": ["**Detection:** you sense the presence of something."]
+    }
+  ]
+}

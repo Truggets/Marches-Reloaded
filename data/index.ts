@@ -54,6 +54,7 @@ let importedFeats: FeatEntry[] = []
 let importedBackgrounds: BackgroundEntry[] = []
 let importedSpecies: SpeciesEntry[] = []
 let importedEquipment: EquipmentEntry[] = []
+let importedSpells: SpellEntry[] = []
 let importedPackManifests: { id: string; name: string }[] = []
 
 /** Fetches this instance's admin-imported packs and merges their feats in.
@@ -74,6 +75,7 @@ export async function initPacks(): Promise<void> {
           backgrounds?: BackgroundEntry[]
           species?: SpeciesEntry[]
           equipment?: EquipmentEntry[]
+          spells?: SpellEntry[]
         }
       }[]
     }
@@ -81,6 +83,7 @@ export async function initPacks(): Promise<void> {
     importedBackgrounds = body.packs.flatMap((p) => p.content.backgrounds ?? [])
     importedSpecies = body.packs.flatMap((p) => p.content.species ?? [])
     importedEquipment = body.packs.flatMap((p) => p.content.equipment ?? [])
+    importedSpells = body.packs.flatMap((p) => p.content.spells ?? [])
     importedPackManifests = body.packs.map((p) => ({ id: p.packId, name: p.manifest.name }))
   } catch {
     // Network failure, malformed response, etc. — degrade to SRD-only.
@@ -134,15 +137,15 @@ export function getFeat(id: string): FeatEntry | undefined {
 }
 
 export function listSpells(): SpellEntry[] {
-  return spells
+  return [...spells, ...importedSpells]
 }
 
 export function getSpell(id: string): SpellEntry | undefined {
-  return spells.find((s) => s.id === id)
+  return spells.find((s) => s.id === id) ?? importedSpells.find((s) => s.id === id)
 }
 
 export function getSpellsByClass(className: string): SpellEntry[] {
-  return spells.filter((s) => s.classes.some((c) => c.toLowerCase() === className.toLowerCase()))
+  return [...spells, ...importedSpells].filter((s) => s.classes.some((c) => c.toLowerCase() === className.toLowerCase()))
 }
 
 export function listEquipment(category?: EquipmentEntry['category']): EquipmentEntry[] {

@@ -10,6 +10,7 @@ import { parseFeatsImport } from "../../../data/build/parse-feats-import.js";
 import { parseBackgroundsImport } from "../../../data/build/parse-backgrounds-import.js";
 import { parseSpeciesImport } from "../../../data/build/parse-species-import.js";
 import { parseEquipmentImport } from "../../../data/build/parse-equipment-import.js";
+import { parseSpellsImport } from "../../../data/build/parse-spells-import.js";
 
 const router = express.Router();
 
@@ -104,24 +105,27 @@ router.get("/characters", (req, res) => {
 });
 
 // M2b: import an additional content pack (feats, backgrounds, species,
-// and/or equipment; at least one required). The pack is stored in
+// equipment, and/or spells; at least one required). The pack is stored in
 // pack_content (shared/data/marches.sqlite), never in the shipped data/
 // directory — see CLAUDE.md's SRD-only bundling rule and
 // docs/planning/m2b-execution-plan.md / m2b-phase2-backgrounds-plan.md /
-// m2b-phase3-4-species-equipment-plan.md. Body shape: { packId, packName,
-// feats?, backgrounds?, species?, equipment? } (each the vault-shaped
-// top-level object for that content type, e.g. {feats: [...]} /
-// {species: [...]}). Runs each provided field through the same
-// parser/validator used by its build-time CLI (parse-feats-import.js /
+// m2b-phase3-4-species-equipment-plan.md / issue-33-plan.md. Body shape:
+// { packId, packName, feats?, backgrounds?, species?, equipment?, spells? }
+// (each the vault-shaped top-level object for that content type, e.g.
+// {feats: [...]} / {spells: [...]}). Runs each provided field through the
+// same parser/validator used by its build-time CLI (parse-feats-import.js /
 // parse-backgrounds-import.js / parse-species-import.js /
-// parse-equipment-import.js) — reject the whole pack, name the offending
-// entry, per the plan's "validation moves to the import boundary" decision.
+// parse-equipment-import.js / parse-spells-import.js) — reject the whole
+// pack, name the offending entry, per the plan's "validation moves to the
+// import boundary" decision. #33: each expansion-book spell file is its own
+// pack (a distinct packId per import call), not merged into a shared pack —
+// this endpoint itself doesn't need to know that; it's a caller convention.
 // Not wrapped in an explicit DB transaction: the SELECT-then-INSERT below
 // isn't atomic across statements in general, but better-sqlite3 is
 // synchronous and this is a single-process deployment, so no other request
 // can interleave in that window (see M2b Phase 2 review).
 router.post("/packs/import", (req, res) => {
-  const { packId, packName, feats, backgrounds, species, equipment } = req.body || {};
+  const { packId, packName, feats, backgrounds, species, equipment, spells } = req.body || {};
 
   if (typeof packId !== "string" || !packId.trim()) {
     return res.status(400).json({ error: "packId is required" });
@@ -133,11 +137,12 @@ router.post("/packs/import", (req, res) => {
     feats === undefined &&
     backgrounds === undefined &&
     species === undefined &&
-    equipment === undefined
+    equipment === undefined &&
+    spells === undefined
   ) {
     return res
       .status(400)
-      .json({ error: "At least one of feats, backgrounds, species, or equipment is required" });
+      .json({ error: "At least one of feats, backgrounds, species, equipment, or spells is required" });
   }
 
   let parsedFeats;
@@ -176,6 +181,15 @@ router.post("/packs/import", (req, res) => {
     }
   }
 
+  let parsedSpells;
+  if (spells !== undefined) {
+    try {
+      parsedSpells = parseSpellsImport(spells, packId);
+    } catch (err) {
+      return res.status(400).json({ error: `Import rejected: ${err.message}` });
+    }
+  }
+
   // Merge with whatever's already stored for this pack_id so importing one
   // field (e.g. backgrounds) doesn't wipe out a previously-imported other
   // field (e.g. feats) — see CLAUDE.md / M2b Phase 2 plan on pack_content
@@ -188,10 +202,12 @@ router.post("/packs/import", (req, res) => {
   const finalBackgrounds = parsedBackgrounds !== undefined ? parsedBackgrounds : existingContent.backgrounds;
   const finalSpecies = parsedSpecies !== undefined ? parsedSpecies : existingContent.species;
   const finalEquipment = parsedEquipment !== undefined ? parsedEquipment : existingContent.equipment;
+  const finalSpells = parsedSpells !== undefined ? parsedSpells : existingContent.spells;
   if (finalFeats !== undefined) mergedContent.feats = finalFeats;
   if (finalBackgrounds !== undefined) mergedContent.backgrounds = finalBackgrounds;
   if (finalSpecies !== undefined) mergedContent.species = finalSpecies;
   if (finalEquipment !== undefined) mergedContent.equipment = finalEquipment;
+  if (finalSpells !== undefined) mergedContent.spells = finalSpells;
 
   const manifest = JSON.stringify({ id: packId, name: packName, importedAt: new Date().toISOString() });
   const content = JSON.stringify(mergedContent);
@@ -208,6 +224,7 @@ router.post("/packs/import", (req, res) => {
   if (parsedBackgrounds !== undefined) response.backgroundCount = parsedBackgrounds.length;
   if (parsedSpecies !== undefined) response.speciesCount = parsedSpecies.length;
   if (parsedEquipment !== undefined) response.equipmentCount = parsedEquipment.length;
+  if (parsedSpells !== undefined) response.spellCount = parsedSpells.length;
 
   return res.status(200).json(response);
 });

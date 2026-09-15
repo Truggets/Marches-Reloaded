@@ -59,7 +59,19 @@ function parseSpellBody(bodyText) {
 }
 
 function main() {
-  const text = fs.readFileSync(SOURCE_PATH, 'utf8')
+  // #33: the checked-out source markdown has CRLF line endings (a Windows
+  // git checkout of the vendored dnd-5e-srd-markdown repo) — JS's `.` never
+  // matches a line terminator, INCLUDING `\r`, so every `\n+`-anchored
+  // regex below silently failed to match past the `\r` a `(.+)` capture
+  // group correctly stopped before, breaking every field boundary in
+  // parseSpellBody's meta-line regex. Normalizing once here (rather than
+  // patching every `\n` in every regex to `\r?\n`) fixes all of them at
+  // once and keeps the regexes themselves readable. Discovered while
+  // re-running this script for #33 (0/339 spells parsed on a clean
+  // checkout) — the shipped data/spells.json was evidently generated on a
+  // checkout with LF line endings at the time, so this was a real,
+  // previously-undetected reproducibility gap, not a #33-specific issue.
+  const text = fs.readFileSync(SOURCE_PATH, 'utf8').replace(/\r\n/g, '\n')
 
   const descStart = text.indexOf('## Spell Descriptions')
   if (descStart === -1) throw new Error('Could not find "## Spell Descriptions" heading')
@@ -115,6 +127,12 @@ function main() {
       classes,
       description: parsedBody.description,
       higherLevels: parsedBody.higherLevels,
+      // #33: derived from the same duration/castingTime text already
+      // captured above — e.g. "Concentration, up to 1 hour" / "1 minute or
+      // Ritual" — rather than a separate parse pass, since the source
+      // markdown encodes both directly in these two fields' own prose.
+      concentration: /Concentration/.test(parsedBody.duration),
+      ritual: /Ritual/.test(parsedBody.castingTime),
       pack: PACK,
       source: { book: BOOK, section: h.name },
     })
