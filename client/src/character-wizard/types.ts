@@ -69,7 +69,8 @@ export interface LevelUpEntry {
   level: number // 2..10, that class's own level after this entry
   hitPointGain: number // the fixed value used that level (die-average+1, +1 more if Dwarf)
   featChoice?: { featId: string; abilityIncreases?: Ability[] } // only present at ASI-granting levels
-  spellsAdded?: { cantrips: string[]; prepared: string[] } // only present for casters at levels where slot/cantrip counts grow
+  // `spellbook` (#5): spells added to a spellbook-class's book this level; absent on saves predating it.
+  spellsAdded?: { cantrips: string[]; prepared: string[]; spellbook?: string[] } // only present for casters at levels where slot/cantrip counts grow
 }
 
 export interface CharacterClassEntry {
@@ -109,7 +110,9 @@ export interface CharacterData {
   abilityScores: AbilityScoresData
   skillProficiencies: string[]
   equipmentChoice: string
-  spells?: { cantrips: string[]; prepared: string[] }
+  // `spellbook` (#5): a spellbook-class's (Wizard) starting book - `prepared` is chosen from it.
+  // Absent on older saves; see engine/spellbook.ts for how those are treated.
+  spells?: { cantrips: string[]; prepared: string[]; spellbook?: string[] }
   levelUps?: LevelUpEntry[]
   // Bonus Origin feat granted by a species trait (e.g. Human's Versatile).
   // Optional/absent-safe — only present for species with such a trait, and

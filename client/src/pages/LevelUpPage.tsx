@@ -6,6 +6,7 @@ import { ContentPicker } from '../ContentPicker'
 import { StepMartial } from '../character-wizard/steps/StepMartial'
 import type { Ability, CharacterClassEntry, CharacterData, LevelUpEntry } from '../character-wizard/types'
 import { ABILITIES } from '../character-wizard/types'
+import { spellbookForClass, spellbookPicksOwed, spellbookRule } from '../engine/spellbook'
 import {
   abilityModifier,
   canMulticlassInto,
@@ -88,6 +89,7 @@ export function LevelUpPage() {
   const [fixedListAbility, setFixedListAbility] = useState<Ability | ''>('')
   const [cantripPicks, setCantripPicks] = useState<string[]>([])
   const [preparedPicks, setPreparedPicks] = useState<string[]>([])
+  const [spellbookPicks, setSpellbookPicks] = useState<string[]>([])
   // In-progress pick for the current level's subclass-choice section, if any
   // — reset every level like the other per-level choices.
   const [chosenSubclassId, setChosenSubclassId] = useState<string | null>(null)
@@ -144,6 +146,7 @@ export function LevelUpPage() {
     setFixedListAbility('')
     setCantripPicks([])
     setPreparedPicks([])
+    setSpellbookPicks([])
     setChosenSubclassId(null)
     setChosenFightingStyleFeatId(null)
     setChosenFightingStyleAlternateCantrips([])
@@ -328,7 +331,7 @@ export function LevelUpPage() {
                 {entry.featChoice ? `, feat: ${entry.featChoice.featId}` : ''}
                 {entry.spellsAdded &&
                 (entry.spellsAdded.cantrips.length > 0 || entry.spellsAdded.prepared.length > 0)
-                  ? `, +${entry.spellsAdded.cantrips.length} cantrip(s), +${entry.spellsAdded.prepared.length} prepared spell(s)`
+                  ? `, +${entry.spellsAdded.cantrips.length} cantrip(s), +${entry.spellsAdded.prepared.length} prepared spell(s)${entry.spellsAdded.spellbook ? `, +${entry.spellsAdded.spellbook.length} spellbook spell(s)` : ''}`
                   : ''}
               </li>
             ))}
@@ -460,12 +463,25 @@ export function LevelUpPage() {
         ...draftLevelUps.flatMap((e) => e.spellsAdded?.prepared ?? []),
       ]
 
+  // #5: spellbook classes (Wizard) add to a book each level, then prepare from
+  // it - so this level's new book spells are immediately preparable.
+  const spellbookOwed = isCaster ? spellbookPicksOwed(classId, level) : 0
+  const usesSpellbook = isCaster && spellbookRule(classId) !== undefined
+  const spellbookSoFar = isNewClass || !usesSpellbook ? [] : spellbookForClass({ ...data, levelUps: [...(data.levelUps ?? []), ...draftLevelUps] }, classId)
+
   const candidateSpells = isCaster ? getSpellsByClass(classEntry.name) : []
   const cantripOptions = candidateSpells.filter(
     (s) => s.level === 0 && !knownCantripsSoFar.includes(s.id),
   )
+  const spellbookOptions = candidateSpells.filter(
+    (s) => s.level >= 1 && s.level <= maxSpellLevel && !spellbookSoFar.includes(s.id),
+  )
   const preparedOptions = candidateSpells.filter(
-    (s) => s.level >= 1 && s.level <= maxSpellLevel && !knownPreparedSoFar.includes(s.id),
+    (s) =>
+      s.level >= 1 &&
+      s.level <= maxSpellLevel &&
+      !knownPreparedSoFar.includes(s.id) &&
+      (!usesSpellbook || spellbookSoFar.includes(s.id) || spellbookPicks.includes(s.id)),
   )
 
   // Ability-increase validation for the ASI sub-choice.
@@ -490,7 +506,8 @@ export function LevelUpPage() {
       (!isFixedListFeatSelected || fixedListValid))
   const spellStepDone =
     (cantripDelta <= 0 || cantripPicks.length === cantripDelta) &&
-    (preparedDelta <= 0 || preparedPicks.length === preparedDelta)
+    (preparedDelta <= 0 || preparedPicks.length === preparedDelta) &&
+    (spellbookOwed <= 0 || spellbookPicks.length === spellbookOwed)
   const subclassStepDone = !needsSubclassChoice || chosenSubclassId !== null
   const fightingStyleStepDone =
     !needsFightingStyleChoice ||
@@ -510,6 +527,15 @@ export function LevelUpPage() {
       setCantripPicks(cantripPicks.filter((s) => s !== spellId))
     } else if (cantripPicks.length < cantripDelta) {
       setCantripPicks([...cantripPicks, spellId])
+    }
+  }
+
+  function toggleSpellbookPick(spellId: string) {
+    if (spellbookPicks.includes(spellId)) {
+      setSpellbookPicks(spellbookPicks.filter((s) => s !== spellId))
+      setPreparedPicks(preparedPicks.filter((s) => s !== spellId))
+    } else if (spellbookPicks.length < spellbookOwed) {
+      setSpellbookPicks([...spellbookPicks, spellId])
     }
   }
 
@@ -563,8 +589,8 @@ export function LevelUpPage() {
       ...(asiLevel && selectedFeatId
         ? { featChoice: { featId: selectedFeatId, ...(abilityIncreases ? { abilityIncreases } : {}) } }
         : {}),
-      ...(isCaster && (cantripDelta > 0 || preparedDelta > 0)
-        ? { spellsAdded: { cantrips: cantripPicks, prepared: preparedPicks } }
+      ...(isCaster && (cantripDelta > 0 || preparedDelta > 0 || spellbookOwed > 0)
+        ? { spellsAdded: { cantrips: cantripPicks, prepared: preparedPicks, ...(usesSpellbook ? { spellbook: spellbookPicks } : {}) } }
         : {}),
     }
 
@@ -769,6 +795,30 @@ export function LevelUpPage() {
                   className={`pixel-btn ${selected ? '' : 'pixel-btn-secondary'}`}
                 >
                   {spell.name}
+                </button>
+              )
+            })}
+          </div>
+        </section>
+      )}
+
+      {usesSpellbook && spellbookOwed > 0 && (
+        <section className="flex flex-col gap-2">
+          <h2 className="pixel-title text-base">
+            Add to Spellbook: choose {spellbookOwed} ({spellbookPicks.length}/{spellbookOwed})
+          </h2>
+          <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+            {spellbookOptions.map((spell) => {
+              const selected = spellbookPicks.includes(spell.id)
+              return (
+                <button
+                  key={spell.id}
+                  type="button"
+                  disabled={!selected && spellbookPicks.length >= spellbookOwed}
+                  onClick={() => toggleSpellbookPick(spell.id)}
+                  className={`pixel-btn ${selected ? '' : 'pixel-btn-secondary'}`}
+                >
+                  {spell.name} (L{spell.level})
                 </button>
               )
             })}

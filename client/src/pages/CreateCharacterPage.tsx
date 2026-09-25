@@ -12,6 +12,7 @@ import { StepEquipment } from '../character-wizard/steps/StepEquipment'
 import { StepSpells } from '../character-wizard/steps/StepSpells'
 import { StepName } from '../character-wizard/steps/StepName'
 import { getCasterCounts } from '../character-wizard/parsing'
+import { spellbookRule } from '../engine/spellbook'
 import {
   diffQuickStats,
   featAbilityDerivedFromChosenClass,
@@ -289,6 +290,7 @@ export function CreateCharacterPage() {
   const [equipmentChoice, setEquipmentChoice] = useState<string | null>(null)
   const [spellCantrips, setSpellCantrips] = useState<string[]>([])
   const [spellPrepared, setSpellPrepared] = useState<string[]>([])
+  const [spellSpellbook, setSpellSpellbook] = useState<string[]>([])
   const [featSpellCantrips, setFeatSpellCantrips] = useState<string[]>([])
   const [featSpellPrepared, setFeatSpellPrepared] = useState<string[]>([])
   const [backgroundFeatSpellAbility, setBackgroundFeatSpellAbility] = useState<string | null>(null)
@@ -308,6 +310,8 @@ export function CreateCharacterPage() {
   const backgroundEntry = backgroundId ? getBackground(backgroundId) : undefined
   const casterCounts = classEntry ? getCasterCounts(classEntry) : null
   const isCaster = casterCounts !== null
+  // #5: level-1 spellbook size for classes that keep one (Wizard); undefined otherwise.
+  const spellbookSize = classEntry && isCaster ? spellbookRule(classEntry.id)?.initial : undefined
   const featSpellList = backgroundFeatSpellList(backgroundEntry?.feat, backgroundEntry?.pack)
   const hasFeatSpells = !!featSpellList
   const resolvedBackgroundFeat = backgroundEntry?.feat
@@ -424,7 +428,7 @@ export function CreateCharacterPage() {
       case 'equipment':
         return !!equipmentChoice
       case 'spells': {
-        const casterDone = !casterCounts || (spellCantrips.length === casterCounts.cantrips && spellPrepared.length === casterCounts.preparedOrKnown)
+        const casterDone = !casterCounts || (spellCantrips.length === casterCounts.cantrips && spellPrepared.length === casterCounts.preparedOrKnown && (spellbookSize === undefined || spellSpellbook.length === spellbookSize))
         const featDone =
           !hasFeatSpells ||
           (featSpellCantrips.length === 2 && featSpellPrepared.length === 1 && !!resolvedBackgroundFeatSpellAbility)
@@ -501,7 +505,7 @@ export function CreateCharacterPage() {
       ),
       equipmentChoice,
       ...(languagesChosen.length > 0 ? { languages: languagesChosen } : {}),
-      ...(isCaster ? { spells: { cantrips: spellCantrips, prepared: spellPrepared } } : {}),
+      ...(isCaster ? { spells: { cantrips: spellCantrips, prepared: spellPrepared, ...(spellbookSize !== undefined ? { spellbook: spellSpellbook } : {}) } } : {}),
       ...(originFeatId ? { originFeatId } : {}),
       ...(hasFeatSpells ? { originFeatSpells: { cantrips: featSpellCantrips, prepared: featSpellPrepared } } : {}),
       ...(hasFeatSpells && resolvedBackgroundFeatSpellAbility
@@ -637,6 +641,12 @@ export function CreateCharacterPage() {
                 preparedCount={casterCounts.preparedOrKnown}
                 cantrips={spellCantrips}
                 prepared={spellPrepared}
+                spellbookCount={spellbookSize}
+                spellbook={spellSpellbook}
+                onChangeSpellbook={(ids) => {
+                  setSpellSpellbook(ids)
+                  setSpellPrepared(spellPrepared.filter((id) => ids.includes(id)))
+                }}
                 excludeIds={[...featSpellCantrips, ...featSpellPrepared, ...versatileSpellCantrips, ...versatileSpellPrepared]}
                 onChangeCantrips={(ids) => {
                   const added = ids.find((id) => !spellCantrips.includes(id))
@@ -658,7 +668,7 @@ export function CreateCharacterPage() {
                 preparedCount={1}
                 cantrips={featSpellCantrips}
                 prepared={featSpellPrepared}
-                excludeIds={[...spellCantrips, ...spellPrepared, ...versatileSpellCantrips, ...versatileSpellPrepared]}
+                excludeIds={[...spellCantrips, ...spellPrepared, ...spellSpellbook, ...versatileSpellCantrips, ...versatileSpellPrepared]}
                 onChangeCantrips={(ids) => {
                   const added = ids.find((id) => !featSpellCantrips.includes(id))
                   if (added) setLastSpellId(added)
@@ -702,7 +712,7 @@ export function CreateCharacterPage() {
                 preparedCount={1}
                 cantrips={versatileSpellCantrips}
                 prepared={versatileSpellPrepared}
-                excludeIds={[...spellCantrips, ...spellPrepared, ...featSpellCantrips, ...featSpellPrepared]}
+                excludeIds={[...spellCantrips, ...spellPrepared, ...spellSpellbook, ...featSpellCantrips, ...featSpellPrepared]}
                 onChangeCantrips={(ids) => {
                   const added = ids.find((id) => !versatileSpellCantrips.includes(id))
                   if (added) setLastSpellId(added)

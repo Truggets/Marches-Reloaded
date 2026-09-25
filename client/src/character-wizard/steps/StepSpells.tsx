@@ -8,6 +8,10 @@ interface Props {
   prepared: string[]
   onChangeCantrips: (ids: string[]) => void
   onChangePrepared: (ids: string[]) => void
+  // #5: spellbook classes (Wizard) first pick a spellbook, then prepare from it.
+  spellbookCount?: number
+  spellbook?: string[]
+  onChangeSpellbook?: (ids: string[]) => void
   // Spell ids already chosen elsewhere (e.g. by a second StepSpells block on
   // the same character — a class caster who also has a background-granted
   // spell feat from the same spell list) — hidden here so the same spell
@@ -27,6 +31,9 @@ export function StepSpells({
   prepared,
   onChangeCantrips,
   onChangePrepared,
+  spellbookCount,
+  spellbook = [],
+  onChangeSpellbook,
   excludeIds = [],
   heading = 'Spells',
 }: Props) {
@@ -42,6 +49,18 @@ export function StepSpells({
       onChangeCantrips(cantrips.filter((s) => s !== id))
     } else if (cantrips.length < cantripCount) {
       onChangeCantrips([...cantrips, id])
+    }
+  }
+
+  const hasSpellbook = spellbookCount !== undefined && onChangeSpellbook !== undefined
+  const preparedOptions = hasSpellbook ? leveledOptions.filter((s) => spellbook.includes(s.id)) : leveledOptions
+
+  function toggleSpellbook(id: string) {
+    if (!onChangeSpellbook || spellbookCount === undefined) return
+    if (spellbook.includes(id)) {
+      onChangeSpellbook(spellbook.filter((s) => s !== id))
+    } else if (spellbook.length < spellbookCount) {
+      onChangeSpellbook([...spellbook, id])
     }
   }
 
@@ -79,12 +98,36 @@ export function StepSpells({
         </div>
       </div>
 
+      {hasSpellbook && (
+        <div className="flex flex-col gap-2">
+          <p className="pixel-label">
+            Spellbook: choose {spellbookCount} ({spellbook.length}/{spellbookCount})
+          </p>
+          <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+            {leveledOptions.map((spell) => {
+              const selected = spellbook.includes(spell.id)
+              return (
+                <button
+                  key={spell.id}
+                  type="button"
+                  disabled={!selected && spellbook.length >= (spellbookCount ?? 0)}
+                  onClick={() => toggleSpellbook(spell.id)}
+                  className={`pixel-btn ${selected ? '' : 'pixel-btn-secondary'}`}
+                >
+                  {spell.name}
+                </button>
+              )
+            })}
+          </div>
+        </div>
+      )}
+
       <div className="flex flex-col gap-2">
         <p className="pixel-label">
-          Prepared/Known: choose {preparedCount} ({prepared.length}/{preparedCount})
+          Prepared{hasSpellbook ? ' (from your spellbook)' : '/Known'}: choose {preparedCount} ({prepared.length}/{preparedCount})
         </p>
         <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
-          {leveledOptions.map((spell) => {
+          {preparedOptions.map((spell) => {
             const selected = prepared.includes(spell.id)
             return (
               <button

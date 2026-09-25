@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { getBackground, getClass, getEquipment, getFeat, getLanguage, getSpecies, getSpell } from '@data'
+import { spellbookForClass } from '../engine/spellbook'
 import type { Ability } from '../character-wizard/types'
 import { ABILITIES, ALL_SKILLS } from '../character-wizard/types'
 import { parseEquipmentOptions } from '../character-wizard/parsing'
@@ -527,6 +528,7 @@ export function CharacterSheetPage() {
                 .filter((c) => spellSlots(c.classId, c.level) !== undefined)
                 .map((c) => {
                   const { cantrips, prepared } = spellsForClass(data, c.classId)
+                  const spellbook = spellbookForClass(data, c.classId)
                   if (cantrips.length === 0 && prepared.length === 0) return null
                   const casting = spellcastingInfo(c.classId, data.classes, scores)
                   return (
@@ -569,6 +571,16 @@ export function CharacterSheetPage() {
                           </ul>
                         </div>
                       </div>
+                      {spellbook.length > 0 && (
+                        <div>
+                          <p className="pixel-label">
+                            {getClass(c.classId)?.name ?? c.classId} Spellbook ({spellbook.length})
+                          </p>
+                          <p className="text-sm">
+                            {spellbook.map((id) => `${getSpell(id)?.name ?? id} (L${getSpell(id)?.level ?? '?'})`).join(', ')}
+                          </p>
+                        </div>
+                      )}
                     </div>
                   )
                 })}
