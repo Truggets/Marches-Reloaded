@@ -64,7 +64,7 @@ function sliceSection(text, startIndex, allSectionStarts) {
 }
 
 function main() {
-  const text = fs.readFileSync(SOURCE_PATH, 'utf8')
+  const text = fs.readFileSync(SOURCE_PATH, 'utf8').replace(/\r\n/g, '\n')
 
   // Find all "### X Feats" category section headings.
   const sectionHeadingRe = /\n### (Origin|General|Fighting Style|Epic Boon) Feats\n/g

@@ -99,7 +99,7 @@ function parseSpeciesBlock(speciesText, speciesName) {
 }
 
 function main() {
-  const text = fs.readFileSync(SOURCE_PATH, 'utf8')
+  const text = fs.readFileSync(SOURCE_PATH, 'utf8').replace(/\r\n/g, '\n')
 
   const descHeadingMatch = text.match(/\n### Species Descriptions\n/)
   if (!descHeadingMatch) throw new Error('Could not find "### Species Descriptions" heading')
