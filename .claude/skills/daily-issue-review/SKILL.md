@@ -5,7 +5,7 @@ description: Daily one-issue-at-a-time triage workflow for Marches Reloaded — 
 
 # Daily Issue Review
 
-Works exactly one open GitHub issue per run, end to end, from "what's next" to a reviewed written plan — never past that. This exists because the open issues (`Truggets/Marches-Reloaded`, currently #2,3,4,5,6,10,12,13) were largely filed by a real playtester and mostly reconcile with this project's own list of accepted scope gaps — the backlog isn't a mystery, it just needs one issue at a time turned into an actionable, verified plan.
+Works exactly one open GitHub issue per run, end to end, from "what's next" to a reviewed written plan — never past that. This exists because the open issues (`Truggets/Marches-Reloaded`, as of 2026-11-19: #5, #6, #22, #36 — run `gh issue list` for the live set) were largely filed by a real playtester and mostly reconcile with this project's own list of accepted scope gaps — the backlog isn't a mystery, it just needs one issue at a time turned into an actionable, verified plan.
 
 This skill never edits code. It ends at a written plan for Truman to act on separately.
 
