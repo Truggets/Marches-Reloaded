@@ -91,7 +91,7 @@ function parseBackgroundBlock(name, blockText) {
 }
 
 function main() {
-  const text = fs.readFileSync(SOURCE_PATH, 'utf8')
+  const text = fs.readFileSync(SOURCE_PATH, 'utf8').replace(/\r\n/g, '\n')
 
   // "Character Backgrounds" (## ) runs until the next "## " heading
   // ("Character Species"), which a sibling parser owns — do not touch it.

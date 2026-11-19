@@ -183,7 +183,7 @@ function parseClassBlock(classText, className) {
 }
 
 function main() {
-  const text = fs.readFileSync(SOURCE_PATH, 'utf8')
+  const text = fs.readFileSync(SOURCE_PATH, 'utf8').replace(/\r\n/g, '\n')
   const classHeadingRe = /\n## (\w+)\n/g
   const matches = [...text.matchAll(classHeadingRe)]
   const classNames = matches.map((m) => m[1])

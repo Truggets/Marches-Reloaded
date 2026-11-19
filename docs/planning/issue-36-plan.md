@@ -1,14 +1,14 @@
 # Issue #36 — CRLF breaks 4 bundled build scripts
 
-**Status:** planned 2026-11-19, not implemented.
+**Status:** fix applied 2026-11-19 (same branch). Verified: all four parsers run, verify-*.js pass, regenerated JSON is JSON-equal to the checked-in files.
 
 ## Root cause
-Vendored `data/build/source/*.md` have CRLF line endings on a Windows checkout. `.` never matches ``, so regexes written for LF fail silently. `parse-spells.js` (#33/PR #35), `parse-equipment.js` and `parse-monsters.js` already read with `.replace(/
+Vendored `data/build/source/*.md` have CRLF line endings on a Windows checkout. `.` never matches ``, so regexes written for LF fail silently. `parse-spells.js` (#33/PR #35), `parse-equipment.js` and `parse-monsters.js` already read with `.replace(/
 /g, '
 ')`. Confirmed 2026-11-19 by reading the read lines: `parse-classes.js:186`, `parse-feats.js:67`, `parse-backgrounds.js:94`, `parse-species.js:102` call plain `fs.readFileSync(SOURCE_PATH, 'utf8')`. The failures described in the issue (0 classes parsed, crash on missing section) were not re-run here.
 
 ## Fix
-Append `.replace(/
+Append `.replace(/
 /g, '
 ')` to those four reads. Reproducibility only; shipped `data/*.json` is unaffected.
 
