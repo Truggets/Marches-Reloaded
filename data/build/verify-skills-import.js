@@ -59,6 +59,8 @@ check('wrong ability', throwsWith({ skills: [{ ...good, ability: 'Strength' }] }
 check('missing source', throwsWith({ skills: [{ ...good, source: undefined }] }, 'Stealth'), true)
 check('empty mechanics_first', throwsWith({ skills: [{ ...good, mechanics_first: [] }] }, 'Stealth'), true)
 check('duplicate skill', throwsWith({ skills: [good, good] }, 'fixture-pack:stealth'), true)
+check('non-string mechanics_first entry', throwsWith({ skills: [{ ...good, mechanics_first: ['ok', 1] }] }, 'Stealth'), true)
+check('empty skills list', throwsWith({ skills: [] }, 'empty list'), true)
 check('wrong top-level shape', throwsWith({ hazards: [] }, '{ skills: [...] }'), true)
 
 console.log('\nKeep-in-sync guard: skill map matches computeSheet.ts:')

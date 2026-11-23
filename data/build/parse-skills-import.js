@@ -65,6 +65,9 @@ function parseSkillEntry(vaultEntry, packId) {
   if (!Array.isArray(mechanics_first) || mechanics_first.length === 0) {
     throw new Error(`Skill "${name}" has no "mechanics_first" bullets to build a description from`)
   }
+  if (!mechanics_first.every((b) => typeof b === 'string')) {
+    throw new Error(`Skill "${name}" has a non-string entry in "mechanics_first"`)
+  }
 
   const description =
     typeof lore_and_flavor === 'string' && lore_and_flavor.trim()
@@ -89,6 +92,11 @@ function parseSkillsImport(vaultDoc, packId = DEFAULT_PACK) {
   }
   if (typeof packId !== 'string' || !packId.trim()) {
     throw new Error('packId is required and must be a non-empty string')
+  }
+  if (vaultDoc.skills.length === 0) {
+    // An empty list would replace the pack's stored skills with nothing
+    // (the import route replaces per field), so reject it as likely a mistake.
+    throw new Error('"skills" is an empty list — nothing to import')
   }
   const skills = vaultDoc.skills.map((s) => parseSkillEntry(s, packId))
 
