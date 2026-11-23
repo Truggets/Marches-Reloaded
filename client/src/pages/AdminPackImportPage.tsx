@@ -35,6 +35,7 @@ export function AdminPackImportPage() {
   const [subclassesText, setSubclassesText] = useState('')
   const [hazardsText, setHazardsText] = useState('')
   const [magicItemsText, setMagicItemsText] = useState('')
+  const [skillsText, setSkillsText] = useState('')
   const [importing, setImporting] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [result, setResult] = useState<{
@@ -46,6 +47,7 @@ export function AdminPackImportPage() {
     subclassCount?: number
     hazardCount?: number
     magicItemCount?: number
+    skillCount?: number
   } | null>(null)
 
   async function handleImport() {
@@ -60,9 +62,10 @@ export function AdminPackImportPage() {
       !spellsText.trim() &&
       !subclassesText.trim() &&
       !hazardsText.trim() &&
-      !magicItemsText.trim()
+      !magicItemsText.trim() &&
+      !skillsText.trim()
     ) {
-      setError('Paste at least one of Feats, Backgrounds, Species, Equipment, Spells, Subclasses, Hazards, or Magic Items JSON before importing.')
+      setError('Paste at least one of Feats, Backgrounds, Species, Equipment, Spells, Subclasses, Hazards, Magic Items, or Skills JSON before importing.')
       return
     }
 
@@ -146,13 +149,23 @@ export function AdminPackImportPage() {
       }
     }
 
+    let skills: unknown
+    if (skillsText.trim()) {
+      try {
+        skills = JSON.parse(skillsText)
+      } catch {
+        setError('Skills JSON is not valid — fix the syntax error and try again.')
+        return
+      }
+    }
+
     setImporting(true)
     try {
       const res = await fetch('/api/admin/packs/import', {
         method: 'POST',
         credentials: 'include',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ packId, packName, feats, backgrounds, species, equipment, spells, subclasses, hazards, magicItems }),
+        body: JSON.stringify({ packId, packName, feats, backgrounds, species, equipment, spells, subclasses, hazards, magicItems, skills }),
       })
       if (!res.ok) throw new Error(await extractErrorMessage(res))
       const body = (await res.json()) as {
@@ -164,6 +177,7 @@ export function AdminPackImportPage() {
         subclassCount?: number
         hazardCount?: number
         magicItemCount?: number
+        skillCount?: number
       }
       await initPacks() // so the admin's own freshly-imported pack shows up without a manual refresh
       setResult({
@@ -175,6 +189,7 @@ export function AdminPackImportPage() {
         subclassCount: body.subclassCount,
         hazardCount: body.hazardCount,
         magicItemCount: body.magicItemCount,
+        skillCount: body.skillCount,
       })
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to import pack')
@@ -325,6 +340,17 @@ export function AdminPackImportPage() {
           />
         </label>
 
+        <label className="flex flex-col gap-1">
+          <span className="pixel-label text-xs">Skills JSON</span>
+          <textarea
+            value={skillsText}
+            onChange={(e) => setSkillsText(e.target.value)}
+            spellCheck={false}
+            placeholder='{"skills": [...]}'
+            className="pixel-input h-[24rem] w-full font-mono text-xs"
+          />
+        </label>
+
         {error && <p className="text-sm text-[var(--color-danger)]">{error}</p>}
         {result && (
           <p className="text-sm text-[var(--color-success,green)]">
@@ -338,6 +364,7 @@ export function AdminPackImportPage() {
               result.subclassCount !== undefined ? `${result.subclassCount} subclasses` : null,
               result.hazardCount !== undefined ? `${result.hazardCount} hazards` : null,
               result.magicItemCount !== undefined ? `${result.magicItemCount} magic items` : null,
+              result.skillCount !== undefined ? `${result.skillCount} skills` : null,
             ]
               .filter(Boolean)
               .join(', ')}{' '}
@@ -358,7 +385,8 @@ export function AdminPackImportPage() {
                 !spellsText.trim() &&
                 !subclassesText.trim() &&
                 !hazardsText.trim() &&
-                !magicItemsText.trim())
+                !magicItemsText.trim() &&
+                !skillsText.trim())
             }
             className="pixel-btn"
           >

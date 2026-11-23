@@ -220,6 +220,18 @@ export interface HazardEntry {
   source: SourceRef
 }
 
+// Import-only, display-only expanded skill rules text (see
+// docs/planning/importer-monsters-skills-plan.md, Phase A). Never feeds the
+// rules engine: sheet math keeps using the hardcoded skill list/ability map.
+export interface SkillReferenceEntry {
+  id: string
+  name: string
+  ability: Ability
+  description: string // mechanics_first bullets + lore_and_flavor folded together
+  pack: string
+  source: SourceRef
+}
+
 export interface MagicItemEntry {
   id: string
   name: string

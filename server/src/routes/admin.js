@@ -14,6 +14,7 @@ import { parseSpellsImport } from "../../../data/build/parse-spells-import.js";
 import { parseSubclassesImport } from "../../../data/build/parse-subclasses-import.js";
 import { parseHazardsImport } from "../../../data/build/parse-hazards-import.js";
 import { parseMagicItemsImport } from "../../../data/build/parse-magic-items-import.js";
+import { parseSkillsImport } from "../../../data/build/parse-skills-import.js";
 
 const router = express.Router();
 
@@ -138,7 +139,7 @@ router.get("/characters", (req, res) => {
 // synchronous and this is a single-process deployment, so no other request
 // can interleave in that window (see M2b Phase 2 review).
 router.post("/packs/import", (req, res) => {
-  const { packId, packName, feats, backgrounds, species, equipment, spells, subclasses, hazards, magicItems } = req.body || {};
+  const { packId, packName, feats, backgrounds, species, equipment, spells, subclasses, hazards, magicItems, skills } = req.body || {};
 
   if (typeof packId !== "string" || !packId.trim()) {
     return res.status(400).json({ error: "packId is required" });
@@ -154,10 +155,11 @@ router.post("/packs/import", (req, res) => {
     spells === undefined &&
     subclasses === undefined &&
     hazards === undefined &&
-    magicItems === undefined
+    magicItems === undefined &&
+    skills === undefined
   ) {
     return res.status(400).json({
-      error: "At least one of feats, backgrounds, species, equipment, spells, subclasses, hazards, or magicItems is required",
+      error: "At least one of feats, backgrounds, species, equipment, spells, subclasses, hazards, magicItems, or skills is required",
     });
   }
 
@@ -224,6 +226,15 @@ router.post("/packs/import", (req, res) => {
     }
   }
 
+  let parsedSkills;
+  if (skills !== undefined) {
+    try {
+      parsedSkills = parseSkillsImport(skills, packId);
+    } catch (err) {
+      return res.status(400).json({ error: `Import rejected: ${err.message}` });
+    }
+  }
+
   let parsedMagicItems;
   if (magicItems !== undefined) {
     try {
@@ -249,6 +260,7 @@ router.post("/packs/import", (req, res) => {
   const finalSubclasses = parsedSubclasses !== undefined ? parsedSubclasses : existingContent.subclasses;
   const finalHazards = parsedHazards !== undefined ? parsedHazards : existingContent.hazards;
   const finalMagicItems = parsedMagicItems !== undefined ? parsedMagicItems : existingContent.magicItems;
+  const finalSkills = parsedSkills !== undefined ? parsedSkills : existingContent.skills;
   if (finalFeats !== undefined) mergedContent.feats = finalFeats;
   if (finalBackgrounds !== undefined) mergedContent.backgrounds = finalBackgrounds;
   if (finalSpecies !== undefined) mergedContent.species = finalSpecies;
@@ -257,6 +269,7 @@ router.post("/packs/import", (req, res) => {
   if (finalSubclasses !== undefined) mergedContent.subclasses = finalSubclasses;
   if (finalHazards !== undefined) mergedContent.hazards = finalHazards;
   if (finalMagicItems !== undefined) mergedContent.magicItems = finalMagicItems;
+  if (finalSkills !== undefined) mergedContent.skills = finalSkills;
 
   const manifest = JSON.stringify({ id: packId, name: packName, importedAt: new Date().toISOString() });
   const content = JSON.stringify(mergedContent);
@@ -277,6 +290,7 @@ router.post("/packs/import", (req, res) => {
   if (parsedSubclasses !== undefined) response.subclassCount = parsedSubclasses.length;
   if (parsedHazards !== undefined) response.hazardCount = parsedHazards.length;
   if (parsedMagicItems !== undefined) response.magicItemCount = parsedMagicItems.length;
+  if (parsedSkills !== undefined) response.skillCount = parsedSkills.length;
 
   return res.status(200).json(response);
 });

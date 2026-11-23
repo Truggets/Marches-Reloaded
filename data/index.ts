@@ -23,6 +23,7 @@ import type {
   Subclass,
   HazardEntry,
   MagicItemEntry,
+  SkillReferenceEntry,
   ContentPack,
 } from './schema'
 
@@ -73,6 +74,8 @@ let importedSubclasses: Subclass[] = []
 // alongside, they're just these arrays directly.
 let importedHazards: HazardEntry[] = []
 let importedMagicItems: MagicItemEntry[] = []
+// Display-only skill rules text (importer plan Phase A) — import-only too.
+let importedSkillReferences: SkillReferenceEntry[] = []
 let importedPackManifests: { id: string; name: string }[] = []
 
 /** Fetches this instance's admin-imported packs and merges their feats in.
@@ -97,6 +100,7 @@ export async function initPacks(): Promise<void> {
           subclasses?: Subclass[]
           hazards?: HazardEntry[]
           magicItems?: MagicItemEntry[]
+          skills?: SkillReferenceEntry[]
         }
       }[]
     }
@@ -108,6 +112,7 @@ export async function initPacks(): Promise<void> {
     importedSubclasses = body.packs.flatMap((p) => p.content.subclasses ?? [])
     importedHazards = body.packs.flatMap((p) => p.content.hazards ?? [])
     importedMagicItems = body.packs.flatMap((p) => p.content.magicItems ?? [])
+    importedSkillReferences = body.packs.flatMap((p) => p.content.skills ?? [])
     importedPackManifests = body.packs.map((p) => ({ id: p.packId, name: p.manifest.name }))
   } catch {
     // Network failure, malformed response, etc. — degrade to SRD-only.
@@ -227,6 +232,10 @@ export function listHazards(): HazardEntry[] {
 
 export function getHazard(id: string): HazardEntry | undefined {
   return importedHazards.find((h) => h.id === id)
+}
+
+export function listSkillReferences(): SkillReferenceEntry[] {
+  return [...importedSkillReferences]
 }
 
 export function listMagicItems(): MagicItemEntry[] {
