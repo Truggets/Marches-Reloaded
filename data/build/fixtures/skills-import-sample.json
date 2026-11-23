@@ -1,0 +1,20 @@
+{
+  "skills": [
+    {
+      "name": "Acrobatics",
+      "ability": "Dexterity",
+      "source": "Player's Handbook (2024)",
+      "mechanics_first": [
+        "**Core Use:** Stay on your feet in a tricky situation.",
+        "**Escaping Ropes:** Requires a successful DC 15 Dexterity (Acrobatics) check as an action."
+      ],
+      "lore_and_flavor": "Acrobatics measures your agility."
+    },
+    {
+      "name": "Sleight of Hand",
+      "ability": "Dexterity",
+      "source": "Player's Handbook (2024)",
+      "mechanics_first": ["**Core Use:** Pick a pocket or plant an item."]
+    }
+  ]
+}
